@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Network Diagnostic Tools</title>
+    <style>
+        body { padding-top: 20px; }
+        .container-fluid { padding: 0; }
+        .left-panel { background-color: #f8f9fa; min-height: 100vh; padding: 20px; }
+        .right-panel { padding: 20px; }
+        .result { white-space: pre; background-color: #f0f0f5; padding: 10px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 left-panel">
+                <h2 class="text-center">Tools</h2>
+                <ul class="list-group" id="tool-list">
+                    <li class="list-group-item" data-tool="ping">Ping</li>
+                    <li class="list-group-item" data-tool="traceroute">Traceroute</li>
+                    <li class="list-group-item" data-tool="dns_lookup">DNS Lookup</li>
+                    <li class="list-group-item" data-tool="port_scan">Port Scan</li>
+                </ul>
+            </div>
+            <div class="col-md-9 right-panel" id="tool-content"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            function loadTool(tool) {
+                $.get(`/${tool}.html`, function(formHtml) {
+                    $('#tool-content').html(formHtml);
+
+                    // Handle form submission
+                    $(`#${tool}-form`).submit(function(e){
+                        e.preventDefault();
+                        $.post(`/${tool}`, $(this).serialize(), function(data){
+                            $(`#${tool}-result`).html(data.result);
+                        });
+                    });
+                });
+            }
+
+            // Initial tool loading (default to 'ping')
+            loadTool('ping');
+
+            // Tool selection event handler
+            $('#tool-list li').click(function() {
+                $('#tool-list li').removeClass('active');
+                $(this).addClass('active');
+                var tool = $(this).data('tool');
+                loadTool(tool);
+            });
+        });
+    </script>
+</body>
+</html>
