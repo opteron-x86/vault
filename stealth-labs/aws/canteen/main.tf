@@ -9,7 +9,7 @@ data "aws_availability_zones" "available" {}
 
 # Define the selected AZ (can also be hardcoded)
 variable "selected_az" {
-  default = "us-east-2a"
+  default = "us-gov-east-1a"
   #default = data.aws_availability_zones.available.names[0]
 }
 
@@ -175,7 +175,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 # Get the latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical's AWS account ID
+  owners      = ["513442679011"] # Canonical's AWS account ID
 
   filter {
     name   = "name"
@@ -199,7 +199,7 @@ module "vm" {
   vpc_id_attacker       = module.vpc.vpc_id_attacker
   security_group_attacker = module.security_group_attacker.security_group_id
   attacker_vm_name      = "black-cat-${random_integer.lab_name_suffix.result}"
-  volume_size_attacker  = 30
+  volume_size_attacker  = 64
 
   # Target Ubuntu VM
   ami_target_01       = data.aws_ami.ubuntu.id
