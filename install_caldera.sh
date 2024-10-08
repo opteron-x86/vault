@@ -1,3 +1,7 @@
+# to run script:
+# 1. chmod +x install_caldera.sh
+#2. ./install_caldera.sh
+
 #!/bin/bash
 
 # Update System
