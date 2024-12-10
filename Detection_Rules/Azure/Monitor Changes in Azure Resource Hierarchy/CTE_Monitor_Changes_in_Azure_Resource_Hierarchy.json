@@ -1,0 +1,60 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/04142cac-4011-4539-a9a3-7865d68cd37a')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/04142cac-4011-4539-a9a3-7865d68cd37a')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "CTE_Monitor Changes to Cloud Resource Hierarchy",
+                "description": "Detects changes to resource groups, subscriptions, or management groups in Azure that may indicate malicious activity.\nPlatform:IAAS\nMITRE:TA0005;T1666",
+                "severity": "High",
+                "enabled": true,
+                "query": "//Desription:Detects changes to resource groups, subscriptions, or management groups in Azure that may indicate malicious activity.\r\n//status:experimental\r\n//author:Danielle Torrence\r\nAzureActivity\r\n| where OperationNameValue has_any (\r\n    \"resourcegroups/write\", \r\n    \"resourcegroups/delete\",\r\n    \"subscriptions/write\", \r\n    \"subscriptions/delete\",\r\n    \"managementGroups/write\", \r\n    \"managementGroups/delete\",\r\n    \"LeaveOrganization\"\r\n)\r\n| extend Activity = case(\r\n    OperationNameValue has \"resourcegroups/write\", \"Resource Group Created\",\r\n    OperationNameValue has \"resourcegroups/delete\", \"Resource Group Deleted\",\r\n    OperationNameValue has \"subscriptions/write\", \"Subscription Created or Modified\",\r\n    OperationNameValue has \"subscriptions/delete\", \"Subscription Deleted\",\r\n    OperationNameValue has \"managementGroups/write\", \"Management Group Created or Modified\",\r\n    OperationNameValue has \"managementGroups/delete\", \"Management Group Deleted\",\r\n    OperationNameValue has \"LeaveOrganization\", \"Subscription Left Organization\",\r\n    \"Unknown\"\r\n)\r\n| project TimeGenerated, Caller, CallerIpAddress, OperationNameValue, Activity, ResourceGroup, ResourceId\r\n",
+                "queryFrequency": "PT5M",
+                "queryPeriod": "PT6M",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "DefenseEvasion"
+                ],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {},
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
