@@ -1,0 +1,40 @@
+title: Monitor Changes in Azure Resource Hierarchy
+id: d27f4a61-dfea-4f65-bf35-1123456789ab
+description: >
+  Detects changes to Azure resource groups, subscriptions, and management groups, 
+  including operations like creation, deletion, and management group modifications.
+status: tested
+author: Danielle Torrence
+date: 2024-12-07
+logsource:
+  category: azure
+  product: azureactivity
+detection:
+  selection:
+    OperationNameValue:
+      - "*resourcegroups/write*"
+      - "*resourcegroups/delete*"
+      - "*subscriptions/write*"
+      - "*subscriptions/delete*"
+      - "*managementGroups/write*"
+      - "*managementGroups/delete*"
+      - "*LeaveOrganization*"
+  condition: selection
+fields:
+  - TimeGenerated
+  - Caller
+  - CallerIpAddress
+  - OperationNameValue
+  - ResourceGroup
+  - ResourceId
+  - ActivityStatusValue
+falsepositives:
+  - Legitimate administrative changes to resource groups, subscriptions, or management groups.
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.t1666
+  - azure
+references:
+  - https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azureactivity
+  - https://attack.mitre.org/techniques/T1666/
