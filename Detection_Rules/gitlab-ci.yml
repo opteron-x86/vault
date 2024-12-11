@@ -1,0 +1,22 @@
+prod backup:
+  stage: deploy
+  variables:
+    credentials: $PRODcredentials
+  image:
+    name: $AzImage
+  before_script:
+    - apt-get update
+    - apt-get -y install git
+    - pwsh './Azure-Sentinel/Tools/PowerShell/Backup/Backup.ps1'
+  script:
+    - pwsh './Azure-Sentinel/Tools/PowerShell/Backup/BackupAnalyticRules.ps1' -resourceGroupName $PRODResourceGroupName -workspaceName $PRODInstanceName -subscriptionid $PRODazureSubscriptionID
+    - pwsh './Azure-Sentinel/Tools/PowerShell/Backup/BackupHuntingRules.ps1' -resourceGroupName $PRODResourceGroupName -workspaceName $PRODInstanceName -subscriptionid $PRODazureSubscriptionID
+    - pwsh './Azure-Sentinel/Tools/PowerShell/Backup/BackupLogicApps.ps1' -resourceGroupName $PRODResourceGroupName -subscriptionID $PRODazureSubscriptionID
+    - git add './Backup/Azure-Sentinel/AnalyticsRules'
+    - git add './Backup/Azure-Sentinel/HuntingQueries'
+    - git add './Backup/Azure-Sentinel/LogicApps'
+    - git commit -m "CI BACKUP - $CI_JOB_STARTED_AT"
+    - git push ssh_origin HEAD:$CI_COMMIT_REF_NAME
+  tags:
+    - USG-DOD-Global-Custom-Docker-Containers-BuildRunner1
+  when: manual
