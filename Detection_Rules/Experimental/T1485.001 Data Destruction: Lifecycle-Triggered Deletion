@@ -1,0 +1,12 @@
+AzureActivity
+| where OperationNameValue startswith "MICROSOFT.STORAGE/STORAGEACCOUNTS/MANAGEMENTPOLICIES/WRITE"
+| extend Details = parse_json(Properties) // Parse the Properties field into JSON
+| extend PolicyScope = tostring(Details.entity), // Extract entity scope
+         PolicyMessage = tostring(Details.message), // Extract message
+         Hierarchy = tostring(Details.hierarchy) // Extract hierarchy for additional context
+| project TimeGenerated, ResourceGroup, Resource, Caller, OperationNameValue, 
+          PolicyScope, PolicyMessage, Hierarchy
+
+
+
+///////doesnt give enough granularity
