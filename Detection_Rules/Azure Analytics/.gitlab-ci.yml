@@ -1,0 +1,22 @@
+stages:
+  - export
+  - push
+
+export_rules:
+  stage: export
+  script:
+    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+    - az account set --subscription $AZURE_SUBSCRIPTION_ID
+    - az sentinel alert-rule list --resource-group $RESOURCE_GROUP --workspace-name $WORKSPACE_NAME > rules.json
+  artifacts:
+    paths:
+      - rules.json
+
+push_to_gitlab:
+  stage: push
+  script:
+    - git config --global user.email "ci-bot@example.com"
+    - git config --global user.name "GitLab CI Bot"
+    - git add rules.json
+    - git commit -m "Update Azure Sentinel analytics rules"
+    - git push --set-upstream origin main
