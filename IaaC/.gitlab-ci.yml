@@ -68,3 +68,8 @@ cleanup:
   environment:
     name: $TF_STATE_NAME
     action: stop
+
+tags:
+    - terraform
+    - push
+    - azure
