@@ -2,26 +2,53 @@ stages:
   - export
   - push
 
+# Define variables for paths and file names
+variables:
+  RULES_DIR: "cyber-threat-emulation/Detection_Rules/Azure_Analytics" # Updated: Underscores replace spaces
+  RULES_FILE: "rules.json" # Name of the output file
+
+# Stage 1: Export Azure Sentinel Rules
 export_rules:
   stage: export
+  tags:
+    - azure
   script:
-    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
-    - az account set --subscription $AZURE_SUBSCRIPTION_ID
-    - az sentinel alert-rule list --resource-group $RESOURCE_GROUP --workspace-name $WORKSPACE_NAME > rules.json
+    - echo "Starting Azure Sentinel rules export..."
+    - echo "Logging into Azure..."
+    - az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID" --debug
+    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+    - echo "Creating target directory: $RULES_DIR"
+    - mkdir -p "$RULES_DIR"
+    - echo "Pulling Sentinel analytics rules..."
+    - az sentinel alert-rule list \
+        --resource-group "$RESOURCE_GROUP" \
+        --workspace-name "$WORKSPACE_NAME" \
+        --query "[].{name:name, displayName:displayName, ruleType:kind, rule:properties}" \
+        > "$RULES_DIR/$RULES_FILE" || { echo "Error exporting rules"; exit 1; }
+    - echo "Rules successfully exported to $RULES_DIR/$RULES_FILE."
+    - ls -al "$RULES_DIR" # List files for confirmation
   artifacts:
     paths:
-      - rules.json
+      - "$RULES_DIR/$RULES_FILE" # Store the exported file as an artifact
+    expire_in: 1 hour # Optional: Set artifact expiry time
 
+# Stage 2: Commit and Push to GitLab
 push_to_gitlab:
   stage: push
+  tags:
+    - git
   script:
+    - echo "Setting up Git configuration..."
     - git config --global user.email "ci-bot@example.com"
     - git config --global user.name "GitLab CI Bot"
-    - git add rules.json
-    - git commit -m "Update Azure Sentinel analytics rules"
-    - git push --set-upstream origin main
-job:
-  tags:
-    - export
-    - push
-    - azure
+    - echo "Cloning the repository using SSH..."
+    - mkdir repo && cd repo
+    - git clone git@gitlab.com:$CI_PROJECT_PATH.git .
+    - echo "Copying exported rules to target directory..."
+    - mkdir -p "$RULES_DIR"
+    - cp "../$RULES_DIR/$RULES_FILE" "$RULES_DIR/$RULES_FILE"
+    - echo "Committing and pushing changes..."
+    - git add "$RULES_DIR/$RULES_FILE"
+    - git commit -m "Update Azure Sentinel analytics rules: $(date +'%Y-%m-%d %H:%M:%S')"
+    - git push origin main || { echo "Git push failed. Check permissions."; exit 1; }
+    - echo "Push successful!"
