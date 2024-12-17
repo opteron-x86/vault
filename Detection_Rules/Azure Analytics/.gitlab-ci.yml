@@ -20,3 +20,8 @@ push_to_gitlab:
     - git add rules.json
     - git commit -m "Update Azure Sentinel analytics rules"
     - git push --set-upstream origin main
+job:
+  tags:
+    - export
+    - push
+    - azure
