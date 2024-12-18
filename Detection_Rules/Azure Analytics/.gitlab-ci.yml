@@ -1,4 +1,5 @@
 stages:
+  - test
   - export
   - push
 
@@ -6,6 +7,16 @@ stages:
 variables:
   RULES_DIR: "cyber-threat-emulation/Detection_Rules/Azure_Analytics" # Updated: Underscores replace spaces
   RULES_FILE: "rules.json" # Name of the output file
+
+# Test
+docker_test_job:
+  stage: test
+  tags:
+    - azure
+  script:
+    - echo "Running in Docker!"
+    - docker --version
+    - docker info
 
 # Stage 1: Export Azure Sentinel Rules
 export_rules:
