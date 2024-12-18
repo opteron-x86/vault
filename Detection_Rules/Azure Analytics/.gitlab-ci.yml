@@ -11,7 +11,8 @@ variables:
 export_rules:
   stage: export
   tags:
-    - azure
+    - azure  # Matches the runner's tag
+    - export
   script:
     - echo "Starting Azure Sentinel rules export..."
     - echo "Logging into Azure..."
@@ -36,7 +37,7 @@ export_rules:
 push_to_gitlab:
   stage: push
   tags:
-    - azure
+    - azure  # Matches the runner's tag
     - push
   script:
     - echo "Setting up Git configuration..."
@@ -53,8 +54,5 @@ push_to_gitlab:
     - git commit -m "Update Azure Sentinel analytics rules: $(date +'%Y-%m-%d %H:%M:%S')"
     - git push origin main || { echo "Git push failed. Check permissions."; exit 1; }
     - echo "Push successful!"
-job:
-  tags:
-    - push
-    - azure
+
 
