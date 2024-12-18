@@ -36,7 +36,8 @@ export_rules:
 push_to_gitlab:
   stage: push
   tags:
-    - git
+    - azure
+    - push
   script:
     - echo "Setting up Git configuration..."
     - git config --global user.email "ci-bot@example.com"
