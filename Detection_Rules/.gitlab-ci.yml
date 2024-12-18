@@ -1,0 +1,9 @@
+stages:
+  - test
+
+test_runner_name:
+  stage: test
+  tags:
+    - docker
+  script:
+    - echo "Running on runner: runner from gitlab to azure"
