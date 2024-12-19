@@ -1,6 +1,36 @@
 stages:
+  - test
   - export
 
+# Stage 1: Test the Environment
+test_environment:
+  stage: test
+  tags:
+    - azure
+    - powershell
+  script:
+    - echo "Testing PowerShell and CI environment..."
+    - |
+      pwsh -Command "
+      # Verify PowerShell version
+      Write-Host 'PowerShell Version:';
+      $PSVersionTable.PSVersion;
+
+      # Verify Az module installation
+      if (-not (Get-Module -ListAvailable -Name Az)) {
+          Write-Error 'Az module is not installed.';
+          Exit 1;
+      }
+      Write-Host 'Az module is installed.';
+
+      # Debug environment variables
+      Write-Host 'Checking environment variables:';
+      Write-Host ('RESOURCE_GROUP: ' + '$RESOURCE_GROUP');
+      Write-Host ('WORKSPACE_NAME: ' + '$WORKSPACE_NAME');
+      Write-Host ('AZURE_SUBSCRIPTION_ID: ' + '$AZURE_SUBSCRIPTION_ID');
+      Write-Host ('AZURE_CLIENT_ID: ' + '$AZURE_CLIENT_ID');
+      Write-Host ('AZURE_TENANT_ID: ' + '$AZURE_TENANT_ID');
+      "
 export_rules:
   stage: export
   tags:
@@ -44,6 +74,7 @@ export_rules:
       # Connect to Azure
       try {
           Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
+          Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
       } catch {
           Write-Error 'Failed to authenticate with Azure. Verify credentials and tenant details.';
           Exit 1;
@@ -56,3 +87,8 @@ export_rules:
       # Success
       Write-Host 'Azure Sentinel rules export completed successfully.';
       "
+    - echo "Export completed successfully!"
+  artifacts:
+    paths:
+      - "$RULES_DIR"
+    expire_in: 1 hour
