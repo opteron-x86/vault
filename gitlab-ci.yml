@@ -9,5 +9,5 @@ test_runner:
     - echo "Checking GitLab Runner configuration..."
     - echo "Runner is working on $(hostname)"
     - echo "Current directory $(pwd)"
-    - echo "Listing files:"
+    - echo "Listing files"
     - dir
