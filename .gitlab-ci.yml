@@ -1,71 +1,58 @@
-# Define global variables
-variables:
-  RULES_DIR: "cyber-threat-emulation/Detection_Rules/Azure_Analytics" # Directory for rules
-  RULES_FILE: "rules.yaml" # Name of the output file
-
 stages:
-  - test
   - export
-  - push
 
-# Stage 1: Test PowerShell Environment
-powershell_test_job:
-  stage: test
-  tags:
-    - azure
-    - powershell
-  script:
-    - echo "Testing PowerShell environment..."
-    - pwsh -Command "Get-Host" # Verify PowerShell availability
-    - pwsh -Command "Get-Module -ListAvailable" # List available PowerShell modules
-
-# Stage 2: Export Azure Sentinel Rules with PowerShell
 export_rules:
   stage: export
   tags:
     - azure
-    - cte
   script:
-  - echo "Running PowerShell script to export Sentinel rules..."
-  - |
-    pwsh -Command "
-    # Check and validate environment variables
-    if (-not '$RESOURCE_GROUP') {
-        Write-Error 'RESOURCE_GROUP is not set or is empty.';
-        Exit 1;
-    }
+    - echo "Running PowerShell script to export Sentinel rules..."
+    - |
+      pwsh -Command "
+      # Validate required environment variables
+      if (-not '$AZURE_CLIENT_ID') { Write-Error 'AZURE_CLIENT_ID is missing or empty.'; Exit 1; }
+      if (-not '$AZURE_CLIENT_SECRET') { Write-Error 'AZURE_CLIENT_SECRET is missing or empty.'; Exit 1; }
+      if (-not '$AZURE_TENANT_ID') { Write-Error 'AZURE_TENANT_ID is missing or empty.'; Exit 1; }
+      if (-not '$AZURE_SUBSCRIPTION_ID') { Write-Error 'AZURE_SUBSCRIPTION_ID is missing or empty.'; Exit 1; }
 
-    $resourceGroupName = '$RESOURCE_GROUP';
-    $workspaceName = '$WORKSPACE_NAME';
-    $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
-    $servicePrincipalId = '$AZURE_CLIENT_ID';
-    $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
-    $tenantId = '$AZURE_TENANT_ID';
+      # Assign variables from environment
+      $servicePrincipalId = '$AZURE_CLIENT_ID';
+      $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
+      $tenantId = '$AZURE_TENANT_ID';
+      $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
 
-    # Debugging: Print validated variables
-    Write-Host 'RESOURCE_GROUP: ' + $resourceGroupName;
-    Write-Host 'WORKSPACE_NAME: ' + $workspaceName;
-    Write-Host 'AZURE_SUBSCRIPTION_ID: ' + $subscriptionid;
-    Write-Host 'AZURE_CLIENT_ID: ' + $servicePrincipalId;
-    Write-Host 'AZURE_TENANT_ID: ' + $tenantId;
+      # Convert client secret to secure string
+      try {
+          $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
+      } catch {
+          Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
+          Exit 1;
+      }
 
-    # Convert clientSecret to a secure string
-    try {
-        $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
-    } catch {
-        Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
-        Exit 1;
-    }
+      # Debug variable values
+      Write-Host ('Service Principal ID: ' + $servicePrincipalId);
+      Write-Host ('Tenant ID: ' + $tenantId);
 
-    # Authenticate with Azure and export rules
-    try {
-        $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
-        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
-        Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
-        Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
-        Write-Host 'Azure Sentinel rules export completed successfully.';
-    } catch {
-        Write-Error 'An error occurred during authentication or rule export.';
-        Exit 1;
-    }
-    "
+      # Create PSCredential object
+      try {
+          $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
+      } catch {
+          Write-Error 'Failed to create PSCredential object. Verify AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
+          Exit 1;
+      }
+
+      # Connect to Azure
+      try {
+          Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
+      } catch {
+          Write-Error 'Failed to authenticate with Azure. Verify credentials and tenant details.';
+          Exit 1;
+      }
+
+      # Export Azure Sentinel rules
+      Write-Host 'Starting Sentinel rules export...';
+      Get-SentinelAnalyticsRuleYAML -workspaceName '$WORKSPACE_NAME' -resourceGroupName '$RESOURCE_GROUP' -subscriptionId '$AZURE_SUBSCRIPTION_ID' -outputPath './$RULES_DIR';
+
+      # Success
+      Write-Host 'Azure Sentinel rules export completed successfully.';
+      "
