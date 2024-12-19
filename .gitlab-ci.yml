@@ -24,4 +24,85 @@ test_environment:
 
       # Verify Az module installation
       if (-not (Get-Module -ListAvailable -Name Az)) {
-          Write-
+          Write-Error 'Az module is not installed.';
+          Exit 1;
+      }
+      Write-Host 'Az module is installed.';
+
+      # Debug environment variables
+      $requiredEnvVars = @('RESOURCE_GROUP', 'WORKSPACE_NAME', 'AZURE_SUBSCRIPTION_ID', 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID')
+      foreach ($var in $requiredEnvVars) {
+          if (-not $env:$var) {
+              Write-Error \"$var is missing or empty.\";
+              Exit 1;
+          }
+      }
+      Write-Host 'All required environment variables are present.';
+      "
+      
+# Stage 2: Export Sentinel Rules
+export_rules:
+  stage: export
+  tags:
+    - azure
+  timeout: 30m
+  script:
+    - echo "Running PowerShell script to export Sentinel rules..."
+    - |
+      pwsh -Command "
+      # Validate required environment variables
+      $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
+      foreach ($var in $requiredEnvVars) {
+          if (-not $env:$var) {
+              Write-Error \"$var is missing or empty.\";
+              Exit 1;
+          }
+      }
+
+      # Assign variables from environment
+      $servicePrincipalId = $env:AZURE_CLIENT_ID;
+      $servicePrincipalKey = $env:AZURE_CLIENT_SECRET;
+      $tenantId = $env:AZURE_TENANT_ID;
+      $subscriptionId = $env:AZURE_SUBSCRIPTION_ID;
+
+      # Convert client secret to secure string
+      try {
+          $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
+      } catch {
+          Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
+          Exit 1;
+      }
+
+      # Debug variable values
+      Write-Host ('Service Principal ID: ' + $servicePrincipalId);
+      Write-Host ('Tenant ID: ' + $tenantId);
+
+      # Create PSCredential object
+      try {
+          $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
+      } catch {
+          Write-Error 'Failed to create PSCredential object. Verify AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
+          Exit 1;
+      }
+
+      # Connect to Azure
+      try {
+          Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
+          Set-AzContext -SubscriptionId $subscriptionId -TenantId $tenantId;
+      } catch {
+          Write-Error 'Failed to authenticate with Azure. Verify credentials and tenant details.';
+          Exit 1;
+      }
+
+      # Export Azure Sentinel rules
+      Write-Host 'Starting Sentinel rules export...';
+      Get-SentinelAnalyticsRuleYAML -workspaceName $env:WORKSPACE_NAME -resourceGroupName $env:RESOURCE_GROUP -subscriptionId $env:AZURE_SUBSCRIPTION_ID -outputPath '$OUTPUT_PATH';
+
+      # Success
+      Write-Host 'Azure Sentinel rules export completed successfully.';
+      "
+    - echo "Export completed successfully!"
+  artifacts:
+    paths:
+      - "$RULES_DIR"
+    expire_in: 1 hour
