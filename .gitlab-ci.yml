@@ -29,7 +29,12 @@ export_rules:
   - echo "Running PowerShell script to export Sentinel rules..."
   - |
     pwsh -Command "
-    # Define parameters from environment variables
+    # Check and validate environment variables
+    if (-not '$RESOURCE_GROUP') {
+        Write-Error 'RESOURCE_GROUP is not set or is empty.';
+        Exit 1;
+    }
+
     $resourceGroupName = '$RESOURCE_GROUP';
     $workspaceName = '$WORKSPACE_NAME';
     $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
@@ -37,20 +42,12 @@ export_rules:
     $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
     $tenantId = '$AZURE_TENANT_ID';
 
-    # Validate required variables
-    if (-not $resourceGroupName) { Write-Error 'RESOURCE_GROUP is missing.'; Exit 1; }
-    if (-not $workspaceName) { Write-Error 'WORKSPACE_NAME is missing.'; Exit 1; }
-    if (-not $subscriptionid) { Write-Error 'AZURE_SUBSCRIPTION_ID is missing.'; Exit 1; }
-    if (-not $servicePrincipalId) { Write-Error 'AZURE_CLIENT_ID is missing.'; Exit 1; }
-    if (-not $servicePrincipalKey) { Write-Error 'AZURE_CLIENT_SECRET is missing.'; Exit 1; }
-    if (-not $tenantId) { Write-Error 'AZURE_TENANT_ID is missing.'; Exit 1; }
-
-    # Debugging: Output validated variables
-    Write-Host ('Resource Group: ' + $resourceGroupName);
-    Write-Host ('Workspace Name: ' + $workspaceName);
-    Write-Host ('Subscription ID: ' + $subscriptionid);
-    Write-Host ('Client ID: ' + $servicePrincipalId);
-    Write-Host ('Tenant ID: ' + $tenantId);
+    # Debugging: Print validated variables
+    Write-Host 'RESOURCE_GROUP: ' + $resourceGroupName;
+    Write-Host 'WORKSPACE_NAME: ' + $workspaceName;
+    Write-Host 'AZURE_SUBSCRIPTION_ID: ' + $subscriptionid;
+    Write-Host 'AZURE_CLIENT_ID: ' + $servicePrincipalId;
+    Write-Host 'AZURE_TENANT_ID: ' + $tenantId;
 
     # Convert clientSecret to a secure string
     try {
