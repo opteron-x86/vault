@@ -37,6 +37,19 @@ export_rules:
     $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
     $tenantId = '$AZURE_TENANT_ID';
 
+    # Debugging: Output key variables (mask sensitive info)
+    Write-Host 'Debug: Validating environment variables...';
+    Write-Host ('Resource Group: ' + $resourceGroupName);
+    Write-Host ('Workspace Name: ' + $workspaceName);
+    Write-Host ('Subscription ID: ' + $subscriptionid);
+    Write-Host ('Tenant ID: ' + $tenantId);
+
+    # Validate required variables
+    if (-not $resourceGroupName -or -not $workspaceName -or -not $subscriptionid -or -not $servicePrincipalId -or -not $servicePrincipalKey -or -not $tenantId) {
+        Write-Error 'One or more required environment variables are missing. Ensure RESOURCE_GROUP, WORKSPACE_NAME, AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID are set.';
+        Exit 1;
+    }
+
     # Convert clientSecret to a secure string
     try {
         $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
@@ -44,7 +57,15 @@ export_rules:
         Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
         Exit 1;
     }
-    
+
+    # Create PSCredential object
+    try {
+        $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
+    } catch {
+        Write-Error 'Failed to create PSCredential object. Verify AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
+        Exit 1;
+    }
+
     # Authenticate with Azure
     try {
         Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
@@ -55,7 +76,11 @@ export_rules:
     }
 
     # Export Azure Sentinel rules
-    Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
-
-    Write-Host 'Azure Sentinel rules export completed successfully.';
+    try {
+        Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
+        Write-Host 'Azure Sentinel rules export completed successfully.';
+    } catch {
+        Write-Error 'Failed to export Azure Sentinel rules. Check resource group, workspace, and subscription details.';
+        Exit 1;
+    }
     "
