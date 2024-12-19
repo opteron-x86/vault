@@ -33,7 +33,8 @@ test_environment:
       $requiredEnvVars = @('RESOURCE_GROUP', 'WORKSPACE_NAME', 'AZURE_SUBSCRIPTION_ID', 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID')
       foreach ($var in $requiredEnvVars) {
           if (-not (Get-Variable -Name $var -Scope Global)) {
-              Write-Host \"[Error] $var is missing or empty.\"; Exit 1;
+              Write-Error \"$var is missing or empty.\";
+              Exit 1;
           }
       }
       Write-Host 'All required environment variables are present.';
