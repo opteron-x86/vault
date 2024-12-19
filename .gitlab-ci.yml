@@ -12,7 +12,8 @@ stages:
 docker_test_job:
   stage: test
   tags:
-    - cte
+    - azure
+    - powershell
   script:
     - echo "Running in Docker!"
     - docker --version
@@ -23,6 +24,7 @@ export_rules:
   stage: export
   tags:
     - azure
+    - cte
   script:
     - echo "Starting Azure Sentinel rules export using PowerShell..."
     - echo "Installing necessary PowerShell modules..."
@@ -63,7 +65,7 @@ push_to_gitlab:
   stage: push
   tags:
     - azure
-    - push
+    - cte
   script:
     - echo "Setting up Git configuration..."
     - git config --global user.email "ci-bot@example.com"
