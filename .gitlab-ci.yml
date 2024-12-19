@@ -8,6 +8,7 @@ test_environment:
   tags:
     - azure
     - powershell
+    - cte
   script:
     - echo "Testing PowerShell and CI environment..."
     - |
