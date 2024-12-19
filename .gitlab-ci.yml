@@ -44,15 +44,7 @@ export_rules:
         Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
         Exit 1;
     }
-
-    # Create the PSCredential object
-    try {
-        $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
-    } catch {
-        Write-Error 'Failed to create PSCredential object. Check AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
-        Exit 1;
-    }
-
+    
     # Authenticate with Azure
     try {
         Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
