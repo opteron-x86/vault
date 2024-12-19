@@ -7,8 +7,4 @@ test_runner:
     - azure
     - powershell
   script:
-    - echo "Checking GitLab Runner configuration..."
-    - echo "Runner is working on $(hostname)"
-    - echo "Current directory $(pwd)"
-    - echo "Listing files"
-    - dir
+    - echo "Runner test successful!"
