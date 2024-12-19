@@ -30,8 +30,14 @@ export_rules:
     - echo "Installing necessary PowerShell modules..."
     - |
       pwsh -Command "
-      Install-Module -Name powershell-yaml -Force -Scope CurrentUser;
-      Import-Module -Name powershell-yaml -Force;
+      try {
+        # Attempt to install the module
+        Install-Module -Name powershell-yaml -Force -Scope CurrentUser -ErrorAction Stop;
+        Import-Module -Name powershell-yaml -Force;
+      } catch {
+        Write-Error 'Failed to install or import the powershell-yaml module.';
+        Exit 1;
+      }
       "
     - echo "Running PowerShell script to export Sentinel rules..."
     - |
@@ -41,7 +47,7 @@ export_rules:
       $workspaceName = '$WORKSPACE_NAME';
       $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
 
-      # Authenticate with Azure if no context is available
+      # Authenticate with Azure
       if (!(Get-AzContext)) {
         $secrets = ConvertFrom-JSON '$env:credentials';
         $servicePrincipalId = $secrets.clientId;
@@ -56,11 +62,11 @@ export_rules:
       Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
       "
     - echo "Rules successfully exported using PowerShell."
-    - pwsh -Command "Get-ChildItem -Path './$RULES_DIR'" # List exported files for confirmation
+    - pwsh -Command "Get-ChildItem -Path './$RULES_DIR'"
   artifacts:
     paths:
-      - "$RULES_DIR" # Store exported files as artifacts
-    expire_in: 1 hour # Optional: Set artifact expiry time
+      - "$RULES_DIR"
+    expire_in: 1 hour
 
 # Stage 3: Commit and Push to GitLab
 push_to_gitlab:
