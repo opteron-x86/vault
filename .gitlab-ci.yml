@@ -37,12 +37,6 @@ export_rules:
     $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
     $tenantId = '$AZURE_TENANT_ID';
 
-    # Validate that required variables are set
-    if (-not $servicePrincipalId -or -not $servicePrincipalKey -or -not $tenantId -or -not $subscriptionid) {
-        Write-Error 'One or more Azure Service Principal variables are missing. Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are set.';
-        Exit 1;
-    }
-
     # Convert clientSecret to a secure string
     try {
         $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
