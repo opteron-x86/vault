@@ -37,18 +37,20 @@ export_rules:
     $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
     $tenantId = '$AZURE_TENANT_ID';
 
-    # Debugging: Output key variables (mask sensitive info)
-    Write-Host 'Debug: Validating environment variables...';
+    # Validate required variables
+    if (-not $resourceGroupName) { Write-Error 'RESOURCE_GROUP is missing.'; Exit 1; }
+    if (-not $workspaceName) { Write-Error 'WORKSPACE_NAME is missing.'; Exit 1; }
+    if (-not $subscriptionid) { Write-Error 'AZURE_SUBSCRIPTION_ID is missing.'; Exit 1; }
+    if (-not $servicePrincipalId) { Write-Error 'AZURE_CLIENT_ID is missing.'; Exit 1; }
+    if (-not $servicePrincipalKey) { Write-Error 'AZURE_CLIENT_SECRET is missing.'; Exit 1; }
+    if (-not $tenantId) { Write-Error 'AZURE_TENANT_ID is missing.'; Exit 1; }
+
+    # Debugging: Output validated variables
     Write-Host ('Resource Group: ' + $resourceGroupName);
     Write-Host ('Workspace Name: ' + $workspaceName);
     Write-Host ('Subscription ID: ' + $subscriptionid);
+    Write-Host ('Client ID: ' + $servicePrincipalId);
     Write-Host ('Tenant ID: ' + $tenantId);
-
-    # Validate required variables
-    if (-not $resourceGroupName -or -not $workspaceName -or -not $subscriptionid -or -not $servicePrincipalId -or -not $servicePrincipalKey -or -not $tenantId) {
-        Write-Error 'One or more required environment variables are missing. Ensure RESOURCE_GROUP, WORKSPACE_NAME, AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID are set.';
-        Exit 1;
-    }
 
     # Convert clientSecret to a secure string
     try {
@@ -58,29 +60,15 @@ export_rules:
         Exit 1;
     }
 
-    # Create PSCredential object
+    # Authenticate with Azure and export rules
     try {
         $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
-    } catch {
-        Write-Error 'Failed to create PSCredential object. Verify AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
-        Exit 1;
-    }
-
-    # Authenticate with Azure
-    try {
         Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
         Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
-    } catch {
-        Write-Error 'Failed to authenticate with Azure. Verify credentials and subscription details.';
-        Exit 1;
-    }
-
-    # Export Azure Sentinel rules
-    try {
         Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
         Write-Host 'Azure Sentinel rules export completed successfully.';
     } catch {
-        Write-Error 'Failed to export Azure Sentinel rules. Check resource group, workspace, and subscription details.';
+        Write-Error 'An error occurred during authentication or rule export.';
         Exit 1;
     }
     "
