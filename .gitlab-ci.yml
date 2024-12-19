@@ -37,12 +37,6 @@ export_rules:
     $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
     $tenantId = '$AZURE_TENANT_ID';
 
-    # Debugging: Validate environment variables
-    Write-Host 'Debug: Validating environment variables...';
-    Write-Host ('ClientId: ' + $servicePrincipalId);
-    Write-Host ('TenantId: ' + $tenantId);
-    Write-Host ('SubscriptionId: ' + $subscriptionid);
-
     # Validate that required variables are set
     if (-not $servicePrincipalId -or -not $servicePrincipalKey -or -not $tenantId -or -not $subscriptionid) {
         Write-Error 'One or more Azure Service Principal variables are missing. Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are set.';
