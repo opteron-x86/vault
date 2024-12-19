@@ -8,16 +8,16 @@ stages:
   - export
   - push
 
-# Stage 1: Test Docker Environment
-docker_test_job:
+# Stage 1: Test PowerShell Environment
+powershell_test_job:
   stage: test
   tags:
     - azure
     - powershell
   script:
-    - echo "Running in Docker!"
-    - docker --version
-    - docker info
+    - echo "Testing PowerShell environment..."
+    - pwsh -Command "Get-Host" # Verify PowerShell availability
+    - pwsh -Command "Get-Module -ListAvailable" # List available PowerShell modules
 
 # Stage 2: Export Azure Sentinel Rules with PowerShell
 export_rules:
@@ -36,13 +36,13 @@ export_rules:
     - echo "Running PowerShell script to export Sentinel rules..."
     - |
       pwsh -Command "
+      # Define parameters
       $resourceGroupName = '$RESOURCE_GROUP';
       $workspaceName = '$WORKSPACE_NAME';
       $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
-      $PowerShellYAMLModule = Get-InstalledModule -Name powershell-yaml -ErrorAction SilentlyContinue;
-      if (!$PowerShellYAMLModule) { Install-Module -Name powershell-yaml -Force; Import-Module powershell-yaml; }
-      $context = Get-AzContext;
-      if (!$context) {
+
+      # Authenticate with Azure if no context is available
+      if (!(Get-AzContext)) {
         $secrets = ConvertFrom-JSON '$env:credentials';
         $servicePrincipalId = $secrets.clientId;
         $servicePrincipalKey = $secrets.clientSecret;
@@ -51,13 +51,15 @@ export_rules:
         Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential (New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass)) -Environment 'AzureCloud';
         Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
       }
+
+      # Export Azure Sentinel rules
       Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
       "
     - echo "Rules successfully exported using PowerShell."
-    - ls -al "$RULES_DIR" # List files for confirmation
+    - pwsh -Command "Get-ChildItem -Path './$RULES_DIR'" # List exported files for confirmation
   artifacts:
     paths:
-      - "$RULES_DIR" # Store the exported files as artifacts
+      - "$RULES_DIR" # Store exported files as artifacts
     expire_in: 1 hour # Optional: Set artifact expiry time
 
 # Stage 3: Commit and Push to GitLab
@@ -68,16 +70,26 @@ push_to_gitlab:
     - cte
   script:
     - echo "Setting up Git configuration..."
-    - git config --global user.email "ci-bot@example.com"
-    - git config --global user.name "GitLab CI Bot"
+    - pwsh -Command "
+      git config --global user.email 'ci-bot@example.com';
+      git config --global user.name 'GitLab CI Bot';
+      "
     - echo "Cloning the repository using SSH..."
-    - mkdir repo && cd repo
-    - git clone git@gitlab.com:$CI_PROJECT_PATH.git .
+    - pwsh -Command "
+      mkdir repo;
+      Set-Location repo;
+      git clone git@gitlab.com:$CI_PROJECT_PATH.git .;
+      "
     - echo "Copying exported rules to target directory..."
-    - mkdir -p "$RULES_DIR"
-    - cp "../$RULES_DIR/*" "$RULES_DIR/"
+    - pwsh -Command "
+      mkdir -p '$RULES_DIR';
+      Copy-Item -Path '../$RULES_DIR/*' -Destination '$RULES_DIR' -Recurse;
+      "
     - echo "Committing and pushing changes..."
     - |
-      git commit -m "Update Azure Sentinel analytics rules: $(date +'%Y-%m-%d %H:%M:%S')"
-    - git push origin main || { echo "Git push failed. Check permissions."; exit 1; }
+      pwsh -Command "
+      git add '$RULES_DIR/*';
+      git commit -m 'Update Azure Sentinel analytics rules: $(Get-Date -Format \"yyyy-MM-dd HH:mm:ss\")';
+      git push origin main;
+      "
     - echo "Push successful!"
