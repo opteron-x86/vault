@@ -8,6 +8,6 @@ test_runner:
   script:
     - echo "Checking GitLab Runner configuration..."
     - echo "Runner is working on $(hostname)"
-    - echo "Current directory: $(pwd)"
+    - echo "Current directory $(pwd)"
     - echo "Listing files:"
     - dir
