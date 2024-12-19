@@ -1,12 +1,81 @@
+# Define global variables
+variables:
+  RULES_DIR: "cyber-threat-emulation/Detection_Rules/Azure_Analytics" # Directory for rules
+  RULES_FILE: "rules.yaml" # Name of the output file
+
 stages:
   - test
+  - export
+  - push
 
-test_runner:
+# Stage 1: Test Docker Environment
+docker_test_job:
   stage: test
   tags:
-    - azure
-    - powershell
+    - cte
   script:
-    - echo "Testing script configuration"
+    - echo "Running in Docker!"
+    - docker --version
+    - docker info
 
+# Stage 2: Export Azure Sentinel Rules with PowerShell
+export_rules:
+  stage: export
+  tags:
+    - azure
+  script:
+    - echo "Starting Azure Sentinel rules export using PowerShell..."
+    - echo "Installing necessary PowerShell modules..."
+    - |
+      pwsh -Command "
+      Install-Module -Name powershell-yaml -Force -Scope CurrentUser;
+      Import-Module -Name powershell-yaml -Force;
+      "
+    - echo "Running PowerShell script to export Sentinel rules..."
+    - |
+      pwsh -Command "
+      $resourceGroupName = '$RESOURCE_GROUP';
+      $workspaceName = '$WORKSPACE_NAME';
+      $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
+      $PowerShellYAMLModule = Get-InstalledModule -Name powershell-yaml -ErrorAction SilentlyContinue;
+      if (!$PowerShellYAMLModule) { Install-Module -Name powershell-yaml -Force; Import-Module powershell-yaml; }
+      $context = Get-AzContext;
+      if (!$context) {
+        $secrets = ConvertFrom-JSON '$env:credentials';
+        $servicePrincipalId = $secrets.clientId;
+        $servicePrincipalKey = $secrets.clientSecret;
+        $tenantId = $secrets.tenantId;
+        $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
+        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential (New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass)) -Environment 'AzureCloud';
+        Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
+      }
+      Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
+      "
+    - echo "Rules successfully exported using PowerShell."
+    - ls -al "$RULES_DIR" # List files for confirmation
+  artifacts:
+    paths:
+      - "$RULES_DIR" # Store the exported files as artifacts
+    expire_in: 1 hour # Optional: Set artifact expiry time
 
+# Stage 3: Commit and Push to GitLab
+push_to_gitlab:
+  stage: push
+  tags:
+    - azure
+    - push
+  script:
+    - echo "Setting up Git configuration..."
+    - git config --global user.email "ci-bot@example.com"
+    - git config --global user.name "GitLab CI Bot"
+    - echo "Cloning the repository using SSH..."
+    - mkdir repo && cd repo
+    - git clone git@gitlab.com:$CI_PROJECT_PATH.git .
+    - echo "Copying exported rules to target directory..."
+    - mkdir -p "$RULES_DIR"
+    - cp "../$RULES_DIR/*" "$RULES_DIR/"
+    - echo "Committing and pushing changes..."
+    - |
+      git commit -m "Update Azure Sentinel analytics rules: $(date +'%Y-%m-%d %H:%M:%S')"
+    - git push origin main || { echo "Git push failed. Check permissions."; exit 1; }
+    - echo "Push successful!"
