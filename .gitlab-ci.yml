@@ -2,6 +2,10 @@ stages:
   - test
   - export
 
+variables:
+  RULES_DIR: sentinel_rules
+  OUTPUT_PATH: './$RULES_DIR'
+
 # Stage 1: Test the Environment
 test_environment:
   stage: test
@@ -9,6 +13,7 @@ test_environment:
     - azure
     - powershell
     - cte
+  timeout: 15m
   script:
     - echo "Testing PowerShell and CI environment..."
     - |
@@ -25,32 +30,39 @@ test_environment:
       Write-Host 'Az module is installed.';
 
       # Debug environment variables
-      Write-Host 'Checking environment variables:';
-      Write-Host ('RESOURCE_GROUP: ' + '$RESOURCE_GROUP');
-      Write-Host ('WORKSPACE_NAME: ' + '$WORKSPACE_NAME');
-      Write-Host ('AZURE_SUBSCRIPTION_ID: ' + '$AZURE_SUBSCRIPTION_ID');
-      Write-Host ('AZURE_CLIENT_ID: ' + '$AZURE_CLIENT_ID');
-      Write-Host ('AZURE_TENANT_ID: ' + '$AZURE_TENANT_ID');
+      $requiredEnvVars = @('RESOURCE_GROUP', 'WORKSPACE_NAME', 'AZURE_SUBSCRIPTION_ID', 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID')
+      foreach ($var in $requiredEnvVars) {
+          if (-not (Get-Variable -Name $var -Scope Global)) {
+              Write-Host \"[Error] $var is missing or empty.\"; Exit 1;
+          }
+      }
+      Write-Host 'All required environment variables are present.';
       "
+      
+# Stage 2: Export Sentinel Rules
 export_rules:
   stage: export
   tags:
     - azure
+  timeout: 30m
   script:
     - echo "Running PowerShell script to export Sentinel rules..."
     - |
       pwsh -Command "
       # Validate required environment variables
-      if (-not '$AZURE_CLIENT_ID') { Write-Error 'AZURE_CLIENT_ID is missing or empty.'; Exit 1; }
-      if (-not '$AZURE_CLIENT_SECRET') { Write-Error 'AZURE_CLIENT_SECRET is missing or empty.'; Exit 1; }
-      if (-not '$AZURE_TENANT_ID') { Write-Error 'AZURE_TENANT_ID is missing or empty.'; Exit 1; }
-      if (-not '$AZURE_SUBSCRIPTION_ID') { Write-Error 'AZURE_SUBSCRIPTION_ID is missing or empty.'; Exit 1; }
+      $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
+      foreach ($var in $requiredEnvVars) {
+          if (-not (Get-Variable -Name $var -Scope Global)) {
+              Write-Error \"$var is missing or empty.\";
+              Exit 1;
+          }
+      }
 
       # Assign variables from environment
       $servicePrincipalId = '$AZURE_CLIENT_ID';
       $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
       $tenantId = '$AZURE_TENANT_ID';
-      $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
+      $subscriptionId = '$AZURE_SUBSCRIPTION_ID';
 
       # Convert client secret to secure string
       try {
@@ -75,7 +87,7 @@ export_rules:
       # Connect to Azure
       try {
           Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
-          Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
+          Set-AzContext -SubscriptionId $subscriptionId -TenantId $tenantId;
       } catch {
           Write-Error 'Failed to authenticate with Azure. Verify credentials and tenant details.';
           Exit 1;
@@ -83,7 +95,7 @@ export_rules:
 
       # Export Azure Sentinel rules
       Write-Host 'Starting Sentinel rules export...';
-      Get-SentinelAnalyticsRuleYAML -workspaceName '$WORKSPACE_NAME' -resourceGroupName '$RESOURCE_GROUP' -subscriptionId '$AZURE_SUBSCRIPTION_ID' -outputPath './$RULES_DIR';
+      Get-SentinelAnalyticsRuleYAML -workspaceName '$WORKSPACE_NAME' -resourceGroupName '$RESOURCE_GROUP' -subscriptionId '$subscriptionId' -outputPath '$OUTPUT_PATH';
 
       # Success
       Write-Host 'Azure Sentinel rules export completed successfully.';
