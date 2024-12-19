@@ -26,76 +26,66 @@ export_rules:
     - azure
     - cte
   script:
-    - echo "Starting Azure Sentinel rules export using PowerShell..."
-    - echo "Installing necessary PowerShell modules..."
-    - |
-      pwsh -Command "
-      try {
-        # Attempt to install the module
-        Install-Module -Name powershell-yaml -Force -Scope CurrentUser -ErrorAction Stop;
-        Import-Module -Name powershell-yaml -Force;
-      } catch {
-        Write-Error 'Failed to install or import the powershell-yaml module.';
-        Exit 1;
-      }
-      "
-    - echo "Running PowerShell script to export Sentinel rules..."
-    - |
-      pwsh -Command "
-      # Define parameters
-      $resourceGroupName = '$RESOURCE_GROUP';
-      $workspaceName = '$WORKSPACE_NAME';
-      $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
+  - echo "Running PowerShell script to export Sentinel rules..."
+  - |
+    pwsh -Command "
+    # Define parameters
+    $resourceGroupName = '$RESOURCE_GROUP';
+    $workspaceName = '$WORKSPACE_NAME';
+    $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
 
-      # Authenticate with Azure
-      if (!(Get-AzContext)) {
-        $secrets = ConvertFrom-JSON '$env:credentials';
+    # Authenticate with Azure if no context is available
+    if (!(Get-AzContext)) {
+        # Parse credentials from environment variable
+        try {
+            $secrets = ConvertFrom-JSON '$env:credentials';
+        } catch {
+            Write-Error 'Failed to parse Azure credentials. Ensure the credentials variable is set and properly formatted.';
+            Exit 1;
+        }
+
+        # Debugging: Output the credentials for validation (mask sensitive info)
+        Write-Host 'Debug: Checking credentials...';
+        Write-Host ('ClientId: ' + $secrets.clientId);
+        Write-Host ('TenantId: ' + $secrets.tenantId);
+
+        # Validate that all required fields are present
+        if (-not $secrets.clientId -or -not $secrets.clientSecret -or -not $secrets.tenantId) {
+            Write-Error 'Azure Service Principal credentials are incomplete. Ensure clientId, clientSecret, and tenantId are set.';
+            Exit 1;
+        }
+
+        # Assign variables for credentials
         $servicePrincipalId = $secrets.clientId;
         $servicePrincipalKey = $secrets.clientSecret;
         $tenantId = $secrets.tenantId;
-        $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
-        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential (New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass)) -Environment 'AzureCloud';
-        Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
-      }
 
-      # Export Azure Sentinel rules
-      Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
-      "
-    - echo "Rules successfully exported using PowerShell."
-    - pwsh -Command "Get-ChildItem -Path './$RULES_DIR'"
-  artifacts:
-    paths:
-      - "$RULES_DIR"
-    expire_in: 1 hour
+        # Convert clientSecret to a secure string
+        try {
+            $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
+        } catch {
+            Write-Error 'Failed to convert clientSecret to a secure string.';
+            Exit 1;
+        }
 
-# Stage 3: Commit and Push to GitLab
-push_to_gitlab:
-  stage: push
-  tags:
-    - azure
-    - cte
-  script:
-    - echo "Setting up Git configuration..."
-    - pwsh -Command "
-      git config --global user.email 'ci-bot@example.com';
-      git config --global user.name 'GitLab CI Bot';
-      "
-    - echo "Cloning the repository using SSH..."
-    - pwsh -Command "
-      mkdir repo;
-      Set-Location repo;
-      git clone git@gitlab.com:$CI_PROJECT_PATH.git .;
-      "
-    - echo "Copying exported rules to target directory..."
-    - pwsh -Command "
-      mkdir -p '$RULES_DIR';
-      Copy-Item -Path '../$RULES_DIR/*' -Destination '$RULES_DIR' -Recurse;
-      "
-    - echo "Committing and pushing changes..."
-    - |
-      pwsh -Command "
-      git add '$RULES_DIR/*';
-      git commit -m 'Update Azure Sentinel analytics rules: $(Get-Date -Format \"yyyy-MM-dd HH:mm:ss\")';
-      git push origin main;
-      "
-    - echo "Push successful!"
+        # Create the credential object
+        try {
+            $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
+        } catch {
+            Write-Error 'Failed to create PSCredential object. Ensure clientId and clientSecret are valid.';
+            Exit 1;
+        }
+
+        # Connect to Azure
+        try {
+            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
+            Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
+        } catch {
+            Write-Error 'Failed to authenticate with Azure. Check credentials and subscription details.';
+            Exit 1;
+        }
+    }
+
+    # Export Azure Sentinel rules
+    Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
+    "
