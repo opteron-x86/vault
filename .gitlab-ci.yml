@@ -18,8 +18,6 @@ powershell_test_job:
     - echo "Testing PowerShell environment..."
     - pwsh -Command "Get-Host" # Verify PowerShell availability
     - pwsh -Command "Get-Module -ListAvailable" # List available PowerShell modules
-    - "C:\\Program Files\\PowerShell\\7\\pwsh.exe --version"
-
 
 # Stage 2: Export Azure Sentinel Rules with PowerShell
 export_rules:
