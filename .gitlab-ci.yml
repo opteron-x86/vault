@@ -29,63 +29,53 @@ export_rules:
   - echo "Running PowerShell script to export Sentinel rules..."
   - |
     pwsh -Command "
-    # Define parameters
+    # Define parameters from environment variables
     $resourceGroupName = '$RESOURCE_GROUP';
     $workspaceName = '$WORKSPACE_NAME';
     $subscriptionid = '$AZURE_SUBSCRIPTION_ID';
+    $servicePrincipalId = '$AZURE_CLIENT_ID';
+    $servicePrincipalKey = '$AZURE_CLIENT_SECRET';
+    $tenantId = '$AZURE_TENANT_ID';
 
-    # Authenticate with Azure if no context is available
-    if (!(Get-AzContext)) {
-        # Parse credentials from environment variable
-        try {
-            $secrets = ConvertFrom-JSON '$env:credentials';
-        } catch {
-            Write-Error 'Failed to parse Azure credentials. Ensure the credentials variable is set and properly formatted.';
-            Exit 1;
-        }
+    # Debugging: Validate environment variables
+    Write-Host 'Debug: Validating environment variables...';
+    Write-Host ('ClientId: ' + $servicePrincipalId);
+    Write-Host ('TenantId: ' + $tenantId);
+    Write-Host ('SubscriptionId: ' + $subscriptionid);
 
-        # Debugging: Output the credentials for validation (mask sensitive info)
-        Write-Host 'Debug: Checking credentials...';
-        Write-Host ('ClientId: ' + $secrets.clientId);
-        Write-Host ('TenantId: ' + $secrets.tenantId);
+    # Validate that required variables are set
+    if (-not $servicePrincipalId -or -not $servicePrincipalKey -or -not $tenantId -or -not $subscriptionid) {
+        Write-Error 'One or more Azure Service Principal variables are missing. Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are set.';
+        Exit 1;
+    }
 
-        # Validate that all required fields are present
-        if (-not $secrets.clientId -or -not $secrets.clientSecret -or -not $secrets.tenantId) {
-            Write-Error 'Azure Service Principal credentials are incomplete. Ensure clientId, clientSecret, and tenantId are set.';
-            Exit 1;
-        }
+    # Convert clientSecret to a secure string
+    try {
+        $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
+    } catch {
+        Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.';
+        Exit 1;
+    }
 
-        # Assign variables for credentials
-        $servicePrincipalId = $secrets.clientId;
-        $servicePrincipalKey = $secrets.clientSecret;
-        $tenantId = $secrets.tenantId;
+    # Create the PSCredential object
+    try {
+        $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
+    } catch {
+        Write-Error 'Failed to create PSCredential object. Check AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.';
+        Exit 1;
+    }
 
-        # Convert clientSecret to a secure string
-        try {
-            $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force;
-        } catch {
-            Write-Error 'Failed to convert clientSecret to a secure string.';
-            Exit 1;
-        }
-
-        # Create the credential object
-        try {
-            $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass);
-        } catch {
-            Write-Error 'Failed to create PSCredential object. Ensure clientId and clientSecret are valid.';
-            Exit 1;
-        }
-
-        # Connect to Azure
-        try {
-            Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
-            Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
-        } catch {
-            Write-Error 'Failed to authenticate with Azure. Check credentials and subscription details.';
-            Exit 1;
-        }
+    # Authenticate with Azure
+    try {
+        Connect-AzAccount -ServicePrincipal -Tenant $tenantId -Credential $credential -Environment 'AzureCloud';
+        Set-AzContext -SubscriptionId $subscriptionid -TenantId $tenantId;
+    } catch {
+        Write-Error 'Failed to authenticate with Azure. Verify credentials and subscription details.';
+        Exit 1;
     }
 
     # Export Azure Sentinel rules
     Get-SentinelAnalyticsRuleYAML -workspaceName $workspaceName -resourceGroupName $resourceGroupName -subscriptionId $subscriptionid -outputPath './$RULES_DIR';
+
+    Write-Host 'Azure Sentinel rules export completed successfully.';
     "
