@@ -5,6 +5,7 @@ test_runner:
   stage: test
   tags:
     - azure
+    - powershell
   script:
     - echo "Checking GitLab Runner configuration..."
     - echo "Runner is working on $(hostname)"
