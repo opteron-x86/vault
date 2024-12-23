@@ -1,42 +1,3 @@
-stages:
-  - build
-  - test
-
-variables:
-  AZURE_ENVIRONMENT: AzureCloud # Optional environment variable for Azure
-
-build_environment:
-  stage: build
-  tags:
-    - azure
-    - powershell
-  script:
-    - echo "Setting up the test environment..."
-    - |
-      pwsh -Command "
-      # Verify PowerShell version
-      Write-Host 'PowerShell Version:';
-      $PSVersionTable.PSVersion;
-
-      # Verify Azure CLI installation
-      if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-          Write-Error 'Azure CLI (az) is not installed.';
-          Exit 1;
-      }
-      Write-Host 'Azure CLI is installed.';
-
-      # Validate environment variables
-      $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
-      foreach ($var in $requiredEnvVars) {
-          if (-not $env:$var) {
-              Write-Error \"$var is missing or empty.\"
-              Exit 1
-          }
-          Write-Host \"$var: $env:$var\"
-      }
-      Write-Host 'Environment variables validated.';
-      "
-
 test_environment:
   stage: test
   tags:
@@ -46,15 +7,15 @@ test_environment:
     - echo "Testing Azure CLI authentication..."
     - |
       pwsh -Command "
-      # Set Azure CLI environment variables
+      # Assign environment variables to local variables
       $clientId = $env:AZURE_CLIENT_ID
       $clientSecret = $env:AZURE_CLIENT_SECRET
       $tenantId = $env:AZURE_TENANT_ID
       $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
 
-      # Check for missing variables
+      # Validate that all required variables are set
       if (-not $clientId -or -not $clientSecret -or -not $tenantId -or -not $subscriptionId) {
-          Write-Error 'One or more Azure variables are missing.'
+          Write-Error 'One or more required environment variables are missing or empty: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.'
           Exit 1
       }
 
