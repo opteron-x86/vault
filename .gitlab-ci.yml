@@ -1,3 +1,42 @@
+stages:
+  - build
+  - test
+
+variables:
+  AZURE_ENVIRONMENT: AzureCloud # Optional environment variable for Azure
+
+build_environment:
+  stage: build
+  tags:
+    - azure
+    - powershell
+  script:
+    - echo "Setting up the test environment..."
+    - |
+      pwsh -Command "
+      # Verify PowerShell version
+      Write-Host 'PowerShell Version:';
+      $PSVersionTable.PSVersion;
+
+      # Verify Azure CLI installation
+      if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+          Write-Error 'Azure CLI (az) is not installed.';
+          Exit 1;
+      }
+      Write-Host 'Azure CLI is installed.';
+
+      # Validate environment variables
+      $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
+      foreach ($var in $requiredEnvVars) {
+          if (-not $env:$var) {
+              Write-Error \"$var is missing or empty.\"
+              Exit 1
+          }
+          Write-Host \"$var: $env:$var\"
+      }
+      Write-Host 'Environment variables validated.';
+      "
+
 test_environment:
   stage: test
   tags:
@@ -39,3 +78,4 @@ test_environment:
 
       Write-Host 'Azure CLI connected and environment ready.';
       "
+
