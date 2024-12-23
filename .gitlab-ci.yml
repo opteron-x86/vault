@@ -46,15 +46,15 @@ test_environment:
     - echo "Testing Azure CLI authentication..."
     - |
       pwsh -Command "
-      # Assign environment variables to local variables
+      # Set Azure CLI environment variables
       $clientId = $env:AZURE_CLIENT_ID
       $clientSecret = $env:AZURE_CLIENT_SECRET
       $tenantId = $env:AZURE_TENANT_ID
       $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
 
-      # Validate that all required variables are set
+      # Check for missing variables
       if (-not $clientId -or -not $clientSecret -or -not $tenantId -or -not $subscriptionId) {
-          Write-Error 'One or more required environment variables are missing or empty: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.'
+          Write-Error 'One or more Azure variables are missing.'
           Exit 1
       }
 
@@ -78,4 +78,3 @@ test_environment:
 
       Write-Host 'Azure CLI connected and environment ready.';
       "
-
