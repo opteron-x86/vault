@@ -2,9 +2,8 @@ stages:
   - build
   - test
 
-# Variables are referenced from GitLab CI/CD settings (defined in the UI)
 variables:
-  AZURE_ENVIRONMENT: AzureCloud # Default Azure environment
+  AZURE_ENVIRONMENT: AzureCloud # Optional environment variable for Azure
 
 build_environment:
   stage: build
@@ -19,22 +18,21 @@ build_environment:
       Write-Host 'PowerShell Version:';
       $PSVersionTable.PSVersion;
 
-      # Verify Az CLI installation
+      # Verify Azure CLI installation
       if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
           Write-Error 'Azure CLI (az) is not installed.';
           Exit 1;
       }
       Write-Host 'Azure CLI is installed.';
 
-      # Verify GitLab environment variables
+      # Validate environment variables
       $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
       foreach ($var in $requiredEnvVars) {
-          $value = (Get-Item -Path "env:$var").Value
-          if (-not $value) {
+          if (-not $env:$var) {
               Write-Error \"$var is missing or empty.\"
               Exit 1
           }
-          Write-Host \"$var: $value\"
+          Write-Host \"$var: $env:$var\"
       }
       Write-Host 'Environment variables validated.';
       "
@@ -45,31 +43,38 @@ test_environment:
     - azure
     - powershell
   script:
-    - echo "Testing Azure CLI authentication and environment..."
+    - echo "Testing Azure CLI authentication..."
     - |
       pwsh -Command "
       # Set Azure CLI environment variables
-      $env:AZURE_CLIENT_ID = (Get-Item -Path 'env:AZURE_CLIENT_ID').Value;
-      $env:AZURE_CLIENT_SECRET = (Get-Item -Path 'env:AZURE_CLIENT_SECRET').Value;
-      $env:AZURE_TENANT_ID = (Get-Item -Path 'env:AZURE_TENANT_ID').Value;
-      $env:AZURE_SUBSCRIPTION_ID = (Get-Item -Path 'env:AZURE_SUBSCRIPTION_ID').Value;
+      $clientId = $env:AZURE_CLIENT_ID
+      $clientSecret = $env:AZURE_CLIENT_SECRET
+      $tenantId = $env:AZURE_TENANT_ID
+      $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
 
-      # Login to Azure CLI
+      # Check for missing variables
+      if (-not $clientId -or -not $clientSecret -or -not $tenantId -or -not $subscriptionId) {
+          Write-Error 'One or more Azure variables are missing.'
+          Exit 1
+      }
+
+      # Log in to Azure CLI
       try {
-          az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET --tenant $env:AZURE_TENANT_ID
+          az login --service-principal -u $clientId -p $clientSecret --tenant $tenantId
+          Write-Host 'Azure CLI login successful.'
       } catch {
-          Write-Error 'Azure CLI login failed. Verify credentials and tenant details.';
-          Exit 1;
+          Write-Error 'Azure CLI login failed. Verify credentials.'
+          Exit 1
       }
 
       # Set Azure subscription
       try {
-          az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+          az account set --subscription $subscriptionId
+          Write-Host 'Azure subscription set successfully.'
       } catch {
-          Write-Error 'Failed to set Azure subscription.';
-          Exit 1;
+          Write-Error 'Failed to set Azure subscription.'
+          Exit 1
       }
 
-      Write-Host 'Azure CLI connected and subscription set.';
+      Write-Host 'Azure CLI connected and environment ready.';
       "
-
