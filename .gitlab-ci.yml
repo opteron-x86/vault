@@ -1,56 +1,32 @@
 stages:
+  - build
   - test
-  - export
 
+# Variables are referenced from GitLab CI/CD settings (defined in the UI)
 variables:
-  RULES_DIR: sentinel_rules
-  OUTPUT_PATH: './$RULES_DIR'
+  AZURE_ENVIRONMENT: AzureCloud # Default Azure environment
 
-test_environment:
-  stage: test
+build_environment:
+  stage: build
   tags:
     - azure
     - powershell
-    - cte
-  timeout: 15m
   script:
-    - echo "Testing PowerShell and CI environment..."
+    - echo "Setting up the test environment..."
     - |
       pwsh -Command "
       # Verify PowerShell version
       Write-Host 'PowerShell Version:';
       $PSVersionTable.PSVersion;
 
-      # Verify Az module installation
-      if (-not (Get-Module -ListAvailable -Name Az)) {
-          Write-Error 'Az module is not installed.';
+      # Verify Az CLI installation
+      if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+          Write-Error 'Azure CLI (az) is not installed.';
           Exit 1;
       }
-      Write-Host 'Az module is installed.';
+      Write-Host 'Azure CLI is installed.';
 
-      # Debug environment variables
-      $requiredEnvVars = @('RESOURCE_GROUP', 'WORKSPACE_NAME', 'AZURE_SUBSCRIPTION_ID', 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID')
-      foreach ($var in $requiredEnvVars) {
-          $value = (Get-Item -Path "env:$var").Value
-          if (-not $value) {
-              Write-Error \"$var is missing or empty.\"
-              Exit 1
-          }
-          Write-Host \"$var: $value\"
-      }
-      Write-Host 'All required environment variables are present.';
-      "
-
-export_rules:
-  stage: export
-  tags:
-    - azure
-  timeout: 30m
-  script:
-    - echo "Running PowerShell script to export Sentinel rules..."
-    - |
-      pwsh -Command "
-      # Validate required environment variables
+      # Verify GitLab environment variables
       $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
       foreach ($var in $requiredEnvVars) {
           $value = (Get-Item -Path "env:$var").Value
@@ -60,33 +36,40 @@ export_rules:
           }
           Write-Host \"$var: $value\"
       }
+      Write-Host 'Environment variables validated.';
+      "
 
-      # Assign variables from environment
-      $servicePrincipalId = (Get-Item -Path "env:AZURE_CLIENT_ID").Value
-      $servicePrincipalKey = (Get-Item -Path "env:AZURE_CLIENT_SECRET").Value
-      $tenantId = (Get-Item -Path "env:AZURE_TENANT_ID").Value
-      $subscriptionId = (Get-Item -Path "env:AZURE_SUBSCRIPTION_ID").Value
+test_environment:
+  stage: test
+  tags:
+    - azure
+    - powershell
+  script:
+    - echo "Testing Azure CLI authentication and environment..."
+    - |
+      pwsh -Command "
+      # Set Azure CLI environment variables
+      $env:AZURE_CLIENT_ID = (Get-Item -Path 'env:AZURE_CLIENT_ID').Value;
+      $env:AZURE_CLIENT_SECRET = (Get-Item -Path 'env:AZURE_CLIENT_SECRET').Value;
+      $env:AZURE_TENANT_ID = (Get-Item -Path 'env:AZURE_TENANT_ID').Value;
+      $env:AZURE_SUBSCRIPTION_ID = (Get-Item -Path 'env:AZURE_SUBSCRIPTION_ID').Value;
 
-      # Ensure AZURE_CLIENT_SECRET is not empty
-      if (-not $servicePrincipalKey) {
-          Write-Error 'AZURE_CLIENT_SECRET is empty.'
-          Exit 1
+      # Login to Azure CLI
+      try {
+          az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET --tenant $env:AZURE_TENANT_ID
+      } catch {
+          Write-Error 'Azure CLI login failed. Verify credentials and tenant details.';
+          Exit 1;
       }
 
-      # Convert client secret to secure string
+      # Set Azure subscription
       try {
-          $credpass = ConvertTo-SecureString $servicePrincipalKey -AsPlainText -Force
+          az account set --subscription $env:AZURE_SUBSCRIPTION_ID
       } catch {
-          Write-Error 'Failed to convert AZURE_CLIENT_SECRET to a secure string.'
-          Exit 1
+          Write-Error 'Failed to set Azure subscription.';
+          Exit 1;
       }
 
-      # Debug variable values
-      Write-Host ('Service Principal ID: ' + $servicePrincipalId)
-      Write-Host ('Tenant ID: ' + $tenantId)
+      Write-Host 'Azure CLI connected and subscription set.';
+      "
 
-      # Create PSCredential object
-      try {
-          $credential = New-Object System.Management.Automation.PSCredential($servicePrincipalId, $credpass)
-      } catch {
-          Write-Error 
