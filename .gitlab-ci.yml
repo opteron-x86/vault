@@ -1,80 +1,11 @@
 stages:
-  - build
-  - test
+  - login
 
-variables:
-  AZURE_ENVIRONMENT: AzureCloud # Optional environment variable for Azure
-
-build_environment:
-  stage: build
+azure-login:
+  stage: login
   tags:
-    - azure
+    - azure 
     - powershell
+    - cte
   script:
-    - echo "Setting up the test environment..."
-    - |
-      pwsh -Command "
-      # Verify PowerShell version
-      Write-Host 'PowerShell Version:';
-      $PSVersionTable.PSVersion;
-
-      # Verify Azure CLI installation
-      if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-          Write-Error 'Azure CLI (az) is not installed.';
-          Exit 1;
-      }
-      Write-Host 'Azure CLI is installed.';
-
-      # Validate environment variables
-      $requiredEnvVars = @('AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')
-      foreach ($var in $requiredEnvVars) {
-          if (-not $env:$var) {
-              Write-Error \"$var is missing or empty.\"
-              Exit 1
-          }
-          Write-Host \"$var: $env:$var\"
-      }
-      Write-Host 'Environment variables validated.';
-      "
-
-test_environment:
-  stage: test
-  tags:
-    - azure
-    - powershell
-  script:
-    - echo "Testing Azure CLI authentication..."
-    - |
-      pwsh -Command "
-      # Set Azure CLI environment variables
-      $clientId = $env:AZURE_CLIENT_ID
-      $clientSecret = $env:AZURE_CLIENT_SECRET
-      $tenantId = $env:AZURE_TENANT_ID
-      $subscriptionId = $env:AZURE_SUBSCRIPTION_ID
-
-      # Check for missing variables
-      if (-not $clientId -or -not $clientSecret -or -not $tenantId -or -not $subscriptionId) {
-          Write-Error 'One or more Azure variables are missing.'
-          Exit 1
-      }
-
-      # Log in to Azure CLI
-      try {
-          az login --service-principal -u $clientId -p $clientSecret --tenant $tenantId
-          Write-Host 'Azure CLI login successful.'
-      } catch {
-          Write-Error 'Azure CLI login failed. Verify credentials.'
-          Exit 1
-      }
-
-      # Set Azure subscription
-      try {
-          az account set --subscription $subscriptionId
-          Write-Host 'Azure subscription set successfully.'
-      } catch {
-          Write-Error 'Failed to set Azure subscription.'
-          Exit 1
-      }
-
-      Write-Host 'Azure CLI connected and environment ready.';
-      "
+    - powershell -NoProfile -Command "./scripts/azure-login.ps1"
