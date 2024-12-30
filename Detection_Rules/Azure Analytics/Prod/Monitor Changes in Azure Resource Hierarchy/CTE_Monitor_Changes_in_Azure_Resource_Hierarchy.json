@@ -14,7 +14,7 @@
             "kind": "Scheduled",
             "apiVersion": "2023-12-01-preview",
             "properties": {
-                "displayName": "CTE_Monitor Changes to Cloud Resource Hierarchy",
+                "displayName": "COLSNA_CTE_Monitor Changes to Cloud Resource Hierarchy",
                 "description": "Detects changes to resource groups, subscriptions, or management groups in Azure that may indicate malicious activity.\nPlatform:IAAS\nMITRE:TA0005;T1666",
                 "severity": "High",
                 "enabled": true,
