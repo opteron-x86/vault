@@ -1,27 +1,3 @@
-# Retrieve environment variables
-$clientId = $env:AZURE_CLIENT_ID
-$clientSecret = $env:AZURE_CLIENT_SECRET
-$tenantId = $env:AZURE_TENANT_ID
-$subscriptionId = $env:AZURE_SUBSCRIPTION_ID
-
-# Debugging: Output the environment variables for verification
-Write-Host "DEBUG: Environment Variables Verification:"
-Write-Host "AZURE_CLIENT_ID: $($clientId -ne $null)"
-Write-Host "AZURE_CLIENT_SECRET: $($clientSecret -ne $null)"
-Write-Host "AZURE_TENANT_ID: $($tenantId -ne $null)"
-Write-Host "AZURE_SUBSCRIPTION_ID: $($subscriptionId -ne $null)"
-
-# Validate required variables
-if (-not $clientId) { Write-Error "AZURE_CLIENT_ID is missing." }
-if (-not $clientSecret) { Write-Error "AZURE_CLIENT_SECRET is missing." }
-if (-not $tenantId) { Write-Error "AZURE_TENANT_ID is missing." }
-if (-not $subscriptionId) { Write-Error "AZURE_SUBSCRIPTION_ID is missing." }
-
-if (-not $clientId -or -not $clientSecret -or -not $tenantId -or -not $subscriptionId) {
-    Write-Error "One or more required environment variables are missing. Ensure all required variables are set in GitLab CI/CD."
-    exit 1
-}
-
 # Log in to Azure using the service principal
 Write-Host "Logging into Azure as Service Principal..."
 $loginResult = az login --service-principal --username $clientId --password $clientSecret --tenant $tenantId
@@ -31,10 +7,9 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "Azure login successful."
+Write-Host "Azure login successful. Checking subscriptions..."
 
-# Check accessible subscriptions
-Write-Host "DEBUG: Listing accessible subscriptions..."
+# List accessible subscriptions
 $subscriptions = az account list --query "[].{Name:name, ID:id}" -o table
 
 if (-not $subscriptions) {
