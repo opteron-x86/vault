@@ -28,5 +28,5 @@ prod backup:
   tags:
     - azure 
     - powershell
-    - windows
+    - cte
   when: manual
