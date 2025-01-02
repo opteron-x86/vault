@@ -2,19 +2,34 @@ prod backup:
   stage: deploy
   variables:
     credentials: $PRODcredentials
+    GIT_USERNAME: "ci_user"  # Replace with your GitLab username
+    GIT_PASSWORD: $GITLAB_TOKEN  # Use a GitLab personal access token
   before_script:
-    # Ensure Git is installed
-    - powershell -Command "& { if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Host 'Git not found. Installing Git...'; Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.41.0.windows.1/Git-2.41.0-64-bit.exe' -OutFile '.\git-installer.exe'; Start-Process -FilePath '.\git-installer.exe' -ArgumentList '/SILENT' -Wait; Remove-Item '.\git-installer.exe'; } else { Write-Host 'Git is already installed.'; } }"
-    # Ensure PowerShell scripts are ready to execute
-    - powershell -Command "Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass"
-    - pwsh './scripts/Backup.ps1'
+    # Check if Git is installed
+    - powershell -Command "& {
+        if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+            Write-Host 'Git is not installed. Exiting.';
+            Exit 1;
+        }
+    }"
+    # Configure Git to use HTTPS with credentials
+    - powershell -Command "& {
+        git config --global user.email \"ci@example.com\";
+        git config --global user.name \"CI\";
+        git remote remove origin || Write-Host 'No existing origin to remove.';
+        git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
+    }"
   script:
-    # Backup Azure Analytics Rules
-    - pwsh './scripts/BackupAnalyticRules.ps1' -resourceGroupName $PRODResourceGroupName -subscriptionID $PRODazureSubscriptionID
-    # Commit and push the backup
-    - powershell -Command "& { git add './Detection_Rules/Azure_Analytics/Backup'; git commit -m \"CI BACKUP - $CI_JOB_STARTED_AT\"; git push ssh_origin HEAD:$CI_COMMIT_REF_NAME; }"
+    # Run the Backup scripts
+    - pwsh './scripts/Backup.ps1' -resourceGroupName "$PRODResourceGroupName" -subscriptionID "$PRODazureSubscriptionID"
+    # Add and push the changes
+    - powershell -Command "& {
+        git add './Detection_Rules/Azure_Analytics/Backup';
+        git commit -m \"CI BACKUP - $CI_JOB_STARTED_AT\";
+        git push origin HEAD:$CI_COMMIT_REF_NAME;
+    }"
   tags:
     - azure 
     - powershell
-    - cte
+    - windows
   when: manual

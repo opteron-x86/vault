@@ -4,7 +4,8 @@ Add-PoshGitToProfile -AllHosts
 git config user.email "ci@example.com"
 git config user.name "CI"
 git remote remove ssh_origin || true  # Local repo state may be cached
-git remote add ssh_origin "[INSERT URL HERE]"
+git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git
+
 
 
 param (
