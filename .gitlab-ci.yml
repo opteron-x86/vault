@@ -1,12 +1,21 @@
-# testing gitlab runner 
-stages:
-  - login
-
-azure-login:
-  stage: login
+prod backup:
+  stage: deploy
+  variables:
+    credentials: $PRODcredentials
+  image:
+    name: $AzImage
+  before_script:
+    - apt-get update
+    - apt-get -y install git
+    - pwsh './scripts/Backup.ps1'
+  script:
+    - pwsh './scripts/BackupAnalyticRules.ps1' -resourceGroupName $PRODResourceGroupName -subscriptionID $PRODazureSubscriptionID
+    - git add './Detection_Rules/Azure_Analytics/Backup'
+    - git commit -m "CI BACKUP - $CI_JOB_STARTED_AT"
+    - git push ssh_origin HEAD:$CI_COMMIT_REF_NAME
   tags:
     - azure 
     - powershell
     - cte
-  script:
-    - powershell -NoProfile -Command "./scripts/azure-login.ps1"
+  when: manual
+
