@@ -1,11 +1,10 @@
 Install-Module posh-git -Scope CurrentUser -Force
 Import-Module posh-git
 Add-PoshGitToProfile -AllHosts
-git config user.email "ci@example.com"
-git config user.name "CI"
+git config user.email "danielle.m.torrence.ctr@mail.mil"
+git config user.name "danielle.m.torrence"
 git remote remove ssh_origin || true  # Local repo state may be cached
 git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git
-
 
 
 param (
