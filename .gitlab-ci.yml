@@ -10,15 +10,13 @@ prod backup:
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
             Write-Host 'Git is not installed. Exiting.';
             Exit 1;
-        }
-    }"
+        }"
     # Configure Git to use HTTPS with credentials
     - powershell -Command "& {
         git config --global user.email \"ci@example.com\";
         git config --global user.name \"CI\";
         git remote remove origin || Write-Host 'No existing origin to remove.';
         git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
-    }"
   script:
     # Run the Backup scripts
     - pwsh './scripts/Backup.ps1' -resourceGroupName "$PRODResourceGroupName" -subscriptionID "$PRODazureSubscriptionID"
@@ -27,7 +25,6 @@ prod backup:
         git add './Detection_Rules/Azure_Analytics/Backup';
         git commit -m \"CI BACKUP - $CI_JOB_STARTED_AT\";
         git push origin HEAD:$CI_COMMIT_REF_NAME;
-    }"
   tags:
     - azure 
     - powershell
