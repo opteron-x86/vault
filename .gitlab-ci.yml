@@ -2,20 +2,19 @@ prod backup:
   stage: deploy
   variables:
     credentials: $PRODcredentials
-  image:
-    name: $AzImage
   before_script:
-    - apt-get update
-    - apt-get -y install git
+    # Ensure Git is installed
+    - powershell -Command "& { if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Host 'Git not found. Installing Git...'; Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.41.0.windows.1/Git-2.41.0-64-bit.exe' -OutFile '.\git-installer.exe'; Start-Process -FilePath '.\git-installer.exe' -ArgumentList '/SILENT' -Wait; Remove-Item '.\git-installer.exe'; } else { Write-Host 'Git is already installed.'; } }"
+    # Ensure PowerShell scripts are ready to execute
+    - powershell -Command "Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass"
     - pwsh './scripts/Backup.ps1'
   script:
+    # Backup Azure Analytics Rules
     - pwsh './scripts/BackupAnalyticRules.ps1' -resourceGroupName $PRODResourceGroupName -subscriptionID $PRODazureSubscriptionID
-    - git add './Detection_Rules/Azure_Analytics/Backup'
-    - git commit -m "CI BACKUP - $CI_JOB_STARTED_AT"
-    - git push ssh_origin HEAD:$CI_COMMIT_REF_NAME
+    # Commit and push the backup
+    - powershell -Command "& { git add './Detection_Rules/Azure_Analytics/Backup'; git commit -m \"CI BACKUP - $CI_JOB_STARTED_AT\"; git push ssh_origin HEAD:$CI_COMMIT_REF_NAME; }"
   tags:
     - azure 
     - powershell
-    - cte
+    - windows
   when: manual
-
