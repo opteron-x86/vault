@@ -1,7 +1,6 @@
 prod backup:
   stage: deploy
   variables:
-    credentials: $PRODcredentials
     GIT_USERNAME: "ci_user"  # Replace with your GitLab username
     GIT_PASSWORD: $GITLAB_TOKEN  # Use a GitLab personal access token
   before_script:
@@ -19,7 +18,7 @@ prod backup:
         git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
   script:
     # Run the Backup scripts
-    - pwsh './scripts/Backup.ps1' -resourceGroupName "$PRODResourceGroupName" -subscriptionID "$PRODazureSubscriptionID"
+    - pwsh './scripts/Backup.ps1' -resourceGroupName "$AZURE_RESOURCEGROUPNAME" -subscriptionID "$AZURE_SUBSCRIPTION_ID"
     # Add and push the changes
     - powershell -Command "& {
         git add './Detection_Rules/Azure_Analytics/Backup';
