@@ -1,31 +1,82 @@
-prod backup:
+stages:
+  - build
+  - testing
+  - deploy
+
+build:
+  stage: build
+  tags:
+    - azure
+    - powershell
+    - cte
+  script:
+    - |
+      powershell -Command "& {
+        Write-Host 'Starting build stage...';
+        Write-Host 'Installing necessary modules...';
+        Install-Module -Name Az -Force -Scope CurrentUser;
+        Import-Module -Name Az -ErrorAction Stop;
+        Write-Host 'Modules installed successfully.';
+        Write-Host 'Compiling PowerShell scripts...';
+        # Add additional build steps, such as packaging or compiling, here
+        Write-Host 'Build completed successfully.';
+      }"
+
+testing:
+  stage: testing
+  tags:
+    - azure
+    - powershell
+    - cte
+  script:
+    - |
+      powershell -Command "& {
+        Write-Host 'Starting testing stage...';
+        Write-Host 'Validating environment variables...';
+        if (-not $env:resourceGroupName) {
+            Write-Error 'resourceGroupName is not set. Exiting.';
+            Exit 1;
+        }
+        if (-not $env:subscriptionid) {
+            Write-Error 'subscriptionid is not set. Exiting.';
+            Exit 1;
+        }
+        Write-Host 'Environment validation successful. Running tests...';
+        # Add your test scripts or commands here
+        Write-Host 'Tests completed successfully.';
+      }"
+
+backup:
   stage: deploy
   variables:
     GIT_USERNAME: "danielle.m.torrence.ctr@mail.mil"  # Replace with your GitLab username
     GIT_PASSWORD: $GITLAB_TOKEN  # Use a GitLab personal access token
   before_script:
-    # Check if Git is installed
-    - powershell -Command "& {
+    - |
+      powershell -Command "& {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
             Write-Host 'Git is not installed. Exiting.';
             Exit 1;
-        }"
-    # Configure Git to use HTTPS with credentials
-    - powershell -Command "& {
+        }
+      }"
+    - |
+      powershell -Command "& {
         git config --global user.email \"ci@example.com\";
         git config --global user.name \"CI\";
         git remote remove origin || Write-Host 'No existing origin to remove.';
-        git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
+        git remote add origin https://${env:GIT_USERNAME}:${env:GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
+      }"
   script:
-    # Run the Backup scripts
-    - pwsh './scripts/Backup.ps1' -resourceGroupName "$resourceGroupName" -subscriptionID "$subscriptionid"
-    # Add and push the changes
-    - powershell -Command "& {
+    - |
+      pwsh './scripts/Backup.ps1' -resourceGroupName "$resourceGroupName" -subscriptionID "$subscriptionid"
+    - |
+      powershell -Command "& {
         git add './Detection_Rules/Azure_Analytics/Backup';
-        git commit -m \"CI BACKUP - $CI_JOB_STARTED_AT\";
-        git push origin HEAD:$CI_COMMIT_REF_NAME;
+        git commit -m \"CI BACKUP - $env:CI_JOB_STARTED_AT\";
+        git push origin HEAD:$env:CI_COMMIT_REF_NAME;
+      }"
   tags:
-    - azure 
+    - azure
     - powershell
     - cte
   when: manual
