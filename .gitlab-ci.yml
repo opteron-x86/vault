@@ -34,23 +34,24 @@ testing:
       powershell -Command "& {
         Write-Host 'Starting testing stage...';
 
-        # Check environment variables
-        if (-not $env:resourceGroupName) {
-            Write-Error 'Error: resourceGroupName is not set. Exiting.';
+        # Debugging: Output environment variable values
+        if ($env:resourceGroupName -eq $null -or $env:resourceGroupName -eq '') {
+            Write-Error 'Error: resourceGroupName is not set or empty. Exiting.';
             Exit 1;
+        } else {
+            Write-Host \"resourceGroupName: $env:resourceGroupName\";
         }
 
-        if (-not $env:subscriptionid) {
-            Write-Error 'Error: subscriptionid is not set. Exiting.';
+        if ($env:subscriptionid -eq $null -or $env:subscriptionid -eq '') {
+            Write-Error 'Error: subscriptionid is not set or empty. Exiting.';
             Exit 1;
+        } else {
+            Write-Host \"subscriptionid: $env:subscriptionid\";
         }
 
-        Write-Host 'Environment variables are set:';
-        Write-Host \"resourceGroupName: $env:resourceGroupName\";
-        Write-Host \"subscriptionid: $env:subscriptionid\";
+        Write-Host 'Environment validation successful. Running tests...';
 
-        Write-Host 'Running tests...';
-        # Placeholder for test commands
+        # Placeholder for test scripts
         Write-Host 'Tests completed successfully.';
       }"
 
