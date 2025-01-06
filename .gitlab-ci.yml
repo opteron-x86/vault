@@ -18,7 +18,7 @@ prod backup:
         git remote add origin https://${GIT_USERNAME}:${GIT_PASSWORD}@gitlab.com/your-namespace/your-repo.git;
   script:
     # Run the Backup scripts
-    - pwsh './scripts/Backup.ps1' -resourceGroupName "$AZURE_RESOURCEGROUPNAME" -subscriptionID "$AZURE_SUBSCRIPTION_ID"
+    - pwsh './scripts/Backup.ps1' -resourceGroupName "$resourceGroupName" -subscriptionID "$subscriptionid"
     # Add and push the changes
     - powershell -Command "& {
         git add './Detection_Rules/Azure_Analytics/Backup';
