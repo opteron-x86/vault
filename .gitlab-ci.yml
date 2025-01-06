@@ -1,7 +1,7 @@
 prod backup:
   stage: deploy
   variables:
-    GIT_USERNAME: "ci_user"  # Replace with your GitLab username
+    GIT_USERNAME: "danielle.m.torrence.ctr@mail.mil"  # Replace with your GitLab username
     GIT_PASSWORD: $GITLAB_TOKEN  # Use a GitLab personal access token
   before_script:
     # Check if Git is installed
