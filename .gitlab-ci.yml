@@ -34,20 +34,23 @@ testing:
       powershell -Command "& {
         Write-Host 'Starting testing stage...';
 
-        # Validate environment variables
+        # Check environment variables
         if (-not $env:resourceGroupName) {
-            Write-Error 'resourceGroupName is not set. Exiting.';
+            Write-Error 'Error: resourceGroupName is not set. Exiting.';
             Exit 1;
         }
 
         if (-not $env:subscriptionid) {
-            Write-Error 'subscriptionid is not set. Exiting.';
+            Write-Error 'Error: subscriptionid is not set. Exiting.';
             Exit 1;
         }
 
-        Write-Host 'Environment validation successful. Running tests...';
+        Write-Host 'Environment variables are set:';
+        Write-Host \"resourceGroupName: $env:resourceGroupName\";
+        Write-Host \"subscriptionid: $env:subscriptionid\";
 
-        # Placeholder for test scripts
+        Write-Host 'Running tests...';
+        # Placeholder for test commands
         Write-Host 'Tests completed successfully.';
       }"
 
