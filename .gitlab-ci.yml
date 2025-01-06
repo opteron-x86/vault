@@ -32,19 +32,24 @@ testing:
     - |
       powershell -Command "& {
         Write-Host 'Starting testing stage...';
-        Write-Host 'Validating environment variables...';
+
+        # Validate environment variables
         if (-not $env:resourceGroupName) {
             Write-Error 'resourceGroupName is not set. Exiting.';
             Exit 1;
         }
+
         if (-not $env:subscriptionid) {
             Write-Error 'subscriptionid is not set. Exiting.';
             Exit 1;
         }
+
         Write-Host 'Environment validation successful. Running tests...';
-        # Add your test scripts or commands here
+
+        # Placeholder for test scripts
         Write-Host 'Tests completed successfully.';
       }"
+
 
 backup:
   stage: deploy
