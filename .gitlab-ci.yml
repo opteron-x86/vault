@@ -15,7 +15,8 @@ build:
         Write-Host 'Starting build stage...';
         Write-Host 'Installing necessary modules...';
         Install-Module -Name Az -Force -Scope CurrentUser;
-        Import-Module -Name Az -ErrorAction Stop;
+         # Import-Module -Name Az -ErrorAction Stop;
+        Import-Module -Name Az -Verbose
         Write-Host 'Modules installed successfully.';
         Write-Host 'Compiling PowerShell scripts...';
         # Add additional build steps, such as packaging or compiling, here
