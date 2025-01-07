@@ -1,0 +1,95 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/f6ead888-2f01-48af-a810-3b3d629d2fc0",
+    "name":  "f6ead888-2f01-48af-a810-3b3d629d2fc0",
+    "etag":  "\"87002441-0000-2700-0000-66fdc0020000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "DeviceProcessEvents\n| where FileName =~ \"powershell.exe\" and ProcessCommandLine has_cs \"-exec bypass -w 1 -enc\"  \n| where ProcessCommandLine contains_cs \"UwB0AGEAcgB0AC0ASgBvAGIAIAAtAFMAYwByAGkAcAB0AEIAbABvAGMAawAgAHsAKABzAGEAcABzACAAKAAiAHAA\" \n| extend timestamp = TimeGenerated, AccountCustomEntity = AccountName, HostCustomEntity = DeviceName, ProcessCustomEntity = InitiatingProcessFileName\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "ProcessCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "DefenseEvasion",
+                                       "PrivilegeEscalation",
+                                       "CredentialAccess",
+                                       "Discovery",
+                                       "LateralMovement",
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+                                          "T1059",
+                                          "T1027",
+                                          "T1562",
+                                          "T1068",
+                                          "T1552",
+                                          "T1083",
+                                          "T1087",
+                                          "T1021",
+                                          "T1071",
+                                          "T1568",
+                                          "T1573"
+                                      ],
+                       "displayName":  "Identify Mango Sandstorm powershell commands",
+                       "enabled":  true,
+                       "description":  "The query below identifies powershell commands used by the threat actor Mango Sandstorm.\nReference:  https://www.microsoft.com/security/blog/2022/08/25/mercury-leveraging-log4j-2-vulnerabilities-in-unpatched-systems-to-target-israeli-organizations/\n\nExecution, Defense Evasion, Privilege Escalation, Credential Access, Discovery, Lateral Movement, Command and Control,\n\nT1059- Command and Scripting Interpreter: T1059.001, T1027: Obfuscated Files or Information, T1562- Impair Defenses: T1562.001, T1068: Exploitation for Privilege Escalation, T1552- Unsecured Credentials: T1552.004, T1083- File and Directory Discovery, T1087: Account Discovery, T1021- Remote Services: T1021.006, T1071- Application Layer Protocol: T1071.001, T1568: Dynamic Resolution, T1573- Encrypted Channel:T1573.002\n\nPLATFORM:IaaS,Azure AD,Microsoft 365\nMITRE:TA0002;T1059;T1059.009",
+                       "alertRuleTemplateName":  "ce74dc9a-cb3c-4081-8c2f-7d39f6b7bae1",
+                       "lastModifiedUtc":  "2024-10-02T21:49:53.8840619Z"
+                   }
+}

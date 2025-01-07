@@ -1,0 +1,96 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/bf3d5ad7-a9d5-4dea-8ab3-9119303706ad",
+    "name":  "bf3d5ad7-a9d5-4dea-8ab3-9119303706ad",
+    "etag":  "\"75036940-0000-2700-0000-6675d9c30000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "SecurityAlert\n| extend Extprop = parse_json(ExtendedProperties)\n| mv-expand todynamic(Entities)\n| extend HostName = iff(isnotempty(tostring(Extprop[\"Compromised Host\"])), tolower(tostring(Extprop[\"Compromised Host\"])), tolower(tostring(parse_json(Entities).HostName)))\n| where isnotempty(HostName)\n| mv-expand todynamic(split(HostName, \u0027,\u0027))\n| extend DnsDomain = iff(isnotempty(tostring(Extprop[\"Machine Domain\"])), tostring(Extprop[\"Machine Domain\"]), tostring(parse_json(Entities).DnsDomain))\n| extend UserName = iff(isnotempty(tostring(Extprop[\"User Name\"])), tostring(Extprop[\"User Name\"]), iff(tostring(parse_json(Entities).Type) == \u0027account\u0027, tostring(parse_json(Entities).Name), \u0027\u0027))\n| extend NTDomain = iff(isnotempty(tostring(Extprop[\"User Domain\"])), tostring(Extprop[\"User Domain\"]), tostring(parse_json(Entities).NTDomain))\n| extend IpAddress = iff(tostring(parse_json(Entities).Type) == \u0027ip\u0027, tostring(parse_json(Entities).Address), tostring(parse_json(Extprop).[\"IpAddress\"]))\n| summarize timestamp = arg_max(TimeGenerated, *) by AlertName, tostring(HostName)\n| project timestamp, AlertName, UserName, NTDomain, tostring(HostName), DnsDomain, IpAddress\n| join kind=inner\n(\nCoreAzureBackup\n| where State =~ \"Deleted\"\n| where OperationName =~ \"BackupItem\"\n| extend data = split(BackupItemUniqueId, \";\")\n| extend AzureLocation = data[0], VaultId=data[1], HostName=tolower(tostring(data[2])), DrivesBackedUp=data[3]\n| project timestamp = TimeGenerated, AzureLocation, VaultId, HostName, DrivesBackedUp, State, BackupItemUniqueId, _ResourceId, OperationName, BackupItemFriendlyName\n)\non HostName\n| project timestamp, AlertName, HostName, DnsDomain, UserName, NTDomain, _ResourceId, IpAddress, VaultId, AzureLocation, DrivesBackedUp, State, BackupItemUniqueId, OperationName, BackupItemFriendlyName\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "NTDomain",
+                                                                            "columnName":  "NTDomain"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "AzureResource",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ResourceId",
+                                                                            "columnName":  "_ResourceId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "HostName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "DnsDomain",
+                                                                            "columnName":  "DnsDomain"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1496"
+                                      ],
+                       "displayName":  "Detect CoreBackUp Deletion Activity from related Security Alerts",
+                       "enabled":  true,
+                       "description":  "The query identifies any efforts by an attacker to delete backup containers, while also searching for any security alerts that may be linked to the same activity, in order to uncover additional information about the attacker\u0027s actions.\u0027 \nThough such an activity could be legitimate as part of business operation, some ransomware actors may perform such operation to cause interruption to regular business services.",
+                       "alertRuleTemplateName":  "011c84d8-85f0-4370-b864-24c13455aa94",
+                       "lastModifiedUtc":  "2024-06-21T19:51:28.3987475Z"
+                   }
+}

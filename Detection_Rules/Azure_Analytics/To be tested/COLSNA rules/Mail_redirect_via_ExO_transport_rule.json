@@ -1,0 +1,71 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/cfec4116-9cc3-4209-8d18-beef162f49b9",
+    "name":  "cfec4116-9cc3-4209-8d18-beef162f49b9",
+    "etag":  "\"8700833c-0000-2700-0000-66fdbfaf0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let timeframe = 1d;\nOfficeActivity\n| where TimeGenerated \u003e= ago(timeframe)\n| where OfficeWorkload == \"Exchange\"\n| where Operation in~ (\"New-TransportRule\", \"Set-TransportRule\")\n| extend p = parse_json(Parameters)\n| extend RuleName = case(\n  Operation =~ \"Set-TransportRule\", tostring(OfficeObjectId),\n  Operation =~ \"New-TransportRule\", tostring(p[1].Value),\n  \"Unknown\"\n  ) \n| mvexpand p\n| where (p.Name =~ \"BlindCopyTo\" or p.Name =~ \"RedirectMessageTo\") and isnotempty(p.Value)\n| extend RedirectTo = p.Value\n| extend ClientIPOnly = case( \n  ClientIP has \".\" and ClientIP has \":\", tostring(split(ClientIP,\":\")[0]), \n  ClientIP has \".\" and ClientIP has \"-\", tostring(split(ClientIP,\"-\")[0]), \n  ClientIP has \"[\", tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP,\"]\")[0]))),\n  ClientIP\n  )  \n| extend Port = case(\n  ClientIP has \".\" and ClientIP has \":\", (split(ClientIP,\":\")[1]),\n  ClientIP has \".\" and ClientIP has \"-\", (split(ClientIP,\"-\")[1]),\n  ClientIP has \"[\" and ClientIP has \":\", tostring(split(ClientIP,\"]:\")[1]),\n  ClientIP has \"[\" and ClientIP has \"-\", tostring(split(ClientIP,\"]-\")[1]),\n  ClientIP\n  )\n| extend ClientIP = ClientIPOnly\n| project TimeGenerated, RedirectTo, ClientIP, Port, UserId, Operation, RuleName\n| extend timestamp = TimeGenerated, AccountCustomEntity = UserId, IPCustomEntity = ClientIP",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Collection",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1114",
+                                          "T1020"
+                                      ],
+                       "displayName":  "Mail redirect via ExO transport rule",
+                       "enabled":  true,
+                       "description":  "Identifies when Exchange Online transport rule configured to forward emails.\nThis could be an adversary mailbox configured to collect mail from multiple user accounts.\nPLATFORM:Microsoft 365,IaaS\nMITRE:TA0003;T1098;T1098.002,TA0005;T1562;T1562.008,TA0009;T1114;T1114.002;T1114.003",
+                       "alertRuleTemplateName":  "500415fb-bba7-4227-a08a-9857fb61b6a7",
+                       "lastModifiedUtc":  "2024-10-02T21:48:29.5432989Z"
+                   }
+}

@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/53333535-9b5a-45ea-a062-3693100bc07b",
+    "name":  "53333535-9b5a-45ea-a062-3693100bc07b",
+    "etag":  "\"870090a8-0000-2700-0000-66fdc6990000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Rob Russell, Michael Gibbs\r\n// Description: Detects command line based behavior related to ATT\u0026CK technique T1047 Windows Management Instrumentation.\r\n// This alert does not look for poweshell based \"Invoke-wmimethod\" activity, see hunting queries \"BAH_Invoke-wmimethod_hunting\"\r\n// supports DTO 22-0484\r\n// False Positives: This is a common command used in incidence response and by administrators. If the user that triggers this alert is a system admin or part of a IR team it is likely a false positive.\r\nlet cmds = dynamic([\"process call create\",\"process get brief\" ]);\r\nlet allowStrings = dynamic([\"diirt\"]); // filters out incident response activity\r\nlet allowUser = dynamic(\"insert_allowed_users_here_by_UPN\");\r\nlet signInLookup = (\r\nSigninLogs \r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName\r\n);\r\nDeviceProcessEvents\r\n| where ((InitiatingProcessCommandLine has_any (cmds)) or (ProcessCommandLine has_any (cmds)))\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| where not(UserPrincipalName has_any (allowUser))\r\n| project TimeGenerated, AccountName, UserPrincipalName, DeviceName, InitiatingProcessCommandLine, ProcessCommandLine",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "InitiatingProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+                                          "T1047"
+                                      ],
+                       "displayName":  "BAH_T1047WMICommands",
+                       "enabled":  true,
+                       "description":  "Detects command line based behavior related to ATT\u0026CK technique T1047 Windows Management Instrumentation.\nPLATFORM:Windows\nMITRE:TA0002;T1047",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:17:58.9123723Z"
+                   }
+}

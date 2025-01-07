@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/daec3875-6738-48a9-a51a-df96fd28b71e",
+    "name":  "daec3875-6738-48a9-a51a-df96fd28b71e",
+    "etag":  "\"3f0e1d02-0000-2700-0000-674662b10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5H",
+                       "queryPeriod":  "PT5H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "DeviceProcessEvents\n| where FileName == \"dllhost.exe\"\n| where isnull(ProcessCommandLine) or ProcessCommandLine == \"\"\n| join kind=inner (\n    DeviceInfo\n    | where MachineGroup contains \"JSP\"\n    )\n    on DeviceId\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1055"
+                                      ],
+                       "displayName":  "J361 - Suspicious DLLHost no Command Line Arguments",
+                       "enabled":  true,
+                       "description":  "Suspicious DLLHost no Command Line Arguments - Rule. The following analytic detects instances of DLLHost.exe executing without command line arguments. This behavior is unusual and often associated with malicious activities, such as those performed by Cobalt Strike. This activity is significant because DLLHost.exe typically requires arguments to function correctly, and its absence may indicate an attempt to evade detection. MITRE:T1055",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-11-27T00:07:11.4432944Z"
+                   }
+}

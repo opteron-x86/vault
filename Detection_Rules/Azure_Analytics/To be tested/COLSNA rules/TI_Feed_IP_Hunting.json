@@ -1,0 +1,61 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/5b60b9b5-39db-4ffb-81a1-89a4c28bb494",
+    "name":  "5b60b9b5-39db-4ffb-81a1-89a4c28bb494",
+    "etag":  "\"8500fae8-0000-2700-0000-66fdacb30000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// This analytic queries the following tables and compare IP Address entries to our threat intelligence feeds.\r\nunion withsource=SourceTable\r\n(SigninLogs\r\n| where IPAddress in~ (ThreatIPs)),\r\n(BehaviorAnalytics\r\n| where SourceIPAddress in~ (ThreatIPs)\r\n| project-rename  IPAddress = SourceIPAddress),\r\n(DeviceLogonEvents\r\n| where RemoteIP in~ (ThreatIPs)\r\n| project-rename IPAddress = RemoteIP),\r\n(DeviceNetworkEvents\r\n| where RemoteIP in~ (ThreatIPs)\r\n| project-rename IPAddress = RemoteIP),\r\n(DeviceEvents\r\n| where RemoteIP in~ (ThreatIPs)\r\n| project-rename IPAddress = RemoteIP),\r\n(OfficeActivity\r\n| where ClientIP in~ (ThreatIPs)\r\n| project-rename IPAddress = ClientIP),\r\n(AzureActivity\r\n| where CallerIpAddress in~ (ThreatIPs)\r\n| project-rename IPAddress = CallerIpAddress),\r\n(AuditLogs\r\n| where isnotempty(InitiatedBy.user.ipAddress)\r\n| extend IPAddress = InitiatedBy.user.ipAddress\r\n| where IPAddress in~ (ThreatIPs))\r\n| project-rename IPAddress = IPAddress_string\r\n| extend Description = strcat(\"This alert was triggered due to the presence of IPAddress: \",IPAddress, \" observed in this query. This IP Address is associated with one of our Threat Intelligence feeds and should be examined thoroughly.\")\r\n| project-reorder Description, IPAddress, SourceTable,*",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CommandAndControl",
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "TI Feed IP Hunting",
+                       "enabled":  true,
+                       "description":  "This query looks at several tables and compares our threat intelligence feeds for associated IP addresses.\nPLATFORM:IaaS,Windows\nMITRE:TA0001;T1190",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:27:30.5862188Z"
+                   }
+}

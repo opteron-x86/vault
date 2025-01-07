@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4b2e8050-5fea-4c06-8a3b-22b8ee9bdafc",
+    "name":  "4b2e8050-5fea-4c06-8a3b-22b8ee9bdafc",
+    "etag":  "\"8700c4e7-0000-2700-0000-66fdcaea0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Stephen Rowley\n//Description: This analytic looks for tenant-wide changes to the Exchange audit log.\n//False Positives: It is possible an alert will be raised when legitimate changes are occurring, but they should be rare.\nOfficeActivity\n| where OfficeWorkload == \"Exchange\"\n| where Operation contains \"Set-AdminAuditLogConfig\"\n| where countof(Parameters, @\u0027\"AdminAuditLogEnabled\",\"Value\":\"False\"}\u0027) \u003e 0 or countof(Parameters, @\u0027\"UnifiedAuditLogIngestionEnabled\",\"Value\":\"False\"}\u0027) \u003e 0\n| project TimeGenerated, UserId, Parameters, OriginatingServer, OrganizationName",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1562"
+                                      ],
+                       "displayName":  "BAH_ExchangeAuditingChanges",
+                       "enabled":  true,
+                       "description":  "This analytic looks for tenant-wide changes to the Exchange audit log.\nPLATFORM:Windows\nMITRE:TA0005;T1562",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:36:24.9257313Z"
+                   }
+}

@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/f0e54b4a-899a-4ae0-927f-f6b5499a3716",
+    "name":  "f0e54b4a-899a-4ae0-927f-f6b5499a3716",
+    "etag":  "\"88009804-0000-2700-0000-66fdccca0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Rob Russell\r\n// Description: This analytic is based on DTO 22-0097 and looks for looks for CaddyWiper based MD5 activity\r\n// False Positives: Since this is based on MD5s there should be no false positives\r\nlet MD5list = dynamic([@\u002742e52b8daf63e6e26c3aa91e7e971492\u0027, \r\n@\u0027728f13a93b62699e8f94f2d14a989bac\u0027]);\r\nlet signInLookup = (\r\nSigninLogs \r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName\r\n);\r\n(union isfuzzy=True\r\n    (\r\n    union withsource=TableName Device* //looks at any table titled \"Device\" \r\n    | where MD5 has_any (MD5list)//checks for any SHA256 in the hashlist\r\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n    )\r\n| project TimeGenerated, AccountName, UserPrincipalName, FileName, FileOriginIP, SHA256, MD5, DeviceName\r\n)",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "MD5"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1561"
+                                      ],
+                       "displayName":  "BAH_CaddyWiper_MD5_Hash",
+                       "enabled":  true,
+                       "description":  "This analytic looks for activity associated the destructive data wiper that was used in attacks against organizations in Ukraine. This wiper destroys user data and partition information from attached drives. It is detected by ESET products as Win32/KillDisk.NCX.\nPLATFORM:IaaS\nMITRE:TA0040;T1651",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:44:26.3682269Z"
+                   }
+}

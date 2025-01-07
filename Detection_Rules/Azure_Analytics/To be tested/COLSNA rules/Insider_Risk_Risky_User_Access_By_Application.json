@@ -1,0 +1,61 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8584a7bb-83b2-4eb1-918a-c78055acd34f",
+    "name":  "8584a7bb-83b2-4eb1-918a-c78055acd34f",
+    "etag":  "\"ed0002ae-0000-2700-0000-65f0821f0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT6H",
+                       "queryPeriod":  "PT6H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "SigninLogs\n| where RiskState == \"atRisk\"\n| project UserPrincipalName, Location, AppDisplayName, RiskState\n| evaluate basket(0.01) // Adjust \u0026 Tune Thresholds within Organzational Requirements\n// | where Percent \u003e 50 // Adjust \u0026 Tune Thresholds within Organzational Requirements\n| where UserPrincipalName \u003c\u003e \"\"\n| where AppDisplayName \u003c\u003e \"\"\n| project Percent, UserPrincipalName, Location, AppDisplayName, RiskState\n// | lookup kind=inner _GetWatchlist(\u0027\u003cYour Watchlist Name\u003e\u0027) on $left.UserPrincipalName == $right.SearchKey\n| sort by Percent desc\n| extend AccountCustomEntity = UserPrincipalName\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.1.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+                                          "T1204"
+                                      ],
+                       "displayName":  "Insider Risk_Risky User Access By Application",
+                       "enabled":  false,
+                       "description":  "This alert evaluates Microsoft Entra ID Sign in risk via Machine Learning correlations in the basket operator. The basket threshold is adjustable, and the default is set to .01. There is an optional configuration to configure the percentage rates. The correlations are designed to leverage machine learning to identify patterns of risky user application access. There is an option for configuration of correlations against Microsoft Sentinel watchlists. For more information, see [Tutorial: Use risk detections for user sign-ins to trigger Microsoft Entra ID Multi-Factor Authentication or password changes](https://docs.microsoft.com/azure/active-directory/authentication/tutorial-risk-based-sspr-mfa)",
+                       "alertRuleTemplateName":  "15386bba-dc70-463f-a09f-d392e7731c63",
+                       "lastModifiedUtc":  "2024-03-12T16:26:07.5443164Z"
+                   }
+}

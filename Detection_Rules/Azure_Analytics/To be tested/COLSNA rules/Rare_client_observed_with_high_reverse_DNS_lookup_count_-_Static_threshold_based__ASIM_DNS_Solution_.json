@@ -1,0 +1,70 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e9695fb2-dc4e-439d-8550-e11b6964eea4",
+    "name":  "e9695fb2-dc4e-439d-8550-e11b6964eea4",
+    "etag":  "\"1c00d26d-0000-2700-0000-658ca9620000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P10D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let threshold = 10;\nlet stime = 10d;\nlet etime = 1d;\nlet SearchDomain = dynamic([\"in-addr.arpa\"]);\n_Im_Dns(starttime=ago(etime), domain_has_any=SearchDomain)\n| summarize\n  StartTimeUtc = min(TimeGenerated),\n  EndTimeUtc = max(TimeGenerated),\n  DNSQueryCount=dcount(DnsQuery)\n  by SrcIpAddr\n| where DNSQueryCount \u003e threshold\n| project StartTimeUtc, EndTimeUtc, SrcIpAddr, DNSQueryCount \n| join kind=leftanti (_Im_Dns(starttime=ago(stime), endtime=ago(etime), domain_has_any=SearchDomain)\n  | summarize DNSQueryCount=dcount(DnsQuery) by SrcIpAddr, bin(TimeGenerated, 1d)\n  | where DNSQueryCount \u003e threshold\n  | project SrcIpAddr, DNSQueryCount\n  )\n  on SrcIpAddr\n| join kind=inner (_Im_Dns(starttime=ago(etime), domain_has_any=SearchDomain)\n  | summarize DNSQueries=make_set(DnsQuery, 1000) by SrcIpAddr)\n  on SrcIpAddr\n| extend DNSQuerythreshold = threshold\n| project-away SrcIpAddr1\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+                                             "DNSQueries":  "DNSQueries",
+                                             "DNSQueryCount":  "DNSQueryCount",
+                                             "DNSQuerythreshold":  "DNSQuerythreshold"
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "SrcIpAddr"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDisplayNameFormat":  "[Static threshold] Rare client has been observed as making high reverse DNS lookup count  - client IP: \u0027{{SrcIpAddr}}\u0027",
+                                                    "alertDescriptionFormat":  "Client identified as making high reverse DNS counts which could be carrying out reconnaissance or discovery activity.\n\nReverse DNS lookup threshold is: \u0027{{DNSQuerythreshold}}\u0027\n\nCurrent reverse DNS lookup count from this client is : \u0027{{DNSQueryCount}}\u0027\n\nDNS queries requested by this client inlcude: \u0027{{DNSQueries}}\u0027"
+                                                },
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "AlertPerResult"
+                                                 },
+                       "tactics":  [
+                                       "Reconnaissance"
+                                   ],
+                       "techniques":  [
+                                          "T1590"
+                                      ],
+                       "displayName":  "Rare client observed with high reverse DNS lookup count - Static threshold based (ASIM DNS Solution)",
+                       "enabled":  true,
+                       "description":  "This rule identifies clients with high reverse DNS counts, which could be carrying out reconnaissance or discovery activity. This helps in detecting the possible initial phases of an attack, like discovery and reconnaissance. It utilizes [ASIM](https://aka.ms/AboutASIM) normalization and is applied to any source that supports the ASIM DNS schema.",
+                       "alertRuleTemplateName":  "77b7c820-5f60-4779-8bdb-f06e21add5f1",
+                       "lastModifiedUtc":  "2023-12-27T22:46:54.8479148Z"
+                   }
+}

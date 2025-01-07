@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/c7b7ba51-945c-46e8-bc20-3dbb540bd74d",
+    "name":  "c7b7ba51-945c-46e8-bc20-3dbb540bd74d",
+    "etag":  "\"17002036-0000-2700-0000-63c8174f0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P3D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//Looks for domain trust modifications:\n// 4706 - A new trust was created to a domain.\n// 4716 - Trusted domain information was modified.\nSecurityEvent\n| where Activity has_any (\"4706\", \"4716\")\n| extend ActivityID = Activity\n| extend Actor = SubjectAccount\n| extend Domain = SubjectDomainName\n| extend Device = Computer\n| project ActivityID, Actor, Device, Domain",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  true,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "P1D",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - ADFS Trust Settings Modified",
+                       "enabled":  false,
+                       "description":  "Looks for domain trust modifications:\n4706 - A new trust was created to a domain.\n4716 - Trusted domain information was modified.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T15:59:11.9159443Z"
+                   }
+}

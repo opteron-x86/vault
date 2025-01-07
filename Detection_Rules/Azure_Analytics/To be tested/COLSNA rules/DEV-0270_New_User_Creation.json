@@ -1,0 +1,76 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/69cfc00d-8e7b-4265-bfe9-6170abe9119c",
+    "name":  "69cfc00d-8e7b-4265-bfe9-6170abe9119c",
+    "etag":  "\"87005b66-0000-2700-0000-66fdc2870000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT6H",
+                       "queryPeriod":  "PT6H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "DeviceProcessEvents \n| where InitiatingProcessCommandLine has_all(\u0027net user\u0027, \u0027/add\u0027) \n| parse InitiatingProcessCommandLine with * \"user \" username \" \"* \n| extend password = extract(@\"\\buser\\s+[^\\s]+\\s+([^\\s]+)\", 1, InitiatingProcessCommandLine) \n| where username in(\u0027DefaultAccount\u0027) or password in(\u0027P@ssw0rd1234\u0027, \u0027_AS_@1394\u0027) \n| extend timestamp = TimeGenerated, AccountCustomEntity =  InitiatingProcessAccountName, HostCustomEntity = DeviceName\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.1",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "DefenseEvasion",
+                                       "Discovery",
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+                                          "T1059",
+                                          "T1562",
+                                          "T1087",
+                                          "T1105"
+                                      ],
+                       "displayName":  "DEV-0270 New User Creation",
+                       "enabled":  true,
+                       "description":  "The following query tries to detect creation of a new user using a known DEV-0270 username/password schema\nPLATFORM:Microsoft 365,IaaS,Windows\nMITRE:TA0005;T1562,TA0007;T1087;T1087.003;T1087.004",
+                       "alertRuleTemplateName":  "7965f0be-c039-4d18-8ee8-9a6add8aecf3",
+                       "lastModifiedUtc":  "2024-10-02T22:00:39.2875963Z"
+                   }
+}

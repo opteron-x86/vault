@@ -1,0 +1,71 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/1f399998-9ecf-4f1b-ba19-57b7f28ef86b",
+    "name":  "1f399998-9ecf-4f1b-ba19-57b7f28ef86b",
+    "etag":  "\"87004a1e-0000-2700-0000-66fdbdb20000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let auditLookback = 1d;\n(union isfuzzy=true\n(\nAuditLogs\n| where TimeGenerated \u003e ago(auditLookback)\n| where OperationName =~ \"Set federation settings on domain\"\n//| where Result =~ \"success\"   // commenting out, as it may be interesting to capture failed attempts\n| mv-expand TargetResources\n| extend modifiedProperties = parse_json(TargetResources).modifiedProperties\n| mv-expand modifiedProperties\n| extend targetDisplayName = tostring(parse_json(modifiedProperties).displayName)\n| mv-expand AdditionalDetails\n),\n(\nAuditLogs\n| where TimeGenerated \u003e ago(auditLookback)\n| where OperationName =~ \"Set domain authentication\"\n//| where Result =~ \"success\"   // commenting out, as it may be interesting to capture failed attempts\n| mv-expand TargetResources\n| extend modifiedProperties = parse_json(TargetResources).modifiedProperties\n| mv-expand modifiedProperties\n| extend targetDisplayName = tostring(parse_json(modifiedProperties).displayName), NewDomainValue=tostring(parse_json(modifiedProperties).newValue)\n| where NewDomainValue has \"Federated\"\n)\n)\n| extend UserAgent = iff(AdditionalDetails.key == \"User-Agent\",tostring(AdditionalDetails.value),\"\")\n| extend InitiatingUserOrApp = iff(isnotempty(InitiatedBy.user.userPrincipalName),tostring(InitiatedBy.user.userPrincipalName), tostring(InitiatedBy.app.displayName))\n| extend InitiatingIpAddress = iff(isnotempty(InitiatedBy.user.ipAddress), tostring(InitiatedBy.user.ipAddress), tostring(InitiatedBy.app.ipAddress))\n| project-reorder TimeGenerated, OperationName, InitiatingUserOrApp, AADOperationType, targetDisplayName, Result, InitiatingIpAddress, UserAgent, CorrelationId, TenantId, AADTenantId\n| extend timestamp = TimeGenerated, AccountCustomEntity = InitiatingUserOrApp, IPCustomEntity = InitiatingIpAddress",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1556",
+                                          "T1078"
+                                      ],
+                       "displayName":  "Modified domain federation trust settings",
+                       "enabled":  true,
+                       "description":  "This will alert when a user or application modifies the federation settings on the domain or Update domain authentication from Managed to Federated.\nFor example, this alert will trigger when a new Active Directory Federated Service (ADFS) TrustedRealm object, such as a signing certificate, is added to the domain.\nModification to domain federation settings should be rare. Confirm the added or modified target domain/URL is legitimate administrator behavior.\nTo understand why an authorized user may update settings for a federated domain in Office 365, Azure, or Intune, see: https://docs.microsoft.com/office365/troubleshoot/active-directory/update-federated-domain-office-365.\nFor details on security realms that accept security tokens, see the ADFS Proxy Protocol (MS-ADFSPP) specification: https://docs.microsoft.com/openspecs/windows_protocols/ms-adfspp/e7b9ea73-1980-4318-96a6-da559486664b.\nFor further information on AuditLogs please see https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-audit-activities.\n\nPersistence, Defense Evasion,\nT1556 - Modify Authentication Process: T1556.001, T1078: Valid Accounts\n\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0004;T1098;T1098.003,TA0005;T1556;T1556.006;T1556.007,TA0006;T1556;T1556.006;T1556.007",
+                       "alertRuleTemplateName":  "95dc4ae3-e0f2-48bd-b996-cdd22b90f9af",
+                       "lastModifiedUtc":  "2024-10-02T21:40:01.0848016Z"
+                   }
+}

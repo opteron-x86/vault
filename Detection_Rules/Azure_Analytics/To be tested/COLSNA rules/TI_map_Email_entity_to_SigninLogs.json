@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/949417db-bfaa-4495-ab2d-54c6e67a3570",
+    "name":  "949417db-bfaa-4495-ab2d-54c6e67a3570",
+    "etag":  "\"7808c666-0000-2700-0000-66295c1d0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nlet emailregex = @\u0027^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$\u0027;\nlet Signins = materialize(union isfuzzy=true\n( SigninLogs | where TimeGenerated \u003e= ago(dt_lookBack)),\n( AADNonInteractiveUserSignInLogs | where TimeGenerated \u003e= ago(dt_lookBack)\n    | extend Status = todynamic(Status), LocationDetails = todynamic(LocationDetails))\n| where isnotempty(UserPrincipalName) and UserPrincipalName matches regex emailregex\n| extend UserPrincipalName = tolower(UserPrincipalName)\n| extend Status = todynamic(Status), LocationDetails = todynamic(LocationDetails)\n| extend StatusCode = tostring(Status.errorCode), StatusDetails = tostring(Status.additionalDetails)\n| extend State = tostring(LocationDetails.state), City = tostring(LocationDetails.city), Region = tostring(LocationDetails.countryOrRegion)\n| extend SigninLogs_TimeGenerated = TimeGenerated);\nlet SigninUPNs = Signins | distinct UserPrincipalName | summarize make_list(UserPrincipalName);\nThreatIntelligenceIndicator\n//Filtering the table for Email related IOCs\n| where isnotempty(EmailSenderAddress)\n| where TimeGenerated \u003e= ago(ioc_lookBack)\n| where EmailSenderAddress in (SigninUPNs)\n| summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n| where Active == true and ExpirationDateTime \u003e now()\n| where Description !contains_cs \"State: inactive;\" and Description !contains_cs \"State: falsepos;\"\n| join kind=innerunique (Signins) on $left.EmailSenderAddress == $right.UserPrincipalName\n| where SigninLogs_TimeGenerated \u003c ExpirationDateTime\n| summarize SigninLogs_TimeGenerated = arg_max(SigninLogs_TimeGenerated, *) by IndicatorId, UserPrincipalName\n| project SigninLogs_TimeGenerated, Description, ActivityGroupNames, IndicatorId, ThreatType, Url, ExpirationDateTime, ConfidenceScore, EmailSenderName, EmailRecipient, EmailSourceDomain, EmailSourceIpAddress, EmailSubject, FileHashValue, FileHashType, IPAddress, UserPrincipalName, AppDisplayName, StatusCode, StatusDetails, NetworkIP, NetworkDestinationIP, NetworkSourceIP, Type\n| extend Name = tostring(split(UserPrincipalName, \u0027@\u0027, 0)[0]), UPNSuffix = tostring(split(UserPrincipalName, \u0027@\u0027, 1)[0])\n| extend timestamp = SigninLogs_TimeGenerated\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "Url"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.2.6",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "TI map Email entity to SigninLogs",
+                       "enabled":  true,
+                       "description":  "Identifies a match in SigninLogs table from any Email IOC from TI",
+                       "alertRuleTemplateName":  "30fa312c-31eb-43d8-b0cc-bcbdfb360822",
+                       "lastModifiedUtc":  "2024-04-24T19:22:59.4562393Z"
+                   }
+}

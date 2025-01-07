@@ -1,0 +1,104 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/65a6c028-35c7-43c7-a109-e33bf8846db7",
+    "name":  "65a6c028-35c7-43c7-a109-e33bf8846db7",
+    "etag":  "\"86006ed1-0000-2700-0000-66fdb8db0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P2D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let admin_users = (IdentityInfo\n  | where TimeGenerated \u003e ago(2d)\n  | summarize arg_max(TimeGenerated, *) by AccountUPN\n  | where AssignedRoles contains \"admin\" or GroupMembership has \"Admin\"\n  | summarize by tolower(AccountUPN));\n  AuditLogs\n  | where Category =~ \"RoleManagement\"\n  | where OperationName has \"Add eligible member\"\n  | extend TargetUserPrincipalName = tostring(TargetResources[0].userPrincipalName)\n  | where tolower(TargetUserPrincipalName) in (admin_users)\n  | extend TargetAadUserId = tostring(TargetResources[0].id)\n  | extend Group = tostring(TargetResources[0].displayName)\n  | extend RoleAddedTo = iif(isnotempty(TargetUserPrincipalName), TargetUserPrincipalName, Group)\n  | extend mod_props = TargetResources[0].modifiedProperties\n  | extend InitiatingAppName = tostring(InitiatedBy.app.displayName)\n  | extend InitiatingAppServicePrincipalId = tostring(InitiatedBy.app.servicePrincipalId)\n  | extend InitiatingUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName)\n  | extend InitiatingAadUserId = tostring(InitiatedBy.user.id)\n  | extend InitiatingIPAddress = tostring(InitiatedBy.user.ipAddress)\n  | extend RoleAddedBy = iif(isnotempty(InitiatingAppName), InitiatingAppName, InitiatingUserPrincipalName)\n  | mv-expand mod_props\n  | where mod_props.displayName == \"Role.DisplayName\"\n  | extend UserAgent = tostring(AdditionalDetails[0].value)\n  | extend RoleAdded = tostring(parse_json(tostring(mod_props.newValue)))\n  | extend TargetAccountName = tostring(split(TargetUserPrincipalName, \"@\")[0]), TargetAccountUPNSuffix = tostring(split(TargetUserPrincipalName, \"@\")[1])\n  | extend InitiatingAccountName = tostring(split(InitiatingUserPrincipalName, \"@\")[0]), InitiatingAccountUPNSuffix = tostring(split(InitiatingUserPrincipalName, \"@\")[1])\n  | project-reorder TimeGenerated, OperationName, TargetUserPrincipalName, RoleAddedTo, RoleAdded, RoleAddedBy, InitiatingUserPrincipalName, InitiatingAppName\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "TargetUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "TargetAccountName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "TargetAccountUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "TargetAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "InitiatingUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatingAccountName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "InitiatingAccountUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatingAadUserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.7",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "Privileged Account Permissions Changed",
+                       "enabled":  true,
+                       "description":  "Detects changes to permissions assigned to admin users. Threat actors may try and increase permission scope by adding additional roles to already privileged accounts.\nReview any modifications to ensure they were made legitimately.\nRef: https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-privileged-accounts#changes-to-privileged-accounts\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0004;T1098;T1098.003",
+                       "alertRuleTemplateName":  "0433c8a3-9aa6-4577-beef-2ea23be41137",
+                       "lastModifiedUtc":  "2024-10-02T21:19:15.6480494Z"
+                   }
+}

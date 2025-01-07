@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/b7209b00-64fa-4ac7-8c28-443460f3e579",
+    "name":  "b7209b00-64fa-4ac7-8c28-443460f3e579",
+    "etag":  "\"8500c9dc-0000-2700-0000-66fdac170000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let dt_lookBack = 1h;\n let ioc_lookBack = 14d;\n ThreatIntelligenceIndicator\n// Picking up only IOC\u0027s that contain the entities we want\n | where isnotempty(Url)\n | where TimeGenerated \u003e= ago(ioc_lookBack)\n | summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n | where Active == true and ExpirationDateTime \u003e now()\n // using innerunique to keep perf fast and result set low, we only need one match to indicate potential malicious activity that needs to be investigated\n | join kind=innerunique (\n OfficeActivity\n | where TimeGenerated \u003e= ago(dt_lookBack)\n //Extract the Url from a number of potential fields\n | extend Url = iif(OfficeWorkload == \"AzureActiveDirectory\",extract(\"(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.\u0026+]|[!*\\\\(\\\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+);\", 1,ModifiedProperties),tostring(parse_json(ModifiedProperties)[12].NewValue))\n | where isnotempty(Url)\n // Ensure we get a clean URL\n | extend Url = tostring(split(Url, \u0027;\u0027)[0])\n | extend OfficeActivity_TimeGenerated = TimeGenerated\n// // Project a single user identity that we can use for entity mapping\n | extend User = iif(isnotempty(UserId), UserId, iif(isnotempty(Actor), tostring(parse_json(Actor)[0].ID), tostring(parse_json(Parameters)[0].Value)))\n ) on Url\n | where OfficeActivity_TimeGenerated \u003c ExpirationDateTime\n | summarize OfficeActivity_TimeGenerated = arg_max(OfficeActivity_TimeGenerated, *) by IndicatorId, Url\n | project OfficeActivity_TimeGenerated, Description, ActivityGroupNames, IndicatorId, ThreatType, ExpirationDateTime, ConfidenceScore, Operation,\n UserType, OfficeWorkload, Parameters, Url, User\n | extend timestamp = OfficeActivity_TimeGenerated, Name = tostring(split(User, \u0027@\u0027, 0)[0]), UPNSuffix = tostring(split(User, \u0027@\u0027, 1)[0]) //datatable() []\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "User"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "Url"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.2.7",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "TI Map URL Entity to OfficeActivity Data [Deprecated]",
+                       "enabled":  false,
+                       "description":  "This query is Deprecated as its filter conditions will never yield results. This query identifies any URL indicators of compromise (IOCs) from threat intelligence (TI) by searching for matches in OfficeActivity data.\nPLATFORM:Microsoft 365,IaaS\nMITRE:TA0001;T1566;T1566.002",
+                       "alertRuleTemplateName":  "36a9c9e5-3dc1-4ed9-afaa-1d13617bfc2b",
+                       "lastModifiedUtc":  "2024-10-02T20:24:55.4740744Z"
+                   }
+}

@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/d5cacb43-6ab5-4306-9ccf-5bcd157dd45c",
+    "name":  "d5cacb43-6ab5-4306-9ccf-5bcd157dd45c",
+    "etag":  "\"8500a1d9-0000-2700-0000-66fdabf70000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// The query_now parameter represents the time (in UTC) at which the scheduled analytics rule ran to produce this alert.\r\n// Enterprise Application DISA-GitLab-CyberAnalytics Object ID is \u0027ef74f5c4-72e8-49d8-8dd2-2db5f4ec7f6c\u0027\r\n// If needed, confirm through Azure AD \u003e Enterprise Applications with Object ID #.\r\nlet watchlist = (_GetWatchlist(\u0027Contrib-Rights-Admin-Whitelist\u0027) \r\n| project SearchKey);\r\nAzureActivity \r\n| where TimeGenerated \u003e= ago(24h)\r\n| where OperationNameValue contains \"MICROSOFT.SECURITYINSIGHTS/ALERTRULES/\"\r\n| where Caller !in~ (watchlist) or ActivityStatusValue != \"Success\"\r\n| extend Analytic_Rule_ID = todynamic(Properties_d).resource\r\n| extend Analytic_Rule_ID = split(Analytic_Rule_ID, \"insights/\").[1]\r\n| extend UserRole = todynamic(Authorization).evidence.role\r\n| extend Operation = split(OperationNameValue, \"ALERTRULES/\").[1]\r\n| extend StatusInfo = todynamic(Properties).statusMessage\r\n| extend SuspiciousUser = iif(Caller !in~ (watchlist), \"True\", \"False\")\r\n| where ActivityStatusValue != \"Start\"\r\n| where ActivitySubstatusValue != \"OK\" or SuspiciousUser != \"False\"\r\n| project\r\n    TimeGenerated,\r\n    Analytic_Rule_ID,\r\n    Operation,\r\n    ActivityStatusValue,\r\n    ActivitySubstatusValue,\r\n    SuspiciousUser,\r\n    Caller,\r\n    UserRole,\r\n    CallerIpAddress,\r\n    StatusInfo,\r\n    Claims",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Caller"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "CallerIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Unauthorized analytic changes v2",
+                       "enabled":  true,
+                       "description":  "This analytic looks for users making unauthorized changes (write or delete) to analytics. This exclusion list identifies those that are permitted to make changes.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0004;T1078;T1078.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:24:19.7473421Z"
+                   }
+}

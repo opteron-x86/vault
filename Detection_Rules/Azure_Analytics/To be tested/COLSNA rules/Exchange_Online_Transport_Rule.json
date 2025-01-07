@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/fa669cd6-e5d2-48af-a36a-ec64a09efbbb",
+    "name":  "fa669cd6-e5d2-48af-a36a-ec64a09efbbb",
+    "etag":  "\"8700be4e-0000-2700-0000-66fdc0f10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Name: Exchange Online transport rule\n// Description: Identifies when a Exchange Online transport rule is changed or created. This is a rare activity that could severly affect mail flow if done imporperly. The Group is a small team in DEOS Engineering. Jonas Lahr (jlahr@dod365.onmicrosoft.us), Jacob Lavender (jlavender@dod365.onmicrosoft.us), Larry Underwood (lunderwood@dod365.onmicrosoft.us), Corey Radesky (cradesky@dod365.onmicrosoft.us), and Robert Bunch (rbunch@dod365.onmicrosoft.us) are known engineers tasked with changing these at this time.\n// requiredDataConnectors:\n//  - connectorId: Office365\n// dataTypes:\n//  - OfficeActivity (Exchange)\n// tactics:\n//  - Exfiltration\nOfficeActivity\n| where OfficeWorkload == \"Exchange\"\n| where Operation in~ (\"New-TransportRule\", \"Set-TransportRule\")\n| mv-apply DynamicParameters = todynamic(Parameters) on (summarize ParsedParameters = make_bag(pack(tostring(DynamicParameters.Name), DynamicParameters.Value)))\n| extend RuleName = case(\n    Operation =~ \"Set-TransportRule\", OfficeObjectId,\n    Operation =~ \"New-TransportRule\", ParsedParameters.Name,\n    \"Unknown\")\n| mv-expand ExpandedParameters = todynamic(Parameters)\n| extend RedirectTo = ExpandedParameters.Value\n| extend ClientIPValues = extract_all(@\u0027\\[?(::ffff:)?(?P\u003cIPAddress\u003e(\\d+\\.\\d+\\.\\d+\\.\\d+)|[^\\]]+)\\]?([-:](?P\u003cPort\u003e\\d+))?\u0027, dynamic([\"IPAddress\", \"Port\"]), ClientIP)[0]\n| project\n    TimeGenerated,\n    IPAddress = tostring(ClientIPValues[0]),\n    Port = tostring(ClientIPValues[1]),\n    UserId,\n    Operation,\n    RuleName,\n    Parameters\n| extend\n    timestamp = TimeGenerated,\n    AccountCustomEntity = UserId,\n    IPCustomEntity = IPAddress;\n// entityMappings:\n// - entityType: Account\n//      FullName: AccountCustomEntity\n// - entityType: IP\n//      Address: IPCustomEntity",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Exchange Online Transport Rule",
+                       "enabled":  true,
+                       "description":  "Identifies when a Exchange Online transport rule is changed or created. This is a rare activity that could severely affect mail flow if done improperly. The Group is a small team in DEOS Engineering. \nPLATFORM:Microsoft 365,IaaS\nMITRE:TA0005;T1562;T1562.008,TA0009;T1114;T1114.002;T1114.003",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T21:53:52.3870396Z"
+                   }
+}

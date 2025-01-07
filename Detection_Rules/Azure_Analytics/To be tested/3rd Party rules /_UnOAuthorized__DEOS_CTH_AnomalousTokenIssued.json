@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8fb6fdf0-fb01-4562-abb7-c85a84dd052d",
+    "name":  "8fb6fdf0-fb01-4562-abb7-c85a84dd052d",
+    "etag":  "\"51015f6b-0000-2700-0000-66ba5cde0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT8H",
+                       "queryPeriod":  "PT8H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "AuditLogs\n| where OperationName contains \"Token\"\n| extend Initiator = tostring(parse_json(InitiatedBy.user.userPrincipalName))\n| extend Target = tostring(parse_json(TargetResources[0].userPrincipalName))\n| where Initiator in (\"Device Registration Service\", \"Viva Engage\", \"Microsoft Rights Management Service\")\n| project Initiator, Target, Result\n| summarize count() by Result, Initiator, Target\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1212"
+                                      ],
+                       "displayName":  "[UnOAuthorized] DEOS_CTH_AnomalousTokenIssued",
+                       "enabled":  true,
+                       "description":  "Monitor for the issuance of OAuth 2.0 tokens to detect unauthorized/anomalous activity.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-08-12T19:05:01.9060911Z"
+                   }
+}

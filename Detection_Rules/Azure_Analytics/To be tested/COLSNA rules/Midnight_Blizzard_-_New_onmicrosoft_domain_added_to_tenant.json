@@ -1,0 +1,86 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/55eaac76-6b8e-4dc6-a93b-387c6ea3657c",
+    "name":  "55eaac76-6b8e-4dc6-a93b-387c6ea3657c",
+    "etag":  "\"87000c24-0000-2700-0000-66fdbe100000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "AuditLogs\r\n  | where AADOperationType == \"Add\"\r\n  | where Result == \"success\"\r\n  | where OperationName in (\"Add verified domain\", \"Add unverified domain\")\r\n  | extend InitiatedBy = parse_json(InitiatedBy)\r\n  | extend InitiatingUser = tostring(InitiatedBy.user.userPrincipalName)\r\n  | extend InitiatingIp = tostring(InitiatedBy.user.ipAddress)\r\n  | extend InitiatingApp = tostring(InitiatedBy.app.displayName)\r\n  | extend InitiatingSPID = tostring(InitiatedBy.app.servicePrincipalId)\r\n  | extend DomainAdded = tostring(TargetResources[0].displayName)\r\n  | where DomainAdded has \"onmicrosoft\"\r\n  | extend ActionInitiatedBy = case(isnotempty(InitiatingUser), InitiatingUser, strcat(InitiatingApp, \" - \", InitiatingSPID))\r\n  | extend UserName = split(InitiatingUser, \"@\")[0]\r\n  | extend UPNSuffix = split(InitiatingUser, \"@\")[1]\r\n  | project-reorder TimeGenerated, OperationName, DomainAdded, ActionInitiatedBy, InitiatingIp",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "AadTenantId",
+                                                                            "columnName":  "InitiatingSPID"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "InitiatingIp"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "DNS",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "DomainName",
+                                                                            "columnName":  "DomainAdded"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "ResourceDevelopment"
+                                   ],
+                       "techniques":  [
+                                          "T1585"
+                                      ],
+                       "displayName":  "Midnight Blizzard - New onmicrosoft domain added to tenant",
+                       "enabled":  true,
+                       "description":  "This detection looks for new onmicrosoft domains being added to a tenant. \n  An attacker who compromises a tenant may register a new onmicrosoft domain in order to masquerade as a service provider for launching phishing campaigns.\n  Domain additions are not a common occurrence and users should validate that the domain was added by a legitimate user, with a legitimate purpose.\n\nhttps://github.com/Azure/Azure-Sentinel/blob/master/Solutions/Azure%20Active%20Directory/Analytic%20Rules/NewOnmicrosoftDomainAdded.yaml\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1136;T1136.003",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T21:41:35.3983063Z"
+                   }
+}

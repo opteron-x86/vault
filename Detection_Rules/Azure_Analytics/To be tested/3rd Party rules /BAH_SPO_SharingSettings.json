@@ -1,0 +1,76 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/7c656470-c98e-40e6-bbb7-54d84afd243d",
+    "name":  "7c656470-c98e-40e6-bbb7-54d84afd243d",
+    "etag":  "\"8700dca9-0000-2700-0000-66fdc6ae0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//Author: Stephen Rowley\n//Description: Will track tenant-level change to SharePoint sharing settings.\n//False Positives: This analytic could alert on legitimate changes, but should be investigated anyway to confirm.\nOfficeActivity\n| where Operation == \"SharingPolicyChanged\"\n| where ItemType == \"Tenant\"\n| project TimeGenerated, UserId, ClientIP, ItemType, EventSource, ModifiedProperties\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "ClientIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess",
+                                       "Persistence",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1566",
+                                          "T1078",
+                                          "T1550",
+                                          "T1531"
+                                      ],
+                       "displayName":  "BAH_SPO_SharingSettings",
+                       "enabled":  true,
+                       "description":  "Will track tenant-level change to SharePoint sharing settings\nPLATFORM:Microsoft 365,Windows\nMITRE:TA0009;T1213;T1530",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:18:21.6060765Z"
+                   }
+}

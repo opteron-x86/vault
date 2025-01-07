@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/858c5837-35ce-4560-9182-a80100a2f383",
+    "name":  "858c5837-35ce-4560-9182-a80100a2f383",
+    "etag":  "\"0c01e4dc-0000-2700-0000-6400b0530000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Stephen Rowley\r\n//Description: A SharePoint policy exists that prevents external users from resharing documents and links. This setting is part of the TCG v1 and should be investigated when changed.\r\n//False Positives: Can alert on legitimate changes to the policy, but should still be investigated to confirm.\r\nOfficeActivity \r\n| where OfficeWorkload == \"SharePoint\"\r\n| where Operation == \"SharingPolicyChanged\" \r\n| where parse_json(ModifiedProperties).[0].Name == \"PreventExternalUsersFromResharing\"\r\n| extend PropertiesChanged = parse_json(ModifiedProperties).[0].Name\r\n| extend OldValue = parse_json(ModifiedProperties).[0].OldValue\r\n| extend NewValue = parse_json(ModifiedProperties).[0].NewValue\r\n| project TimeGenerated, UserId, ClientIP, EventSource, PropertiesChanged, OldValue, NewValue\r\n//MITRE\r\n//Exfiltration Over Web Service T1567",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "ClientIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_TCG-BlockExternalUsersSharing",
+                       "enabled":  true,
+                       "description":  "A SharePoint policy exists that prevents external users from resharing documents and links. This setting is part of the TCG v1 and should be investigated when changed.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-03-02T14:18:58.8470887Z"
+                   }
+}

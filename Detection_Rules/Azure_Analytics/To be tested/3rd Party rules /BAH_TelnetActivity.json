@@ -1,0 +1,96 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/d0530387-91f8-4c35-aac2-6456c675b837",
+    "name":  "d0530387-91f8-4c35-aac2-6456c675b837",
+    "etag":  "\"0c0140da-0000-2700-0000-6400b0060000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Stephen Rowley\n//Description: Looks for connections on port 23 in Defender\u0027s DeviceNetworkEvents table and both telnet.exe and putty.exe processes. Additions may be made to include additional processes or behavior detection gaps.\n//False Positives: Could alert on testing activity, but Telnet generally should not be used\nDeviceNetworkEvents\n| where (RemotePort == \"23\" and InitiatingProcessCommandLine has_any(\"telnet\", \"putty\")) or (RemotePort == \"23\" and InitiatingProcessFileName has_any(\"telnet\", \"putty\"))\n| extend CommandLine = InitiatingProcessCommandLine, FileName = InitiatingProcessFileName, Result = ActionType, Account = InitiatingProcessAccountUpn, Process = InitiatingProcessParentFileName\n| project TimeGenerated, CommandLine, FileName, Result, DeviceName, Account, Process, LocalIP, LocalPort, RemoteIP, RemotePort",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Account"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "Process"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "LocalIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "RemoteIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_TelnetActivity",
+                       "enabled":  true,
+                       "description":  "Looks for connections on port 23 in Defender\u0027s DeviceNetworkEvents table and both telnet.exe and putty.exe processes. It requires a combination of RemotePort 23 AND either \"telnet\" or \"putty\" strings in either InitiatingProcessCommandLine or InitiatingProcessFileName columns.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-03-02T14:17:41.7483419Z"
+                   }
+}

@@ -1,0 +1,50 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/044b4611-6272-4cdf-bbdb-30856055591a",
+    "name":  "044b4611-6272-4cdf-bbdb-30856055591a",
+    "etag":  "\"51011564-0000-2700-0000-66ba5baa0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT8H",
+                       "queryPeriod":  "PT8H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "AuditLogs\n| where OperationName in (\"Add group\", \"Restore Group\", \"Group_Create\", \"Create incompatible group\")\n| extend Init = parse_json(InitiatedBy.user)\n| extend Initiator = tostring(parse_json(Init.userPrincipalName))\n| extend InitiatorIp = tostring(parse_json(Init.ipAddress))\n| extend AddedGroup = tostring(parse_json(TargetResources[0].displayName))\n| where Initiator in (\"Device Registration Service\", \"Viva Engage\", \"Microsoft Rights Management Service\")\n| summarize count() by Result, Initiator, AddedGroup\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1404",
+                                          "T1484"
+                                      ],
+                       "displayName":  "[UnOAuthorized} DEOS_CTH_AnomalousGroupMade",
+                       "enabled":  true,
+                       "description":  "Monitor for creation of anomalous/unauthorized groups by Service Principals.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-08-12T18:59:52.8653162Z"
+                   }
+}

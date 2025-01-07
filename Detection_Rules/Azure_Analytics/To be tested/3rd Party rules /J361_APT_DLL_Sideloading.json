@@ -1,0 +1,85 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/37d2a25c-b350-4c36-a412-0fff031dea9a",
+    "name":  "37d2a25c-b350-4c36-a412-0fff031dea9a",
+    "etag":  "\"f41a42d6-0000-2700-0000-676f43370000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let file_lookBack = 1d;\nlet signInLookup = (\n    SigninLogs\n    | where TimeGenerated \u003e= ago(file_lookBack)\n    | where DeviceDetail contains \"displayName\"\n    | extend DeviceDetailJson = parse_json(DeviceDetail)\n    | extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n    | distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nlet deviceInfoLookup = (\n    DeviceInfo\n    | where MachineGroup contains \"JSP\"\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | distinct SILogDeviceName, MachineGroup\n);\n(union isfuzzy=True\n    (\n    DeviceFileEvents\n    | where ((ActionType == \"FileCreated\") and ((InitiatingProcessFileName =~ \"PresentationHost.exe\" and FileName =~ \"mscoree.dll\") or (InitiatingProcessFileName =~ \"colorcpl.exe\" and FileName =~ \"colorui.dll\") or (InitiatingProcessFileName =~ \"fixmapi.exe\" and FileName =~ \"mapistub.dll\") or (InitiatingProcessFileName =~ \"tabcal.exe\" and FileName =~ \"HID.dll\")))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | join kind=inner deviceInfoLookup on $left.SILogDeviceName == $right.SILogDeviceName\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        InitiatingProcessFileName,\n        InitiatingProcessFolderPath,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Detects sideloading of trojanized DLLs used in Lazarus APT campaign\"\n    ),\n    (\n    DeviceImageLoadEvents\n    | where ((ActionType == \"ImageLoaded\") and ((InitiatingProcessFileName =~ \"PresentationHost.exe\" and FileName =~ \"mscoree.dll\") or (InitiatingProcessFileName =~ \"colorcpl.exe\" and FileName =~ \"colorui.dll\") or (InitiatingProcessFileName =~ \"fixmapi.exe\" and FileName =~ \"mapistub.dll\") or (InitiatingProcessFileName =~ \"tabcal.exe\" and FileName =~ \"HID.dll\")))\n    | where not(FolderPath has_any(\"system32\", \"syswow64\", \"program files\", \"windows defender\\\\platform\", \"winsxs\", \"platform\", \"trend micro\"))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | join kind=inner deviceInfoLookup on $left.SILogDeviceName == $right.SILogDeviceName\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        InitiatingProcessFileName,\n        InitiatingProcessFolderPath,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Detects sideloading of trojanized DLLs used in Lazarus APT campaign\"\n    ),\n    (\n    DeviceFileEvents\n    | where ((ActionType == \"FileCreated\") and ((InitiatingProcessFileName =~ \"clip.exe\" and FileName =~ \"Version.dll\") or (FolderPath contains @\":\\ProgramData\\wsmprovhost.exe\" and FolderPath endswith @\":\\ProgramData\\DSROLE.dll\")))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | join kind=inner deviceInfoLookup on $left.SILogDeviceName == $right.SILogDeviceName\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        InitiatingProcessFileName,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Possible detection of DLL sideloading activity seen used by Diamond Sleet APT\"\n    ),\n    (\n    DeviceImageLoadEvents\n    | where ((ActionType == \"ImageLoaded\") and ((InitiatingProcessFileName =~ \"clip.exe\" and FileName =~ \"version.dll\") or (InitiatingProcessFileName =~ \"wsmprovhost.exe\" and FileName =~ \"DSROLE.dll\")))\n    | where not(FolderPath has_any(\"system32\", \"syswow64\", \"program files\", \"windows defender\\\\platform\", \"winsxs\", \"platform\", \"trend micro\"))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | join kind=inner deviceInfoLookup on $left.SILogDeviceName == $right.SILogDeviceName\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        InitiatingProcessFileName,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Possible detection of DLL sideloading activity seen used by Diamond Sleet APT\"\n    )\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "InitiatingProcessFileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1574"
+                                      ],
+                       "displayName":  "J361_APT_DLL_Sideloading",
+                       "enabled":  true,
+                       "description":  "Side-loading takes advantage of the DLL search order used by the loader by positioning both the victim application and malicious payload(s) alongside each other. This analytic focuses on the specific executable and DLL combinations seen in the wild for both APT groups Lazarus and Diamond Sleet.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-12-28T00:15:50.6628879Z"
+                   }
+}

@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/2afde03f-55a5-46fa-b76c-4198a1b10768",
+    "name":  "2afde03f-55a5-46fa-b76c-4198a1b10768",
+    "etag":  "\"fc041847-0000-2700-0000-62b9e7c00000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Title: UEM6-OutsideLastCheckinTime\n//Description: MDE will report both first and last check-in time in which the MDE agent on the endpoint contacts the cloud service. If a device has not checked in within a certain timeframe, escalation may be required to determine the location and status of the device. It could indicate a misconfiguration, connectivity problems, or a lost or stolen device.\nDefenderMachines_CL\n| where TimeGenerated \u003e= ago(24h)\n| where lastSeen_t \u003c= ago(90d)\n| extend Time = TimeGenerated, Hostname = computerDnsName_s, LastSeenTime = lastSeen_t, OS = osPlatform_s, LastInternalIPAddress = lastIpAddress_s, LastExternalIPAddress = lastExternalIpAddress_s, AADJoinStatus = isAadJoined_b, AADDeviceID = aadDeviceId_g\n| project Time, Hostname, LastSeenTime, OS, LastInternalIPAddress, LastExternalIPAddress, AADJoinStatus, AADDeviceID\n//MITRE: T1562 - Impair Defenses",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "Hostname"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "LastExternalIPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "LastInternalIPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1562"
+                                      ],
+                       "displayName":  "BAH-Defender-OutsideLastCheckinTime",
+                       "enabled":  false,
+                       "description":  "MDE will report both first and last check-in time in which the MDE agent on the endpoint contacts the cloud service. If a device has not checked in within a certain timeframe, escalation may be required to determine the location and status of the device. It could indicate a misconfiguration, connectivity problems, or a lost or stolen device.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2022-06-27T17:24:16.2861346Z"
+                   }
+}

@@ -1,0 +1,70 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/c000975e-1d38-4db4-8f37-af9f61be1a48",
+    "name":  "c000975e-1d38-4db4-8f37-af9f61be1a48",
+    "etag":  "\"26012084-0000-2700-0000-65e0d2660000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  1,
+                       "severity":  "Medium",
+                       "query":  "let MinimumDifferentPortsThreshold = 100;\nlet BinTime = 30s;\nunion isfuzzy=true(\nAZFWApplicationRule\n| summarize AlertTimedCountPortsInBinTime = dcount(DestinationPort) by SourceIp, bin(TimeGenerated, BinTime), Fqdn\n| where AlertTimedCountPortsInBinTime \u003e MinimumDifferentPortsThreshold),\n(AZFWNetworkRule\n| extend Fqdn = DestinationIp\n| summarize AlertTimedCountPortsInBinTime = dcount(DestinationPort) by SourceIp, bin(TimeGenerated, BinTime), Fqdn\n| where AlertTimedCountPortsInBinTime \u003e MinimumDifferentPortsThreshold),\n(AzureDiagnostics\n| where OperationName == \"AzureFirewallApplicationRuleLog\" or OperationName == \"AzureFirewallNetworkRuleLog\"\n| parse msg_s with * \"from \" SourceIp \":\" SourcePort:int \" to \" Fqdn \":\" DestinationPort:int *\n| where isnotempty(Fqdn) and isnotempty(SourceIp)\n| summarize AlertTimedCountPortsInBinTime = dcount(DestinationPort) by SourceIp, bin(TimeGenerated, BinTime), Fqdn\n| where AlertTimedCountPortsInBinTime \u003e MinimumDifferentPortsThreshold)\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "SourceIp"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "Fqdn"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.1.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Discovery"
+                                   ],
+                       "techniques":  [
+                                          "T1046"
+                                      ],
+                       "displayName":  "Port Scan",
+                       "enabled":  true,
+                       "description":  "Identifies a source IP scanning multiple open ports on Azure Firewall. This can indicate malicious scanning of ports by an attacker, trying to reveal open ports in the organization that can be compromised for initial access.\n\nConfigurable Parameters:\n\n- Port scan time - the time range to look for multiple ports scanned. Default is set to 30 seconds.\n- Minimum different ports threshold - alert only if more than this number of ports scanned. Default is set to 100.",
+                       "alertRuleTemplateName":  "b2c5907b-1040-4692-9802-9946031017e8",
+                       "lastModifiedUtc":  "2024-02-29T18:52:21.5245767Z"
+                   }
+}

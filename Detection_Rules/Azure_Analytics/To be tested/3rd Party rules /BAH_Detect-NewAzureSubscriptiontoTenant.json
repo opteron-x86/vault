@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4031a20e-02f2-46b1-9de1-ce62aab83a31",
+    "name":  "4031a20e-02f2-46b1-9de1-ce62aab83a31",
+    "etag":  "\"87006eef-0000-2700-0000-66fdcb690000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT4H",
+                       "queryPeriod":  "P2D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Stephen Rowley\n//Description: This analytic looks for new subscriptions in the tenant based on changes to the SubscriptionInventory_CL table\n//False Positives: It is possible to have a false positive during the first few runs of the Logic App (Detect-NewSubscriptions) while it builds the table, but no false positives should occur after that.\nSubscriptionInventory_CL\n| summarize arg_min(TimeGenerated, *) by SubscriptionId\n| where TimeGenerated \u003e= ago(4h)\n| project TimeGenerated, displayName_s, state_s, SubscriptionId",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "displayName_s"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "CredentialAccess",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1003",
+                                          "T1098",
+                                          "T1496"
+                                      ],
+                       "displayName":  "BAH_Detect-NewAzureSubscriptiontoTenant",
+                       "enabled":  true,
+                       "description":  "This analytic looks for new subscriptions in the tenant based on changes to the SubscriptionInventory_CL table.   Results of this analytic will need deconflicted through DEOS Engineering, as we (CSSP) do not have eyes on what subscriptions are allowed or not allowed to be added or disabled.\nPLATFORM:Microsoft 365,Azure AD,IaaS,Windows\nMITRE:TA0003;T1098,TA0006;T1003,TA0040;T1496",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:38:31.975742Z"
+                   }
+}

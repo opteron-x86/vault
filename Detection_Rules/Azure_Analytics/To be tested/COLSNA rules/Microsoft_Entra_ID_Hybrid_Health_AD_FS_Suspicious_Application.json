@@ -1,0 +1,80 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e278bc5b-6695-4faf-8bb8-2870a58dfedf",
+    "name":  "e278bc5b-6695-4faf-8bb8-2870a58dfedf",
+    "etag":  "\"8800f01a-0000-2700-0000-66fdce700000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Microsoft Entra ID Connect Health Agent - cf6d7e68-f018-4e0a-a7b3-126e053fb88d\n// Microsoft Entra ID Connect - cb1056e2-e479-49de-ae31-7812af012ed8\nlet appList = dynamic([\u0027cf6d7e68-f018-4e0a-a7b3-126e053fb88d\u0027,\u0027cb1056e2-e479-49de-ae31-7812af012ed8\u0027]);\nlet operationNamesList = dynamic([\u0027Microsoft.ADHybridHealthService/services/servicemembers/action\u0027,\u0027Microsoft.ADHybridHealthService/services/delete\u0027]);\nAzureActivity\n| where CategoryValue =~ \u0027Administrative\u0027\n| where ResourceProviderValue =~ \u0027Microsoft.ADHybridHealthService\u0027\n| where _ResourceId has \u0027AdFederationService\u0027\n| where OperationNameValue in~ (operationNamesList)\n| extend claimsJson = parse_json(Claims)\n| extend AppId = tostring(claimsJson.appid), AccountName = tostring(claimsJson.name), Name = tostring(split(Caller,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(Caller,\u0027@\u0027,1)[0])\n| where AppId !in (appList)\n| project-away claimsJson\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Caller"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "CallerIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "2.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1528",
+                                          "T1550"
+                                      ],
+                       "displayName":  "Microsoft Entra ID Hybrid Health AD FS Suspicious Application",
+                       "enabled":  true,
+                       "description":  "This detection uses AzureActivity logs (Administrative category) to identify a suspicious application adding a server instance to an Microsoft Entra ID Hybrid Health AD FS service or deleting the AD FS service instance.\nUsually the Microsoft Entra ID Connect Health Agent application with ID cf6d7e68-f018-4e0a-a7b3-126e053fb88d and ID cb1056e2-e479-49de-ae31-7812af012ed8 is used to perform those operations.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1136;T1136.003",
+                       "alertRuleTemplateName":  "d9938c3b-16f9-444d-bc22-ea9a9110e0fd",
+                       "lastModifiedUtc":  "2024-10-02T22:51:27.7174379Z"
+                   }
+}

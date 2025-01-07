@@ -1,0 +1,61 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/589fd18d-70b0-4a6f-9583-89059f149c5d",
+    "name":  "589fd18d-70b0-4a6f-9583-89059f149c5d",
+    "etag":  "\"37000b1f-0000-2700-0000-6346e1c80000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "// Adjust this value to change how many Teams should be deleted before including\nlet max_delete_count = 10;\n// Adjust this value to change the timewindow the query runs over\n  OfficeActivity\n| where OfficeWorkload =~ \"MicrosoftTeams\" \n| where Operation =~ \"TeamDeleted\"\n| where UserId != \"Application\"\n| summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated), DeletedTeams = make_set(TeamName) by UserId\n| where array_length(DeletedTeams) \u003e max_delete_count",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1485",
+                                          "T1489"
+                                      ],
+                       "displayName":  "Multiple Teams deleted by a single user",
+                       "enabled":  false,
+                       "description":  "This detection flags the occurrences of deleting multiple teams within an hour.\nThis data is a part of Office 365 Connector in Azure Sentinel.",
+                       "alertRuleTemplateName":  "173f8699-6af5-484a-8b06-8c47ba89b380",
+                       "lastModifiedUtc":  "2022-10-12T15:48:24.6526065Z"
+                   }
+}

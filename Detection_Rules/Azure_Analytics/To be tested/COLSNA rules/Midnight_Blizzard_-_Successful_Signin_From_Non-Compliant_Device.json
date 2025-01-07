@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/98f9e873-dbc7-4046-aaaf-916f585a4293",
+    "name":  "98f9e873-dbc7-4046-aaaf-916f585a4293",
+    "etag":  "\"87007222-0000-2700-0000-66fdbdf50000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "SigninLogs\r\n    | where ResultType == 0\r\n    | where tostring(DeviceDetail.isCompliant) == \"false\"\r\n    | extend Account_0_Name = tolower(UserPrincipalName)\r\n    | extend IP_0_Address = IPAddress\r\n    | join kind=leftouter (\r\n        IdentityInfo\r\n        | summarize LatestReportTime = arg_max(TimeGenerated, *) by AccountUPN\r\n        | extend BlastRadiusInt = iif(BlastRadius == \"High\", 1, 0)\r\n        | project AccountUPN, Tags, JobTitle, GroupMembership, AssignedRoles, UserType, IsAccountEnabled, BlastRadiusInt\r\n        | summarize\r\n            Tags = make_set(Tags, 1000),\r\n            GroupMembership = make_set(GroupMembership, 1000),\r\n            AssignedRoles = make_set(AssignedRoles, 1000),\r\n            BlastRadiusInt = sum(BlastRadiusInt),\r\n            UserType = make_set(UserType, 1000),\r\n            UserAccountControl = make_set(UserType, 1000)\r\n        by AccountUPN\r\n        | extend Account_0_Name =tolower(AccountUPN)\r\n    ) on Account_0_Name\r\n    | join kind=leftouter (\r\n        BehaviorAnalytics\r\n        | where ActivityType in (\"FailedLogOn\", \"LogOn\")\r\n        | where isnotempty(SourceIPAddress)\r\n        | project UsersInsights, DevicesInsights, ActivityInsights, InvestigationPriority, SourceIPAddress\r\n        | project-rename IP_0_Address = SourceIPAddress\r\n        | summarize\r\n          UsersInsights = make_set(UsersInsights, 1000),\r\n          DevicesInsights = make_set(DevicesInsights, 1000),\r\n          IPInvestigationPriority = sum(InvestigationPriority)\r\n        by IP_0_Address\r\n    ) on IP_0_Address\r\n    | extend UEBARiskScore = BlastRadiusInt + IPInvestigationPriority\r\n    | sort by UEBARiskScore desc",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "Midnight Blizzard - Successful Signin From Non-Compliant Device",
+                       "enabled":  true,
+                       "description":  "Detects successful sign ins from devices marked non-compliant. Best practice is to block sign ins from non-complaint devices, however if allowed monitor these events to ensure they do not lead to other risky activity. \nRef: https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-devices#non-compliant-device-sign-in\nThis query has also been updated to include UEBA logs IdentityInfo and BehaviorAnalytics for contextual information around the results.\n\nhttps://github.com/Azure/Azure-Sentinel/blob/master/Hunting%20Queries/SigninLogs/SuccessfulSigninFromNon-CompliantDevice.yaml\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1078;T1078.001;T1078.004,TA0005;T1078;T1078.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T21:41:08.4687683Z"
+                   }
+}

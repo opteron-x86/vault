@@ -1,0 +1,82 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/78421e71-7c95-4de4-bc0e-6c6d56878a1c",
+    "name":  "78421e71-7c95-4de4-bc0e-6c6d56878a1c",
+    "etag":  "\"900753c4-0000-2700-0000-6627ea430000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "  let aadFunc = (tableName:string){\r\n  table(tableName)\r\n  | where AppId =~ \"1b730954-1685-4b74-9bfd-dac224a7b894\" // AppDisplayName IS Azure Active Directory PowerShell\r\n  | where TokenIssuerType =~ \"AzureAD\"\r\n  | where ResourceIdentity !in (\"00000002-0000-0000-c000-000000000000\", \"00000003-0000-0000-c000-000000000000\") // ResourceDisplayName IS NOT Windows Azure Active Directory OR Microsoft Graph\r\n  | extend Status = todynamic(Status)\r\n  | where Status.errorCode == 0 // Success\r\n  | project-reorder IPAddress, UserAgent, ResourceDisplayName, UserDisplayName, UserId, UserPrincipalName, Type\r\n  | order by TimeGenerated desc\r\n  | extend Name = tostring(split(UserPrincipalName,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(UserPrincipalName,\u0027@\u0027,1)[0])\r\n  };\r\n  let aadSignin = aadFunc(\"SigninLogs\");\r\n  let aadNonInt = aadFunc(\"AADNonInteractiveUserSignInLogs\");\r\n  union isfuzzy=true aadSignin, aadNonInt",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "DEOS_CTH_Microsoft Entra ID PowerShell accessing non-Entra ID resources",
+                       "enabled":  true,
+                       "description":  "\u0027This will alert when a user or application signs in using Microsoft Entra ID PowerShell to access non-Active Directory resources, such as the Azure Key Vault, which may be undesired or unauthorized behavior.\n  For capabilities and expected behavior of the Microsoft Entra ID PowerShell module, see: https://docs.microsoft.com/powershell/module/azuread/?view=azureadps-2.0.\n  For further information on Microsoft Entra ID Signin activity reports, see: https://docs.microsoft.com/azure/active-directory/reports-monitoring/concept-sign-ins.\u0027",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-04-23T17:05:05.2836757Z"
+                   }
+}

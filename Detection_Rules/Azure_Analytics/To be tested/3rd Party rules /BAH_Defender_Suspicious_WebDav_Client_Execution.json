@@ -1,0 +1,75 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/644f4985-2577-4299-9f20-d2b83a88718b",
+    "name":  "644f4985-2577-4299-9f20-d2b83a88718b",
+    "etag":  "\"870031fc-0000-2700-0000-66fdcc3c0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "// Author: Rob Russell\r\n// Description:\r\n// Looks for suspicious webDav client execution. This analytic was built to address MS 0 day related to CVE-2023-23397.\r\n// If the external address contacted is a public IP or non .mil or .gov domain it will fire.\r\n// https://www.huntress.com/blog/everything-we-know-about-cve-2023-23397\r\n// https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_webdav_client_susp_execution.yml\r\n// False Positives: No false positives known at this time. It should produce alerts with high condifence. \r\nlet Dav_string = @\"rundll32.exe C:\\WINDOWS\\system32\\davclnt.dll,DavSetCookie\";\r\nlet Http_regex = @\"(http:.*)\";\r\nlet IP_regex = @\"([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})\";\r\nlet Domain_regex=@\"(rundll32\\.exe C:\\\\WINDOWS\\\\system32\\\\davclnt\\.dll,DavSetCookie )(([a-z\\-0-9\\.]+ )(((?P\u003cprotocol\u003e[a-z]{2,6})?:\\/\\/)?)(?P\u003csubdomain\u003e([a-z0-9]{0,10}\\.{1}){0,5}(?P\u003cdomain\u003e[a-z\\-0-9]{1,30}){1})\\.{1}(?P\u003cextention\u003e[a-z]{1,10}){1})(?P\u003cpath\u003e/.+$)\";\r\nlet Allowed_TLD = dynamic([\u0027mil\u0027,\u0027gov\u0027]);\r\nlet Parse_url = (parse_string:string){extract(Http_regex,0,parse_string, typeof(string))};\r\nlet Parse_IP = (parse_string:string){extract(IP_regex,0,parse_string, typeof(string))};\r\nlet Parse_domain = (parse_string:string){(extract_all(Domain_regex,dynamic ([\u0027domain\u0027, \u0027extention\u0027]), parse_string))[0]};\r\nlet signInLookup = (\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\r\n);\r\nDeviceProcessEvents\r\n| where (ProcessCommandLine startswith Dav_string\r\n  or InitiatingProcessCommandLine startswith Dav_string)\r\n  and (ProcessCommandLine endswith \"wav\"\r\n  or InitiatingProcessCommandLine endswith \"wav\")\r\n| extend In_process_cmd = iff(ProcessCommandLine startswith Dav_string, true, false) // checks to see if it is in ProcessCommandLine or InitiatingProcessCommandLine\r\n| extend Url_data = iff(In_process_cmd, Parse_url(ProcessCommandLine), Parse_url(InitiatingProcessCommandLine))\r\n| extend IP_data = iff (In_process_cmd, Parse_IP(ProcessCommandLine),Parse_IP(InitiatingProcessCommandLine))\r\n| extend Is_public_IP = iff(IP_data!=\"\" and not(ipv4_is_private(IP_data)), true, false)\r\n| extend Domain_data = iff (In_process_cmd, Parse_domain(ProcessCommandLine), Parse_domain(InitiatingProcessCommandLine))\r\n| where ((ipv4_is_private(IP_data)==false) and (isnotempty(IP_data))) or\r\n    (not(Domain_data[1] has_any (Allowed_TLD)) and (isnotempty(Domain_data[1]))) // remove not at beginning of line to test against prod data on 7-April 2023\r\n| extend Domain_Contacted = strcat_array(Domain_data, \".\")\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project TimeGenerated, AccountName, UserPrincipalName, DeviceName, IP_Contacted = IP_data , Domain_Contacted, ProcessCommandLine, InitiatingProcessCommandLine",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion",
+                                       "CredentialAccess",
+                                       "LateralMovement",
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+                                          "T1059",
+                                          "T1055",
+                                          "T1036",
+                                          "T1003",
+                                          "T1021",
+                                          "T1071"
+                                      ],
+                       "displayName":  "BAH_Defender_Suspicious_WebDav_Client_Execution",
+                       "enabled":  true,
+                       "description":  "/ Looks for suspicious webDav client execution. This analytic was built to address MS 0 day related to CVE-2023-23397.\n// If the external address contacted is a public IP or non .mil or .gov domain it will fire.\n// https://www.huntress.com/blog/everything-we-know-about-cve-2023-23397\n// https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_webdav_client_susp_execution.yml\n// False Positives: No false positives known at this time. It should produce alerts with high confidence.  This rule focuses on identifying cases where rundll32.exe is used to load the WebDAV client (davclnt.dll) in a suspicious context.\nPLATFORM:Azure AD,Windows,IaaS\nMITRE:TA0010;T1048",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:42:03.9630535Z"
+                   }
+}

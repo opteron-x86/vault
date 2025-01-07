@@ -1,0 +1,45 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/006af3f1-d3ce-4331-8597-4d56785db78c",
+    "name":  "006af3f1-d3ce-4331-8597-4d56785db78c",
+    "etag":  "\"3d00a762-0000-2700-0000-64e75c980000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "//Title: BAH_TamperProtectionDetection\n//Description: Looks in the DeviceEvents table for any instance of \u0027TamperingAttempt\u0027 via ActionType. \n//This will ignore attempts from McAfee to disable MDE via mfetp.exe\n//Authors: Steven Wan, Rob Russell, Michael Gibbs\n//False Positives: None applicable at this time.\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nlet detectMcAfee = (\nDeviceEvents\n| where InitiatingProcessFileName == \"mfetp.exe\"\n| project TimeGenerated, DeviceName, ProcessId, InitiatingProcessFileName\n);\nDeviceEvents\n| where ActionType contains \"TamperingAttempt\"\n| extend AdditionalFields = todynamic(AdditionalFields)\n| extend TamperingAction = tostring(AdditionalFields.[\u0027TamperingAction\u0027])\n| extend Status = tostring(AdditionalFields.[\u0027Status\u0027])\n| extend Target = tostring(AdditionalFields.[\u0027Target\u0027])\n| extend TargetProperty = replace_regex(Target,@\"(.*)\\\\(.*)\",@\"\\2\")\n| extend OriginalValue = tostring(AdditionalFields.[\u0027OriginalValue\u0027])\n| extend TamperingAttemptedValue = tostring(AdditionalFields.[\u0027TamperingAttemptedValue\u0027])\n// For ThreatSeverityDefaultAction ignore changes made by GPO or Endpoint configuration manager (SCCM)\n| where ( TargetProperty startswith \"Disable\" and TamperingAttemptedValue == 1 ) or ( ( Target contains \"ThreatSeverityDefaultAction\" ) and ( InitiatingProcessCommandLine !in (\"svchost.exe -k GPSvcGroup\",\"svchost.exe -k netsvcs -p -s gpsvc\") and InitiatingProcessFolderPath != @\"C:\\Windows\\System32\" ) and ( InitiatingProcessCommandLine != \"CcmExec.exe\" and InitiatingProcessFolderPath == @\"C:\\Windows\\CCM\" ))\n| where Status != \"Ignored\"\n| extend TargetProperty = iff( ( TargetProperty matches regex @\"\\d\" ), strcat(\"ThreatSeverityDefaultAction-\",TargetProperty), TargetProperty)\n| join kind=leftouter detectMcAfee on $left.InitiatingProcessParentId == $right.ProcessId, $left.DeviceName == $right.DeviceName\n| where not (InitiatingProcessFileName1 == \"mfetp.exe\") // if McAfee tried to disable MDE ignore\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0]) // for signin lookup by device will find last user signed into device if it was in the last 24 hours\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI // this join will add UserPrincipalName from here forward based on device name\n| project TimeGenerated, DeviceName, TamperingAction, Status, TargetProperty, OriginalValue, TamperingAttemptedValue, InitiatingProcessCommandLine, InitiatingProcessAccountName, InitiatingProcessAccountSid, ReportId, DeviceId\n| sort by TimeGenerated desc\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_TamperProtectionDetection",
+                       "enabled":  false,
+                       "description":  "Looks in the DeviceEvents table for any instance of \u0027TamperingAttempt\u0027 via ActionType.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-08-24T13:35:20.1729196Z"
+                   }
+}

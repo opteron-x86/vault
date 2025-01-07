@@ -1,0 +1,70 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e693e3e9-4f20-4c2f-a697-5e041c35565b",
+    "name":  "e693e3e9-4f20-4c2f-a697-5e041c35565b",
+    "etag":  "\"0301266f-0000-2700-0000-63ff6f150000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  1,
+                       "severity":  "Medium",
+                       "query":  "//Author: Matt Schwartz\r\n//Description: The following alert reports activity for users accessing mailboxes that are not their own.\r\n//False Positives: None known\r\nlet identity_lookup = 30d;\r\nlet main_lookup = 24h;\r\nlet user_threshold = 0;\r\nlet folder_threshold = 0\t\t;\r\nlet OpsTable = datatable(Category:string, Operation:string) [\r\n    \u0027Domain_Operations\u0027,\"Set domain authentication\",\r\n    \u0027Domain_Operations\u0027,\"Set federation settings on domain\",\r\n    \u0027AppUpdate_Operations\u0027,\"Update application\",\r\n    \u0027AppUpdate_Operations\u0027,\"Update application ? Certificates and secrets management\",\r\n    \u0027ServicePrincipal_Operations\u0027,\"Update service principal\",\r\n    \u0027ServicePrincipal_Operations\u0027,\"Add service principal credentials\",\r\n    \u0027AppRoleAssignment_Operations\u0027,\"Add app role assignment\",\r\n    \u0027Consent_Operations\u0027,\"Add OAuth2PermissionGrant\",\r\n    \u0027Consent_Operations\u0027,\"Consent to application\",\r\n    \u0027SAMLToken_Operations\u0027,\"UserLoggedIn\",\r\n    \u0027SAMLToken_Operations\u0027,\"UserLoginFailed\",\r\n    \u0027PSMailbox_Operations\u0027,\"MailboxLogin\",\r\n    \u0027PSLogin_Operations\u0027,\"UserLoggedIn\",\r\n    \u0027PSLogin_Operations\u0027,\"UserLoginFailed\",\r\n    \u0027MailItemsAccessed_Operations\u0027,\"MailItemsAccessed\",\r\n    \u0027FileItems_Operations\u0027,\"FileAccessed\",\r\n    \u0027FileItems_Operations\u0027,\"FileAccessedExtended\"\r\n    ];\r\n// let approved_delegates = \r\n// externaldata(MailboxOwnerUPN:string,UserId:string)[@\"https://solorigatedemo.file.core.windows.net/deleteme-demo/approved_mailbox_delegations.csv?sp=rl\u0026st=2021-02-05T19:07:51Z\u0026se=2022-02-02T19:07:00Z\u0026sv=2019-12-12\u0026sig=LgjDWJO9s9n%2BuMYFei%2Fe2GIEvKm5zyBlFxIst2MUJe0%3D\u0026sr=f\"]\r\n    // with(format=\"csv\",ignoreFirstRecord=true);\r\nlet main =OfficeActivity\r\n| where TimeGenerated \u003e=ago(main_lookup)\r\n| join kind=inner OpsTable on Operation\r\n| project CreationTime = TimeGenerated, Id = AADGroupId, Category, Operation, Organization = OrganizationId, RecordType, ResultStatus, LogonError = LoginStatus, UserKey, UserType, Version = ClientVersion, Workload = OfficeWorkload, ClientIP, ObjectId = OfficeObjectId, UserId, AzureActiveDirectoryEventType = Type, ExtendedProperties, ModifiedProperties, Actor, ActorContextId, ActorIpAddress, InterSystemsId, IntraSystemId, SupportTicketId, Target = AADTarget, TargetContextId, AppId = AzureADAppId, \"ClientAppId\", ClientIPAddress = Client_IPAddress, ClientInfoString, ExternalAccess, InternalLogonType, LogonType = Logon_Type, MailboxGuid, MailboxOwnerSid, MailboxOwnerUPN, \"OperationProperties\", OrganizationName, OriginatingServer, Folders, \"OperationCount\", LogonUserSid, \"ApplicationId\", \"CorrelationId\", EventSource, ItemType, \"ListId\", \"ListItemUniqueId\", Site = Site_, UserAgent, \"WebId\", \"HighPriorityMediaProcessing\", SourceFileExtension, SiteUrl = Site_Url, SourceFileName, SourceRelativeUrl\r\n| where Category == \"MailItemsAccessed_Operations\"\r\n| where ResultStatus =~ \"Succeeded\"\r\n| where tolower(MailboxOwnerUPN) != tolower(UserId) //negate to detect anomolous activity\r\n| where isnotempty(Folders)\r\n// | join kind=leftanti approved_delegates on MailboxOwnerUPN, UserId\r\n| mv-expand parse_json(Folders)\r\n| extend folders = tostring(Folders.Path)\r\n| extend ClientIP = coalesce(ClientIP, iif(ClientIPAddress startswith \"[\", extract(\"\\\\[([^\\\\]]*)\", 1, ClientIPAddress), ClientIPAddress))\r\n| where folders != \"\\\\Calendar\"\r\n| summarize make_set(folders), make_set(ClientInfoString), make_set(ClientIP), make_set(MailboxGuid), MailboxOwnerUPN =make_set(MailboxOwnerUPN) by UserId\r\n| extend folder_count = array_length(set_folders)\r\n| extend user_count = array_length(set_MailboxGuid)\r\n| where user_count \u003e user_threshold or folder_count \u003e folder_threshold\r\n| extend Reason = case(user_count \u003e user_threshold and folder_count \u003e folder_threshold, \"Both User and Folder Theshold Exceeded\", folder_count \u003e folder_threshold and user_count \u003c user_threshold, \"Folder Count Threshold Exceeded\",\"User Threshold Exceeded\")\r\n| sort by user_count desc\r\n| mv-expand MailboxOwnerUPN, set_MailboxGuid, set_ClientIP\r\n| project-reorder UserId, user_count, folder_count, MailboxOwnerUPN, set_MailboxGuid, set_ClientIP, set_ClientInfoString, set_folders\r\n| where UserId !has \"S-1-5-18\"\r\n| where isnotempty(MailboxOwnerUPN)\r\n// | summarize count(Category) by bin(CreationTime, 1h), AppId, Category\r\n// | render timechart \r\n//| extend Users = tostring(Users)\r\n;\r\n// make set of suspicious users\r\nlet suspiciousUsers = main\r\n| summarize suspiciousUsers = make_set(UserId);\r\n// make set of mailbox owners\r\nlet mailboxOwner = main\r\n| summarize mailboxOwner = make_set(MailboxOwnerUPN);\r\n// pull suspicous users identities into query\r\nlet useraccessing =\r\nIdentityInfo\r\n| where TimeGenerated \u003e=ago(identity_lookup)\r\n| where AccountUPN in (suspiciousUsers)\r\n| summarize max(TimeGenerated), UserId = tostring(make_set(AccountUPN)[0]), AccountDisplayName = tostring(make_set(AccountDisplayName)[0]), JobTitle = make_set(JobTitle)[0], Department = tostring(make_set(Department)[0]) by AccountUPN\r\n| join kind=rightouter (main\r\n| extend MailboxOwnerUPN = tostring(MailboxOwnerUPN))\r\non UserId\r\n| project-away UserId\r\n| project-rename SuspiciousUser = UserId1;\r\nIdentityInfo\r\n| where TimeGenerated \u003e=ago(identity_lookup)\r\n| where AccountUPN in (mailboxOwner)\r\n| summarize max(TimeGenerated), UserId = tostring(make_set(AccountUPN)[0]), AccountDisplayName = tostring(make_set(AccountDisplayName)[0]), JobTitle = make_set(JobTitle)[0], Department = tostring(make_set(Department)[0]) by AccountUPN\r\n| join (useraccessing)\r\non $left.UserId == $right.MailboxOwnerUPN\r\n// Writes \"Not Listed\" if AAD does not have an entry for this field.\r\n| extend JobTitle = iif(isempty(JobTitle), \"Not Listed\", JobTitle)\r\n| extend JobTitle1 = iif(isempty(JobTitle1), \"Not Listed\", JobTitle1)\r\n| extend Department = iif(isempty(Department), \"Not Listed\", Department)\r\n| extend Department1 = iif(isempty(Department1), \"Not Listed\", Department1)\r\n// Create information packs for displayed users\r\n| extend MailboxOwner_Info = pack (\"Email\", AccountUPN, \"Department\", Department, \"JobTitle\", JobTitle)\r\n| extend SuspiciousUser_Info = pack(\"Email\", SuspiciousUser, \"IPAddress\", set_ClientIP, \"Department\", Department1, \"JobTitle\", JobTitle1)\r\n// Remove suspicious users that have the title ~ assistant\r\n| where not(parse_json(SuspiciousUser_Info)[\u0027JobTitle\u0027] has \"Assistant\" or parse_json(SuspiciousUser_Info)[\u0027JobTitle\u0027] has \"Asst\" or parse_json(SuspiciousUser_Info)[\u0027JobTitle\u0027] has \"Chief\")\r\n| project MailboxOwnerDisplayName = AccountDisplayName, MailboxOwner_Info, SuspiciousUserDisplayName = AccountDisplayName1, SuspiciousUser_Info, folder_count, Reason, MailboxGUID = set_MailboxGuid, ClientInfoString = set_ClientInfoString, Folders = set_folders\r\n| sort by folder_count\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "MailboxOwnerDisplayName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "SuspiciousUserDisplayName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Collection",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_Anomalous_User_Impersonation_Exchange",
+                       "enabled":  true,
+                       "description":  "The following alert reports activity for users accessing mailboxes that are not their own.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-03-01T15:28:20.726274Z"
+                   }
+}

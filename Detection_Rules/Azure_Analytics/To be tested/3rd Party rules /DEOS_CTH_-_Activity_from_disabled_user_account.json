@@ -1,0 +1,80 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/539e22b2-3be2-42f5-be5c-13f7a566f74a",
+    "name":  "539e22b2-3be2-42f5-be5c-13f7a566f74a",
+    "etag":  "\"28000ec3-0000-2700-0000-66d9f8f10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT6H",
+                       "queryPeriod":  "PT6H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Informational",
+                       "query":  "let UserWatchList = (_GetWatchlist(\"DEOS_CTH_LegacyAppAuthUsers\") | project UserPrincipalName);\nSigninLogs\n| where TimeGenerated \u003e= ago(6h)\n| where UserPrincipalName in (UserWatchList)\n| where ClientAppUsed == \"Exchange ActiveSync\"\n| where ConditionalAccessStatus == \"failure\"\n| extend StatusError = tostring(parse_json(Status.errorCode))\n| where StatusError != \"0\"\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+                                             "UPN":  "UserPrincipalName",
+                                             "IPv4Address":  "IPAddress",
+                                             "ClientApp":  "ClientAppUsed"
+                                         },
+                       "alertDetailsOverride":  {
+                                                    "alertDisplayNameFormat":  "DEOS_CTH - Activity from User Account disabled due to conditional access violation",
+                                                    "alertDescriptionFormat":  "User Account was found attempting authentication utilizing unauthorized legacy application. The account was previously disabled and has been found to be operational.",
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "sentinelEntitiesMappings":  [
+                                                        {
+                                                            "columnName":  "IPAddress"
+                                                        },
+                                                        {
+                                                            "columnName":  "UserPrincipalName"
+                                                        },
+                                                        {
+                                                            "columnName":  "Identity"
+                                                        },
+                                                        {
+                                                            "columnName":  "AuthenticationRequirement"
+                                                        },
+                                                        {
+                                                            "columnName":  "ClientAppUsed"
+                                                        }
+                                                    ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "CredentialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1098",
+                                          "T1212"
+                                      ],
+                       "displayName":  "DEOS_CTH - Activity from disabled user account",
+                       "enabled":  true,
+                       "description":  "Monitors for user accounts associated with gaining/attempting access via legacy methods blocked by conditional access.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-09-05T18:31:11.8670311Z"
+                   }
+}

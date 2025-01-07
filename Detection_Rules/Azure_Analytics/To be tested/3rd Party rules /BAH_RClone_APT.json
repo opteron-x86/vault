@@ -1,0 +1,90 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/DoD365-LAW-RG2/providers/Microsoft.OperationalInsights/workspaces/DOD365-LAW/providers/Microsoft.SecurityInsights/alertRules/d1815af2-ef7e-4c8b-9465-70e42a4e65e7",
+    "name":  "d1815af2-ef7e-4c8b-9465-70e42a4e65e7",
+    "etag":  "\"3008849a-0000-2700-0000-67360a220000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//BAH_APT_RClone Utility Tool usage\n//Author: Shawn McWhirter\n//Description: This activity is significant as rclone.exe is often used by adversaries for data exfiltration, especially during ransomware attacks. If confirmed malicious, this behavior could lead to unauthorized data transfer, resulting in data breaches and potential loss of sensitive information.\n//https://www.helpnetsecurity.com/2024/09/30/ransomware-cloud-compromise/\n//https://app.snapattack.com/detection/0fe6db5b-cfbc-4db4-ade9-64da8aad5263\n//https://redcanary.com/blog/threat-detection/rclone-mega-extortion/\n//https://app.snapattack.com/detection/7af177d9-28fc-46c7-9f77-b69e6b04a056\n//https://www.nccgroup.com/us/research-blog/detecting-rclone-an-effective-tool-for-exfiltration/\n//https://app.snapattack.com/detection/38f8b9ed-9517-46da-bcf8-4ccc71437c01\n//https://www.microsoft.com/en-us/security/blog/2022/06/13/the-many-lives-of-blackcat-ransomware/\n//https://attack.mitre.org/techniques/T1021/006/\n//https://attack.mitre.org/techniques/T1567/002/\n//False Positives: Legitimate use of rclone to manage files on cloud storage.\nlet signInLookup = (\n    SigninLogs\n    | where TimeGenerated \u003e= ago(1d)\n    | where DeviceDetail contains \"displayName\"\n    | extend DeviceDetailJson = parse_json(DeviceDetail)\n    | extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n    | distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n    );\n(union isfuzzy=True\n    (\n    DeviceProcessEvents\n    | where (((ProcessCommandLine contains \"--config \" and ProcessCommandLine contains \"--no-check-certificate \" and ProcessCommandLine contains \" copy \") or ((FolderPath contains @\"\\rclone.exe\" or ProcessVersionInfoFileDescription == \"Rsync for cloud storage\") and (ProcessCommandLine contains \"pass\" or ProcessCommandLine contains \"user\" or ProcessCommandLine contains \"copy\" or ProcessCommandLine contains \"sync\" or ProcessCommandLine contains \"config\" or ProcessCommandLine contains \"lsd\" or ProcessCommandLine contains \"remote\" or ProcessCommandLine contains \"ls\" or ProcessCommandLine contains \"mega\" or ProcessCommandLine contains \"pcloud\" or ProcessCommandLine contains \"ftp\" or ProcessCommandLine contains \"ignore-existing\" or ProcessCommandLine contains \"auto-confirm\" or ProcessCommandLine contains \"transfers\" or ProcessCommandLine contains \"multi-thread-streams\" or ProcessCommandLine contains \"no-check-certificate \"))))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        ProcessCommandLine,\n        ProcessVersionInfoFileDescription,\n        InitiatingProcessFileName,\n        InitiatingProcessFolderPath,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Detects RClone utility usage for possible exfiltration used by ransomware strains\"\n    ),\n    (\n    DeviceFileEvents\n    | where (ActionType == \"FileCreated\" and FolderPath contains @\":\\Users\\\" and FolderPath contains @\"\\.config\\rclone\\\")\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        ActionType,\n        InitiatingProcessFileName,\n        InitiatingProcessFolderPath,\n        FolderPath,\n        FileName,\n        MD5,\n        Tactic = \"Detects Rclone config files being created\"\n    ),(\n    DeviceNetworkEvents\n    | where InitiatingProcessCommandLine has_all(\"copy\", \"--max-age\", \"--ignore-existing\", \"--multi-thread-streams\", \"--transfers\") and InitiatingProcessCommandLine has_any(\"ftp\", \"ssh\", \"-q\")\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        TimeGenerated,\n        DeviceName,\n        InitiatingProcessAccountName,\n        ActionType,\n        InitiatingProcessCommandLine,\n        InitiatingProcessFileName,\n        InitiatingProcessFolderPath,\n        Tactic = \"Detects process execution of RClone or similar tools used by ransomware operators to exfiltrate data\"\n    )\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "customDetails":  {
+
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "InitiatingProcessFileName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "InitiatingProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FileName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "FolderPath"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "tactics":  [
+                                       "Exfiltration",
+                                       "LateralMovement"
+                                   ],
+                       "techniques":  [
+                                          "T1021",
+                                          "T1537",
+                                          "T1567"
+                                      ],
+                       "displayName":  "BAH_RClone_APT",
+                       "enabled":  true,
+                       "description":  "This activity is significant as rclone.exe is often used by adversaries for data exfiltration, especially during ransomware attacks. If confirmed malicious, this behavior could lead to unauthorized data transfer, resulting in data breaches and potential loss of sensitive information.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-11-14T14:33:05.7278691Z"
+                   }
+}

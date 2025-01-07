@@ -1,0 +1,70 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/6675a8c3-c113-414f-9901-757da5612693",
+    "name":  "6675a8c3-c113-414f-9901-757da5612693",
+    "etag":  "\"85003fb3-0000-2700-0000-66fdaa260000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT9H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Searches for access by users who have not previously accessed an Azure Key Vault in the last 14 days and returns all actions by those users\r\nlet operationlist = dynamic([\"SecretGet\", \"KeyGet\", \"VaultGet\"]);\r\nlet starttime = 14d;\r\nlet endtime = 9h;\r\nlet detection=\r\n    AzureDiagnostics\r\n    | where TimeGenerated between (ago(starttime) .. ago(endtime))\r\n    | where ResourceType == \"VAULTS\"\r\n    | where ResultType == \"Success\"\r\n    | where OperationName in (operationlist)\r\n    | where isnotempty(identity_claim_http_schemas_xmlsoap_org_ws_2005_05_identity_claims_upn_s)\r\n    | project-rename KeyVaultName=Resource, UserPrincipalName=identity_claim_appid_g\r\n    | distinct KeyVaultName, UserPrincipalName\r\n    | join kind=rightanti  (\r\n        AzureDiagnostics\r\n        | where TimeGenerated \u003e ago(endtime)\r\n        | where ResourceType == \"VAULTS\"\r\n        | where ResultType == \"Success\"\r\n        | where OperationName in (operationlist)\r\n        | where isnotempty(identity_claim_http_schemas_xmlsoap_org_ws_2005_05_identity_claims_upn_s)\r\n        | project-rename\r\n            KeyVaultName=Resource,\r\n            UserPrincipalName=identity_claim_http_schemas_xmlsoap_org_ws_2005_05_identity_claims_upn_s\r\n        | distinct KeyVaultName, UserPrincipalName)\r\n        on KeyVaultName, UserPrincipalName;\r\nAzureDiagnostics\r\n| where TimeGenerated \u003e ago(endtime)\r\n| where ResourceType == \"VAULTS\"\r\n| where ResultType == \"Success\"\r\n| project-rename\r\n    KeyVaultName=Resource,\r\n    UserPrincipalName=identity_claim_http_schemas_xmlsoap_org_ws_2005_05_identity_claims_upn_s\r\n    | join kind=inner detection on KeyVaultName, UserPrincipalName\r\n\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "AzureResource",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ResourceId",
+                                                                            "columnName":  "KeyVaultName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1555"
+                                      ],
+                       "displayName":  "User Operations in KeyVault not seen in 14 days",
+                       "enabled":  true,
+                       "description":  "Searches for access by users who have not previously accessed an Azure Key Vault in the last 14 days and returns all actions by those users\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0004;T1078;T1078.004,TA0006;T1552;T1552.001;T1552.005,TA0007;T1526",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:16:37.2324686Z"
+                   }
+}

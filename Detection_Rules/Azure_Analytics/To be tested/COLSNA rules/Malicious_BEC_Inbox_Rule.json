@@ -1,0 +1,80 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/c9aa0093-0969-44ca-8db2-34a1208f66a3",
+    "name":  "c9aa0093-0969-44ca-8db2-34a1208f66a3",
+    "etag":  "\"5404c1e8-0000-2700-0000-667c35690000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let BEC_Keywords = dynamic([ \u0027invoice\u0027,\u0027payment\u0027,\u0027paycheck\u0027,\u0027transfer\u0027,\u0027bank statement\u0027,\u0027bank details\u0027,\u0027closing\u0027,\u0027funds\u0027,\u0027bank account\u0027,\u0027account details\u0027,\u0027remittance\u0027,\u0027purchase\u0027,\u0027deposit\u0027,\"PO#\",\"Zahlung\",\"Rechnung\",\"Paiement\", \"virement bancaire\",\"Bankuberweisung\",\u0027hacked\u0027,\u0027phishing\u0027]);\nOfficeActivity\n| where Operation =~ \"New-InboxRule\"\n| where Parameters has \"Deleted Items\" or Parameters has \"Junk Email\"  or Parameters has \"DeleteMessage\"\n| extend Events=todynamic(Parameters)\n| parse Events  with * \"SubjectContainsWords\" SubjectContainsWords \u0027}\u0027*\n| parse Events  with * \"BodyContainsWords\" BodyContainsWords \u0027}\u0027*\n| parse Events  with * \"SubjectOrBodyContainsWords\" SubjectOrBodyContainsWords \u0027}\u0027*\n| where SubjectContainsWords has_any (BEC_Keywords)\n or BodyContainsWords has_any (BEC_Keywords)\n or SubjectOrBodyContainsWords has_any (BEC_Keywords)\n| extend ClientIPAddress = case( ClientIP has \".\", tostring(split(ClientIP,\":\")[0]), ClientIP has \"[\", tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP,\"]\")[0]))), ClientIP )\n| extend Keyword = iff(isnotempty(SubjectContainsWords), SubjectContainsWords, (iff(isnotempty(BodyContainsWords),BodyContainsWords,SubjectOrBodyContainsWords )))\n| extend RuleDetail = case(OfficeObjectId contains \u0027/\u0027 , tostring(split(OfficeObjectId, \u0027/\u0027)[-1]) , tostring(split(OfficeObjectId, \u0027\\\\\u0027)[-1]))\n| summarize count(), StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated) by  Operation, UserId, ClientIPAddress, ResultStatus, Keyword, OriginatingServer, OfficeObjectId, RuleDetail\n| extend UserName = split(UserId, \u0027@\u0027)[0], DomainName = split(UserId, \u0027@\u0027)[1]\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserId"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "DomainName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "ClientIPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1098",
+                                          "T1078"
+                                      ],
+                       "displayName":  "Malicious BEC Inbox Rule",
+                       "enabled":  true,
+                       "description":  "Often times after the initial compromise in a BEC attack the attackers create inbox rules to delete emails that contain certain keywords related to their BEC attack.\n This is done so as to limit ability to warn compromised users that they\u0027ve been compromised",
+                       "alertRuleTemplateName":  "8ac77493-3cae-4840-8634-15fb23f8fb68",
+                       "lastModifiedUtc":  "2024-06-26T15:36:08.5361155Z"
+                   }
+}

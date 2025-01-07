@@ -1,0 +1,83 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/7fead111-942e-4665-a8cf-ecc1101c0d1d",
+    "name":  "7fead111-942e-4665-a8cf-ecc1101c0d1d",
+    "etag":  "\"53015d58-0000-2700-0000-65aacd420000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "    DeviceFileEvents\n    | where ActionType == \"FileCreated\"\n    | where FileName endswith \".h0lyenc\" or FolderPath == \"C:\\\\FOR_DECRYPT.html\"\n    | summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated)\n        by\n        AccountCustomEntity = iff(isnotempty(InitiatingProcessAccountUpn), InitiatingProcessAccountUpn, InitiatingProcessAccountName),\n        HostCustomEntity = DeviceName,\n        Type,\n        InitiatingProcessId,\n        FileName,\n        FolderPath,\n        EventType = ActionType,\n        Commandline = InitiatingProcessCommandLine,\n        InitiatingProcessFileName,\n        InitiatingProcessSHA256,\n        FileHashCustomEntity = SHA256,\n        AlgorithmCustomEntity = \"SHA256\"\n   ",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Algorithm",
+                                                                            "columnName":  "AlgorithmCustomEntity"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "FileHashCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1486"
+                                      ],
+                       "displayName":  "Dev-0530 File Extension Rename",
+                       "enabled":  true,
+                       "description":  "Dev-0530 actors are known to encrypt the contents of the victims device as well as renaming the file extensions. This query looks for the creation of files with .h0lyenc extension or presence of ransom note.",
+                       "alertRuleTemplateName":  "d82eb796-d1eb-43c8-a813-325ce3417cef",
+                       "lastModifiedUtc":  "2024-01-19T19:27:59.8629453Z"
+                   }
+}

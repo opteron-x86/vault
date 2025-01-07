@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8b21ed1d-4de1-40f9-a3d9-e08b3a26f347",
+    "name":  "8b21ed1d-4de1-40f9-a3d9-e08b3a26f347",
+    "etag":  "\"87006af4-0000-2700-0000-66fdcbbc0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Steven Wan\r\n//Description: This analytic searches for data being downloaded through PowerShell using various cmdlets.\r\n//False Positives: Possibly will flag legitimate PowerShell download requests with users that have PowerShell access. This analytic is also known to alert when the MDE agent is downloading updated definitions. In the future, this analytic should be modified to create a defeat for MDE downloads.\r\nDeviceEvents \r\n| where ActionType == \"PowerShellCommand\"\r\n| where AdditionalFields has_any(\"Invoke-WebRequest\", \"WebClient\", \"DownloadFile\", \"DownloadData\", \"DownloadString\" \"WebRequest\", \"Shellcode\", \"http\", \"https\")\r\n| where not(InitiatingProcessAccountName has_any(\"system\", \"local service\"))\r\n| project TimeGenerated, InitiatingProcessAccountUpn, DeviceName, MachineGroup, FileName, ActionType, AdditionalFields, InitiatingProcessAccountName, InitiatingProcessCommandLine, ProcessCommandLine, InitiatingProcessFileName",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatingProcessAccountName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1048"
+                                      ],
+                       "displayName":  "BAH_Defender-PowerShellDownload",
+                       "enabled":  false,
+                       "description":  "This analytic searches for data being downloaded through PowerShell using various cmdlets.\nPLATFORM:Windows\nMITRE:TA0010;T1048",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:39:56.0007951Z"
+                   }
+}

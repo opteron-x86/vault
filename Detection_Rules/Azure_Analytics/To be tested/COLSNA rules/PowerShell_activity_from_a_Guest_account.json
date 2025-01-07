@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/1625655d-8f8d-424a-a454-70f554ccfe0b",
+    "name":  "1625655d-8f8d-424a-a454-70f554ccfe0b",
+    "etag":  "\"d600a59c-0000-2700-0000-65a7cdda0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Looks for Guest accounts authenticating to access/execute a PowerShell app.\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(24h)\r\n| where UserType == \"Guest\"\r\n// AppDisplayName has several variations of \"PowerShell\".  This is a catch-all.\r\n| where AppDisplayName contains \"PowerShell\"\r\n// Extend both AccountCustomEntity and IPCustomEntity so the populate within the \"Entities\" pane.\r\n| extend AccountCustomEntity = UserPrincipalName, IPCustomEntity = IPAddress",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Reconnaissance"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "PowerShell activity from a Guest account",
+                       "enabled":  true,
+                       "description":  "This analytic looks for any authentication from a guest account where the user is accessing a PowerShell-related resource.  Guest accounts should not be accessing or executing PowerShell resources within the environment.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-01-17T12:53:45.4097653Z"
+                   }
+}

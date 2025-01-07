@@ -1,0 +1,74 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4234b3ce-1d01-4f70-9890-087b8101bf1e",
+    "name":  "4234b3ce-1d01-4f70-9890-087b8101bf1e",
+    "etag":  "\"7b002cb5-0000-2700-0000-64c3c1960000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let SensitiveOperationList = dynamic(\n[\"VaultDelete\", \"KeyDelete\", \"SecretDelete\", \"SecretPurge\", \"KeyPurge\", \"SecretBackup\", \"KeyBackup\"]);\nAzureDiagnostics\n| where ResourceType =~ \"VAULTS\" and ResultType =~ \"Success\"\n| where OperationName in~ (SensitiveOperationList)\n| extend ResultType = column_ifexists(\"ResultType\", \"NoResultType\"), \nrequestUri_s = column_ifexists(\"requestUri_s\", \"None\"), \nidentity_claim_oid_g = column_ifexists(\"identity_claim_oid_g\", \"None\"), CallerIPAddress = column_ifexists(\"CallerIPAddress\", \"None\"), \nclientInfo_s = column_ifexists(\"clientInfo_s\", \"None\"), \nidentity_claim_upn_s = column_ifexists(\"identity_claim_upn_s\", \"None\")\n| summarize EventCount=count(), StartTimeUtc=min(TimeGenerated), EndTimeUtc=max(TimeGenerated), TimeTriggered=make_list(TimeGenerated),OperationNameList=make_set(OperationName), RequestURLList=make_set(requestUri_s), CallerIPList = make_set(CallerIPAddress),  CallerIPMax= arg_max(CallerIPAddress,*) by ResourceType, ResultType, Resource, identity_claim_upn_s, clientInfo_s\n| extend timestamp = StartTimeUtc\n| extend Name = tostring(split(identity_claim_upn_s,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(identity_claim_upn_s,\u0027@\u0027,1)[0])",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "CallerIPMax"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1485"
+                                      ],
+                       "displayName":  "Sensitive Azure Key Vault operations",
+                       "enabled":  true,
+                       "description":  "Identifies when sensitive Azure Key Vault operations are used. This includes: VaultDelete, KeyDelete, SecretDelete, SecretPurge, KeyPurge, SecretBackup, KeyBackup.\nAny Backup operations should match with expected scheduled backup activity.",
+                       "alertRuleTemplateName":  "d6491be0-ab2d-439d-95d6-ad8ea39277c5",
+                       "lastModifiedUtc":  "2023-07-28T13:24:37.4071836Z"
+                   }
+}

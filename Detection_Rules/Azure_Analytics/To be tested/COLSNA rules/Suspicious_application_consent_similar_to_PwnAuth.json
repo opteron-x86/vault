@@ -1,0 +1,71 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/38d56ffc-934a-4b85-b9d9-7a28df85ad50",
+    "name":  "38d56ffc-934a-4b85-b9d9-7a28df85ad50",
+    "etag":  "\"86001f52-0000-2700-0000-66fdb1f20000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let detectionTime = 1h;\nlet joinLookback = 14d;\nAuditLogs\n| where TimeGenerated \u003e ago(detectionTime)\n| where LoggedByService =~ \"Core Directory\"\n| where Category =~ \"ApplicationManagement\"\n| where OperationName =~ \"Consent to application\"\n| where TargetResources has \"offline\"\n| extend AppDisplayName = TargetResources.[0].displayName\n| extend AppClientId = tolower(TargetResources.[0].id)\n| where AppClientId !in ((externaldata(knownAppClientId:string, knownAppDisplayName:string)[@\"https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Sample%20Data/Feeds/Microsoft.OAuth.KnownApplications.csv\"] with (format=\"csv\")))\n| extend ConsentFull = TargetResources[0].modifiedProperties[4].newValue\n| parse ConsentFull with * \"ConsentType: \" GrantConsentType \", Scope: \" GrantScope1 \"]\" *\n| where ConsentFull contains \"user.read\" and ConsentFull contains \"offline_access\" and ConsentFull contains \"mail.readwrite\" and ConsentFull contains \"mail.send\" and ConsentFull contains \"files.read.all\"\n| where GrantConsentType != \"AllPrincipals\" // NOTE: we are ignoring if OAuth application was granted to all users via an admin - but admin due diligence should be audited occasionally\n| extend GrantIpAddress = iff(isnotempty(InitiatedBy.user.ipAddress), InitiatedBy.user.ipAddress, InitiatedBy.app.ipAddress)\n| extend GrantInitiatedBy = iff(isnotempty(InitiatedBy.user.userPrincipalName),InitiatedBy.user.userPrincipalName, InitiatedBy.app.displayName)\n| extend GrantUserAgent = iff(AdditionalDetails[0].key =~ \"User-Agent\", AdditionalDetails[0].value, \"\")\n| project TimeGenerated, GrantConsentType, GrantScope1, GrantInitiatedBy, AppDisplayName, GrantIpAddress, GrantUserAgent, AppClientId, OperationName, ConsentFull, CorrelationId\n| join kind = leftouter (AuditLogs\n| where TimeGenerated \u003e ago(joinLookback)\n| where LoggedByService =~ \"Core Directory\"\n| where Category =~ \"ApplicationManagement\"\n| where OperationName =~ \"Add service principal\"\n| extend AppClientId = tolower(TargetResources[0].id)\n| extend AppReplyURLs = iff(TargetResources[0].modifiedProperties[1].newValue has \"AddressType\", TargetResources[0].modifiedProperties[1].newValue, \"\")\n| distinct AppClientId, tostring(AppReplyURLs)\n)\non AppClientId\n| join kind = innerunique (AuditLogs\n| where TimeGenerated \u003e ago(joinLookback)\n| where LoggedByService =~ \"Core Directory\"\n| where Category =~ \"ApplicationManagement\"\n| where OperationName =~ \"Add OAuth2PermissionGrant\" or OperationName =~ \"Add delegated permission grant\"\n| extend GrantAuthentication = tostring(TargetResources[0].displayName)\n| extend GrantOperation = OperationName\n| project GrantAuthentication, GrantOperation, CorrelationId\n) on CorrelationId\n| project TimeGenerated, GrantConsentType, GrantScope1, GrantInitiatedBy, AppDisplayName, AppReplyURLs, GrantIpAddress, GrantUserAgent, AppClientId, GrantAuthentication, OperationName, GrantOperation, CorrelationId, ConsentFull",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "GrantInitiatedBy"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "GrantIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1528",
+                                          "T1550"
+                                      ],
+                       "displayName":  "Suspicious application consent similar to PwnAuth",
+                       "enabled":  true,
+                       "description":  "This will alert when a user consents to provide a previously-unknown Azure application with the same OAuth permissions used by the FireEye PwnAuth toolkit (https://github.com/fireeye/PwnAuth).\nThe default permissions/scope for the PwnAuth toolkit are user.read, offline_access, mail.readwrite, mail.send, and files.read.all.\nConsent to applications with these permissions should be rare, especially as the knownApplications list is expanded. Public contributions to expand this filter are welcome!\nFor further information on AuditLogs please see https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-audit-activities.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1078;T1078.004,TA0005;T1550;T1550.001;T1550.004,TA0006;T1528",
+                       "alertRuleTemplateName":  "39198934-62a0-4781-8416-a81265c03fd6",
+                       "lastModifiedUtc":  "2024-10-02T20:49:49.2729745Z"
+                   }
+}

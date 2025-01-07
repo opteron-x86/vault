@@ -1,0 +1,112 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4f5bbd71-2aa9-4b1a-9952-a39547129938",
+    "name":  "4f5bbd71-2aa9-4b1a-9952-a39547129938",
+    "etag":  "\"87000dcd-0000-2700-0000-66fdc9250000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// BAH_Midnight_Blizzard_full_access_as_app\n// Author: Shawn McWhirter\n// Description:This detection looks for the full_access_as_app permission being granted to an OAuth application with Admin Consent. This permission provide access to all Exchange mailboxes via the EWS API can could be exploited to access sensitive data by being added to a compromised application. The application granted this permission should be reviewed to ensure that it is absolutely necessary for the applications function.\n// \"https://learn.microsoft.com/en-us/graph/auth-limit-mailbox-access\", \"https://github.com/Azure/Azure-Sentinel/blob/master/Solutions/Microsoft%20Entra%20ID/Analytic%20Rules/ExchangeFullAccessGrantedToApp.yaml\"\n// False Positives: Applications that may be setup wrong or given too much permissions in the infrastructure. Apps that need to be tuned.\nAuditLogs\n  | where LoggedByService =~ \"Core Directory\"\n  | mv-expand TargetResources\n  | extend OAuthAppName = TargetResources.displayName\n  | extend ModifiedProperties = TargetResources.modifiedProperties\n  | mv-apply Property = ModifiedProperties on\n    (\n        where Property.displayName =~ \"ConsentContext.isAdminConsent\"\n        | extend AdminConsent = tostring(Property.newValue)\n    )\n  | mv-apply Property = ModifiedProperties on\n    (\n        where Property.displayName =~ \"ConsentAction.Permissions\"\n        | extend Permissions = tostring(Property.newValue)\n    )\n  | mv-apply Property = ModifiedProperties on\n    (\n        where Property.displayName =~ \"TargetId.ServicePrincipalNames\"\n        | extend AppId = tostring(Property.newValue)\n    )\n  | mv-apply Property = AdditionalDetails on\n    (\n        where Property.key =~ \"User-Agent\"\n        | extend InitiatingUserAgent = replace_string(\u0027\"\u0027, \u0027\u0027, tostring(Property.value))\n    )\n  | project-away Property\n  | parse Permissions with * \"ConsentType: \" GrantConsentType \", Scope: \" GrantScope1 \",\" *\n  | extend InitiatingAppName = tostring(InitiatedBy.app.displayName)\n  | extend InitiatingAppServicePrincipalId = tostring(InitiatedBy.app.servicePrincipalId)\n  | extend InitiatingUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName)\n  | extend InitiatingAadUserId = tostring(InitiatedBy.user.id)\n  | extend InitiatingIpAddress = tostring(iff(isnotempty(InitiatedBy.user.ipAddress), InitiatedBy.user.ipAddress, InitiatedBy.app.ipAddress))\n  | project-reorder TimeGenerated, OAuthAppName, AppId, AdminConsent, Permissions, InitiatingUserPrincipalName, InitiatingAadUserId, InitiatingAppName, InitiatingAppServicePrincipalId, InitiatingIpAddress, InitiatingUserAgent, GrantScope1, GrantConsentType\n  | extend GrantInitiatedBy = tostring(iff(isnotempty(InitiatingUserPrincipalName), InitiatingUserPrincipalName, InitiatingAppName))\n  | extend Name = split(InitiatingUserPrincipalName, \"@\")[0], UPNSuffix = split(InitiatingUserPrincipalName, \"@\")[1]",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "customDetails":  {
+
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "CloudApplication",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AppId",
+                                                                            "columnName":  "AppId"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "OAuthAppName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "InitiatingUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatingAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatingAppServicePrincipalId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "InitiatingIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1550"
+                                      ],
+                       "displayName":  "BAH_Midnight_Blizzard_full_access_as_app",
+                       "enabled":  true,
+                       "description":  "This detection looks for the full_access_as_app permission being granted to an OAuth application with Admin Consent. This permission provide access to all Exchange mailboxes via the EWS API can could be exploited to access sensitive data by being added to a compromised application. The application granted this permission should be reviewed to ensure that it is absolutely necessary for the applications function.\nPLATFORM:Microsoft 365,Windows,IaaS\nMITRE:TA0005;T1550",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:28:45.3814329Z"
+                   }
+}

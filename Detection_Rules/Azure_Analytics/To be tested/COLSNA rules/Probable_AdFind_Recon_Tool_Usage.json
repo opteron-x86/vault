@@ -1,0 +1,108 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/694408b8-95ce-416e-927a-cf0c06457e82",
+    "name":  "694408b8-95ce-416e-927a-cf0c06457e82",
+    "etag":  "\"86008ec6-0000-2700-0000-66fdb8260000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let args = dynamic([\"objectcategory\",\"domainlist\",\"dcmodes\",\"adinfo\",\"trustdmp\",\"computers_pwdnotreqd\",\"Domain Admins\", \"objectcategory=person\", \"objectcategory=computer\", \"objectcategory=*\",\"dclist\"]);\nlet parentProcesses = dynamic([\"pwsh.exe\",\"powershell.exe\",\"cmd.exe\"]);\nDeviceProcessEvents\n//looks for execution from a shell\n| where InitiatingProcessFileName in~ (parentProcesses)\n// main filter\n| where FileName =~ \"AdFind.exe\" or SHA256 == \"c92c158d7c37fea795114fa6491fe5f145ad2f8c08776b18ae79db811e8e36a3\"\n   // AdFind common Flags to check for from various threat actor TTPs\n    or ProcessCommandLine has_any (args)\n| extend HostName = split(DeviceName, \u0027.\u0027, 0)[0], DnsDomain = strcat_array(array_slice(split(DeviceName, \u0027.\u0027), 1, -1), \u0027.\u0027), FileHashAlgorithm = \"SHA256\"",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "AccountName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "AccountDomain"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "HostName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "DnsDomain",
+                                                                            "columnName":  "DnsDomain"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "InitiatingProcessFileName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "ProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Algorithm",
+                                                                            "columnName":  "FileHashAlgorithm"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "SHA256"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Discovery"
+                                   ],
+                       "techniques":  [
+                                          "T1016",
+                                          "T1018",
+                                          "T1069",
+                                          "T1087",
+                                          "T1482"
+                                      ],
+                       "displayName":  "Probable AdFind Recon Tool Usage",
+                       "enabled":  true,
+                       "description":  "This query identifies the host and account that executed AdFind, by hash and filename, in addition to the flags commonly utilized by various threat actors during the reconnaissance phase.\nPLATFORM:Microsoft 365\nMITRE:TA0007;T1087;T1087.003;T1087.004",
+                       "alertRuleTemplateName":  "c63ae777-d5e0-4113-8c9a-c2c9d3d09fcd",
+                       "lastModifiedUtc":  "2024-10-02T21:16:19.3013436Z"
+                   }
+}

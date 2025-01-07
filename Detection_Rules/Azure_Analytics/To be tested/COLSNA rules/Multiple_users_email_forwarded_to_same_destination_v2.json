@@ -1,0 +1,62 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/5190ac07-1c6f-4ec3-9d22-e01b8d9bc729",
+    "name":  "5190ac07-1c6f-4ec3-9d22-e01b8d9bc729",
+    "etag":  "\"d600c78f-0000-2700-0000-65a7cd7a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P7D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let timeframe = 90d;\nOfficeActivity\n| where TimeGenerated \u003e= ago(timeframe)\n| where Operation =~ \"Set-Mailbox\"\n| where Parameters has \"ForwardingSmtpAddress\"\n| extend parsed = parse_json(Parameters)\n| mv-expand parsed\n| where parsed.Name == \"ForwardingSmtpAddress\"\n| extend parameterName = tostring(parsed.Name), fwdingDestination = tostring(parsed.Value)\n| where isnotempty(fwdingDestination)\n| extend ClientIPOnly = case( \nClientIP has \".\" and ClientIP has \u0027:\u0027, tostring(split(ClientIP,\":\")[0]), \nClientIP has \".\" and ClientIP has \u0027-\u0027, tostring(split(ClientIP,\"-\")[0]), \nClientIP has \u0027]-\u0027, tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP,\"]\")[0]))),\nClientIP has \u0027]:\u0027, tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP,\"]\")[0]))),\nisempty(ClientIP) and ClientIP_ has \".\" and ClientIP_ has \u0027:\u0027, tostring(split(ClientIP_,\":\")[0]), \nisempty(ClientIP) and ClientIP_ has \".\" and ClientIP_ has \u0027-\u0027, tostring(split(ClientIP_,\"-\")[0]), \nisempty(ClientIP) and ClientIP_ has \u0027]-\u0027, tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP_,\"]\")[0]))),\nisempty(ClientIP) and ClientIP_ has \u0027]:\u0027, tostring(trim_start(@\u0027[[]\u0027,tostring(split(ClientIP_,\"]\")[0]))),\nisnotempty(ClientIP), ClientIP,\nisnotempty(ClientIP_), ClientIP_,\n\"IP Not Available\"\n)  \n| extend Port = case(\nClientIP has \".\" and ClientIP has \u0027:\u0027, tostring(split(ClientIP,\":\")[1]), \nClientIP has \".\" and ClientIP has \u0027-\u0027, tostring(split(ClientIP,\"-\")[1]), \nClientIP has \u0027]-\u0027, tostring(split(ClientIP,\"]-\")[1]), \nClientIP has \u0027]:\u0027, tostring(split(ClientIP,\"]:\")[1]), \nisempty(ClientIP) and ClientIP_ has \".\" and ClientIP_ has \u0027:\u0027, tostring(split(ClientIP_,\":\")[1]), \nisempty(ClientIP) and ClientIP_ has \".\" and ClientIP_ has \u0027-\u0027, tostring(split(ClientIP_,\"-\")[1]), \nisempty(ClientIP) and ClientIP_ has \u0027]-\u0027, tostring(split(ClientIP_,\"]-\")[1]),\nisempty(ClientIP) and ClientIP_ has \u0027]:\u0027, tostring(split(ClientIP_,\"]:\")[1]),\nisnotempty(ClientIP), ClientIP,\nisnotempty(ClientIP_), ClientIP_,\n\"IP Not Available\"\n)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), DistinctUserCount = dcount(UserId), UserId = make_set(UserId),\nPorts = make_set(Port), EventCount = count(), ClientIPOnly = make_set(ClientIPOnly) by fwdingDestination\n| where DistinctUserCount \u003e 1\n| mv-expand UserId\n| extend fwdingDestination = tostring(split(fwdingDestination, \"smtp:\")[1])\n| extend UserId = iif(UserId contains \"on behalf\", split(UserId, \"on behalf of \")[0], UserId)\n| extend UserId = tostring(UserId), Ports = tostring(Ports), ClientIPOnly = tostring(ClientIPOnly)\n| distinct StartTimeUtc, EndTimeUtc, UserId, DistinctUserCount, Ports, fwdingDestination, EventCount, ClientIPOnly\n| extend timestamp = StartTimeUtc",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Collection",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1114",
+                                          "T1020"
+                                      ],
+                       "displayName":  "Multiple users email forwarded to same destination v2",
+                       "enabled":  false,
+                       "description":  " Identifies when multiple (more than one) users mailboxes are configured to forward to the same destination. \nThis could be an attacker-controlled destination mailbox configured to collect mail from multiple compromised user accounts. (Version 2 notes: Fixed the summarize operation. The summarize operation was summarizing by fwdingmailbox and IP. Just because the same ClientIPs are used on two different accounts being forwarded to the same place, does not mean we shouldn\u0027t see it.\nThis analytic is looking for mutliple forwarded mailboxes to same location regardless of IP address.)",
+                       "alertRuleTemplateName":  "871ba14c-88ef-48aa-ad38-810f26760ca3",
+                       "lastModifiedUtc":  "2024-01-17T12:52:09.9799504Z"
+                   }
+}

@@ -1,0 +1,57 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/04142cac-4011-4539-a9a3-7865d68cd37a",
+    "name":  "04142cac-4011-4539-a9a3-7865d68cd37a",
+    "etag":  "\"801be738-0000-2700-0000-6772a9c10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//Desription:Detects changes to resource groups, subscriptions, or management groups in Azure that may indicate malicious activity.\r\n//status:tested\r\n//author:Danielle Torrence\r\nAzureActivity\r\n| where OperationNameValue has_any (\r\n    \"resourcegroups/write\", \r\n    \"resourcegroups/delete\",\r\n    \"subscriptions/write\", \r\n    \"subscriptions/delete\",\r\n    \"managementGroups/write\", \r\n    \"managementGroups/delete\",\r\n    \"LeaveOrganization\"\r\n)\r\n| extend Activity = case(\r\n    OperationNameValue has \"resourcegroups/write\", \"Resource Group Created\",\r\n    OperationNameValue has \"resourcegroups/delete\", \"Resource Group Deleted\",\r\n    OperationNameValue has \"subscriptions/write\", \"Subscription Created or Modified\",\r\n    OperationNameValue has \"subscriptions/delete\", \"Subscription Deleted\",\r\n    OperationNameValue has \"managementGroups/write\", \"Management Group Created or Modified\",\r\n    OperationNameValue has \"managementGroups/delete\", \"Management Group Deleted\",\r\n    OperationNameValue has \"LeaveOrganization\", \"Subscription Left Organization\",\r\n    \"Unknown\"\r\n)\r\n| project TimeGenerated, Caller, CallerIpAddress, OperationNameValue, Activity, ResourceGroup, ResourceId\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+
+                                         },
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "COLSNA_CTE_Monitor Changes to Cloud Resource Hierarchy",
+                       "enabled":  true,
+                       "description":  "Detects changes to resource groups, subscriptions, or management groups in Azure that may indicate malicious activity.\nPlatform:IAAS\nMITRE:TA0005;T1666",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-12-30T14:10:07.3426549Z"
+                   }
+}

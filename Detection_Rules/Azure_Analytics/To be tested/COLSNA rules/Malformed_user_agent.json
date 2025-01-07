@@ -1,0 +1,81 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/a0bee7ea-73ab-4f90-9a64-e2fd83fe786b",
+    "name":  "a0bee7ea-73ab-4f90-9a64-e2fd83fe786b",
+    "etag":  "\"87008935-0000-2700-0000-66fdbf3a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// name: Malformed user agent\n// description: |\n// \u0027Malware authors will sometimes hardcode user agent string values when writing the network communication component of their malware.\n//   Malformed user agents can be an indication of such malware.\u0027\n// severity: Medium\n// requiredDataConnectors:\n//   - connectorId: Office365\n//     dataTypes:\n//       - OfficeActivity\n//   - connectorId: AzureActiveDirectory\n//     dataTypes:\n//       - SigninLogs\n// query: |\nlet whiteAccounts = dynamic([\u0027disa.oe.pulse@dod365.onmicrosoft.us\u0027, \u0027disa.meade.oe.equip.synapp1@mail.mil\u0027, \u0027disa.meade.oe.equip.synapp2@mail.mil\u0027, \u0027disa.pentagon.jsp.mbx.equip-synapp1@mail.mil\u0027, \u0027disa.meade.oe.equip.synapp3@mail.mil\u0027, \u0027ac9cb27e-0886-4359-9a19-8669ae7749a6\u0027, \u0027disa.meade.oe.equip.synapp6@mail.mil\u0027, \u0027disa.meade.oe.equip.synapp7@mail.mil\u0027, \u0027disa.meade.oe.equip.synapp8@mail.mil\u0027, \u002770fd679f-e3a2-4dc7-bdd4-b6b03d242c58\u0027, \u0027disa.meade.oe.equip.synapp5@mail.mil\u0027, \u0027disa.meade.oe.equip.synapp4@mail.mil\u0027 ]);\nlet endtime = 1d;\n(union isfuzzy=true\n    (OfficeActivity\n    | where TimeGenerated \u003e= ago(endtime)\n    | where UserAgent != \"\"),\n    (OfficeActivity\n    | where TimeGenerated \u003e= ago(endtime)\n    | where RecordType in (\"AzureActiveDirectory\", \"AzureActiveDirectoryStsLogon\")\n    | extend OperationName = Operation\n    | parse ExtendedProperties with * \u0027User-Agent\\\\\":\\\\\"\u0027 UserAgent2 \u0027\\\\\u0027 *\n    | parse ExtendedProperties with * \u0027UserAgent\",      \"Value\": \"\u0027 UserAgent1 \u0027\"\u0027 *\n    | where isnotempty(UserAgent1) or isnotempty(UserAgent2)\n    | extend UserAgent = iff(RecordType == \u0027AzureActiveDirectoryStsLogon\u0027, UserAgent1, UserAgent2)\n    | summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated) by UserAgent, SourceIP = ClientIP, Account = UserId, Type, RecordType, Operation\n    ),\n    (SigninLogs\n    | where TimeGenerated \u003e= ago(endtime)\n    | where isnotempty(UserAgent)\n    | summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated) by UserAgent, SourceIP = IPAddress, Account = UserPrincipalName, Type, OperationName, tostring(LocationDetails), tostring(DeviceDetail), AppDisplayName, ClientAppUsed\n    )\n)\n// Custom change - whitelisted the \u0027disa.oe.pulse\u0027 \u0026 \u0027disa.meade.oe.equip.synapp\u0027 accounts\n| where UserId !in (whiteAccounts) and Account !in (whiteAccounts)\n// Likely artefact of hardcoding\n| where UserAgent startswith \"User\" or UserAgent startswith \u0027\\\"\u0027\n    // Incorrect casing\n    or (UserAgent startswith \"Mozilla\" and not(UserAgent containscs \"Mozilla\"))\n    // Incorrect casing\n    or UserAgent containscs \"(Compatible;\"\n    // Missing MSIE version\n    or UserAgent matches regex @\"MSIE\\s?;\"\n    // Incorrect spacing around MSIE version\n    or UserAgent matches regex @\"MSIE(?:\\d|.{1,5}?\\d\\s;)\"\n| extend timestamp = StartTime, IPCustomEntity = SourceIP, AccountCustomEntity = Account\n// Uncomment the following line to count by User-Agent\n//| summarize count() by UserAgent",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Account"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Account"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "MailboxOwnerUPN"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "SourceIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess",
+                                       "CommandAndControl",
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+                                          "T1189",
+                                          "T1071",
+                                          "T1203"
+                                      ],
+                       "displayName":  "Malformed user agent",
+                       "enabled":  false,
+                       "description":  "This Sentinel Analytic \"Malformed user agent\" query can detect potential C2 or C2 agent activity.  This control provides minimal to partial coverage for a minority of this technique\u0027s T1071 sub-techniques and only some of its procedure examples. Malware authors will sometimes hardcode user agent string values when writing the network communication component of their malware. Malformed user agents can be an indication of such malware. \n\nhttps://center-for-threat-informed-defense.github.io/security-stack-mappings/Azure/README.html\nhttps://attack.mitre.org/techniques/T1071/\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0006;T1110;T1110.001;T1110.002;T1110.003;T1110.004",
+                       "alertRuleTemplateName":  "a357535e-f722-4afe-b375-cff362b2b376",
+                       "lastModifiedUtc":  "2024-10-02T21:46:34.6703204Z"
+                   }
+}

@@ -1,0 +1,45 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/f02ba742-33b0-470c-b6d8-e351ac2f42d6",
+    "name":  "f02ba742-33b0-470c-b6d8-e351ac2f42d6",
+    "etag":  "\"870008de-0000-2700-0000-66fdca6a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Title: BAH_GuestAccountEnabled\n//Description: Detects for the built-in Windows guest account being enabled. The guest account could potentially be used to perform malicious activities on a device such as installing malware, deleting files, or data exfiltration.\n//Author: Steven Wan\n//False Positives: None applicable at this time.\n\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nDeviceProcessEvents\n| where (InitiatingProcessCommandLine contains \"user guest /active:yes\" and (FileName == \"net1.exe\" or FileName == \"net.exe\"))\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0]) // for signin lookup by device will find last user signed into device if it was in the last 24 hours\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI // this join will add UserPrincipalName from here forward based on device name\n| project TimeGenerated, UserPrincipalName, AccountName, DeviceId, DeviceName, ActionType, FileName, InitiatingProcessCommandLine, ProcessCommandLine",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "BAH_GuestAccountEnabled",
+                       "enabled":  true,
+                       "description":  "Detects for the built-in Windows guest account being enabled. The guest account could potentially be used to perform malicious activities on a device such as installing malware, deleting files, or data exfiltration.\nPLATFORM:Windows,Azure AD\nMITRE:TA0003;T1078;T1078.001;T1078.002;T1078.003",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:34:18.1397695Z"
+                   }
+}

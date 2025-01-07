@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/71a9650a-ca38-43fa-9f5f-01bba047f661",
+    "name":  "71a9650a-ca38-43fa-9f5f-01bba047f661",
+    "etag":  "\"87006a28-0000-2700-0000-66fdbe560000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let riskScoreCutoff = 20; //Adjust this based on volume of results\nSigninLogs\n| where ResultType == 500121\n| extend additionalDetails_ = tostring(Status.additionalDetails)\n| extend UserPrincipalName = tolower(UserPrincipalName)\n| where additionalDetails_ =~ \"MFA denied; user declined the authentication\" or additionalDetails_ has \"fraud\"\n| summarize StartTime = min(TimeGenerated), EndTIme = max(TimeGenerated) by UserPrincipalName, UserId, AADTenantId, IPAddress\n| extend Name = tostring(split(UserPrincipalName,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(UserPrincipalName,\u0027@\u0027,1)[0])\n| join kind=leftouter (\n    IdentityInfo\n    | summarize LatestReportTime = arg_max(TimeGenerated, *) by AccountUPN\n    | project AccountUPN, Tags, JobTitle, GroupMembership, AssignedRoles, UserType, IsAccountEnabled\n    | summarize\n        Tags = make_set(Tags, 1000),\n        GroupMembership = make_set(GroupMembership, 1000),\n        AssignedRoles = make_set(AssignedRoles, 1000),\n        UserType = make_set(UserType, 1000),\n        UserAccountControl = make_set(UserType, 1000)\n    by AccountUPN\n    | extend UserPrincipalName=tolower(AccountUPN)\n) on UserPrincipalName\n| join kind=leftouter (\n    BehaviorAnalytics\n    | where ActivityType in (\"FailedLogOn\", \"LogOn\")\n    | where isnotempty(SourceIPAddress)\n    | project UsersInsights, DevicesInsights, ActivityInsights, InvestigationPriority, SourceIPAddress\n    | project-rename IPAddress = SourceIPAddress\n    | summarize\n        UsersInsights = make_set(UsersInsights, 1000),\n        DevicesInsights = make_set(DevicesInsights, 1000),\n        IPInvestigationPriority = sum(InvestigationPriority)\n    by IPAddress)\non IPAddress\n| extend UEBARiskScore = IPInvestigationPriority\n| where  UEBARiskScore \u003e riskScoreCutoff\n| sort by UEBARiskScore desc \n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "2.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "MFA Rejected by User",
+                       "enabled":  true,
+                       "description":  "Identifies occurances where a user has rejected an MFA prompt. This could be an indicator that a threat actor has compromised the username and password of this user account and is using it to try and log into the account.\nRef : https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-user-accounts#monitoring-for-failed-unusual-sign-ins\nThis query has also been updated to include UEBA logs IdentityInfo and BehaviorAnalytics for contextual information around the results.\nPLATFORM:Azure AD,IaaS,Microsoft 365\nMITRE:TA0003;T1098;T1098.001;T1098.003",
+                       "alertRuleTemplateName":  "d99cf5c3-d660-436c-895b-8a8f8448da23",
+                       "lastModifiedUtc":  "2024-10-02T21:42:45.6201796Z"
+                   }
+}

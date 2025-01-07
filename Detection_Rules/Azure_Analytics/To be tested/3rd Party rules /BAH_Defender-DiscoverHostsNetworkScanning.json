@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/164da98a-3173-4cbb-bcc5-bdfbea57e99f",
+    "name":  "164da98a-3173-4cbb-bcc5-bdfbea57e99f",
+    "etag":  "\"870081f7-0000-2700-0000-66fdcbf10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT30M",
+                       "queryPeriod":  "PT30M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Steven Wan, Rob Russell\n// Description: Detects devices that may be performing scanning activity\n// If something connects to more than the remotePortCountThreshold within the analytic time period it will fire an alert\n// False positives: Legitimate scanning activity like MDE device discovery\nlet remotePortCountThreshold = 10;\nlet signInLookup = (\n    SigninLogs\n    | where TimeGenerated \u003e= ago(1d)\n    | where DeviceDetail contains \"displayName\"\n    | extend DeviceDetailJson = parse_json(DeviceDetail)\n    | extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n    | distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n    );\nDeviceNetworkEvents\n| where ipv4_is_private(RemoteIP)\n| where RemotePort \u003c 1024 // System or well-known ports only\n| summarize make_set(RemotePort)\n    by\n    DeviceName,\n    RemoteIP,\n    InitiatingProcessFileName,\n    InitiatingProcessFolderPath,\n    InitiatingProcessCommandLine\n| extend RemotePortList = array_sort_asc(set_RemotePort)\n| where array_length(set_RemotePort) \u003e remotePortCountThreshold\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n| extend ScanningType = iif(InitiatingProcessCommandLine contains @\"C:\\ProgramData\\Microsoft\\Windows Defender Advanced Threat Protection\\Downloads\\PSScript_\", \"MDE Device Discovery\", \"Unknown\")\n| where ScanningType != \"MDE Device Discovery\" // remove to show MDE Device Discovery \n| project\n    UserPrincipalName,\n    DeviceName,\n    ScanningType,\n    InitiatingProcessFileName,\n    InitiatingProcessFolderPath,\n    InitiatingProcessCommandLine,\n    RemoteIP,\n    RemotePortList\n",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "RemoteIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatingProcessFileName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Reconnaissance"
+                                   ],
+                       "techniques":  [
+                                          "T1595"
+                                      ],
+                       "displayName":  "BAH_Defender-DiscoverHostsNetworkScanning",
+                       "enabled":  false,
+                       "description":  "Looking for high volume queries against a given RemoteIP, per DeviceName, RemotePort and Process.\nPLATFORM:Windows\nMITRE:TA0043;T1595",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:40:49.1599322Z"
+                   }
+}

@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/082f703b-2a1a-4b27-b240-02831e95b7b8",
+    "name":  "082f703b-2a1a-4b27-b240-02831e95b7b8",
+    "etag":  "\"850013e5-0000-2700-0000-66fdac830000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nlet emailregex = @\u0027^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$\u0027;\nlet OfficeEvents = materialize(\n  OfficeActivity\n  | where isnotempty(UserId)\n  | where TimeGenerated \u003e= ago(dt_lookBack)\n  | where UserId matches regex emailregex\n  | project-rename  OfficeActivity_TimeGenerated = TimeGenerated);\nlet OfficeActivityUPNs = OfficeEvents | distinct UserId = tolower(UserId) | summarize make_list(UserId);\nThreatIntelligenceIndicator\n| where isnotempty(EmailSenderAddress)\n| where TimeGenerated \u003e= ago(ioc_lookBack)\n| where tolower(EmailSenderAddress) in (OfficeActivityUPNs)\n| summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n| where Active == true and ExpirationDateTime \u003e now()\n| where Description !contains_cs \"State: inactive;\" and Description !contains_cs \"State: falsepos;\"\n// using innerunique to keep perf fast and result set low, we only need one match to indicate potential malicious activity that needs to be investigated\n| join kind=innerunique (OfficeEvents) on $left.EmailSenderAddress == $right.UserId\n| where OfficeActivity_TimeGenerated \u003c ExpirationDateTime\n| summarize OfficeActivity_TimeGenerated = arg_max(OfficeActivity_TimeGenerated, *) by IndicatorId, UserId\n| project OfficeActivity_TimeGenerated, Description, ActivityGroupNames, IndicatorId, ThreatType, Url, ExpirationDateTime, ConfidenceScore, EmailSenderName, EmailRecipient, EmailSourceDomain, EmailSourceIpAddress, EmailSubject, FileHashValue, FileHashType, UserId, ClientIP, Operation, UserType, RecordType, OfficeWorkload, Parameters\n| extend Name = tostring(split(UserId, \u0027@\u0027, 0)[0]), UPNSuffix = tostring(split(UserId, \u0027@\u0027, 1)[0])\n| extend timestamp = OfficeActivity_TimeGenerated\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserId"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "ClientIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "Url"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.2.6",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "TI map Email entity to OfficeActivity",
+                       "enabled":  true,
+                       "description":  "Identifies a match in OfficeActivity table from any Email IOC from TI\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1566;T1566.002,TA0006;T1110;T1110.001;T1110.002;T1110.003;T1110.004",
+                       "alertRuleTemplateName":  "4a3f5ed7-8da5-4ce2-af6f-c9ada45060f2",
+                       "lastModifiedUtc":  "2024-10-02T20:26:37.1450241Z"
+                   }
+}

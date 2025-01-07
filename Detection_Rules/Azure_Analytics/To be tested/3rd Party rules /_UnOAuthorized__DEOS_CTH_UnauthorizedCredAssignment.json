@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/b25a2988-e339-4589-b105-1549f2be03b7",
+    "name":  "b25a2988-e339-4589-b105-1549f2be03b7",
+    "etag":  "\"51015476-0000-2700-0000-66ba5e220000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT8H",
+                       "queryPeriod":  "PT8H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "AuditLogs\n| where OperationName == \"Add service principal credentials\"\n| extend Initiator = parse_json(InitiatedBy.app)\n| mv-expand Initiator\n| extend InitiatorDisplayName = tostring(parse_json(Initiator.displayName))\n| extend Target = parse_json(TargetResources)\n| mv-expand Target\n| extend TargetDisplayName = tostring(parse_json(Target.displayName))\n| where isnotempty(InitiatorDisplayName)\n| where InitiatorDisplayName in (\"Device Registration Service\", \"Viva Engage\", \"Microsoft Rights Management Service\")\n| summarize count() by InitiatorDisplayName, TargetDisplayName, OperationName\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1484"
+                                      ],
+                       "displayName":  "[UnOAuthorized] DEOS_CTH_UnauthorizedCredAssignment",
+                       "enabled":  true,
+                       "description":  "Identify when credentials are added to service principals associated with vulnerable services, such as the Device Registration Service",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-08-12T19:10:25.7704395Z"
+                   }
+}

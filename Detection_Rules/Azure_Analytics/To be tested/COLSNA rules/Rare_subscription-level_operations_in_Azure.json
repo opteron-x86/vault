@@ -1,0 +1,71 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/687038a0-25ba-4d5f-904a-263a79ed4d44",
+    "name":  "687038a0-25ba-4d5f-904a-263a79ed4d44",
+    "etag":  "\"91109937-0000-2700-0000-674f6e780000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let starttime = 14d;\nlet endtime = 1h;\n// The number of operations below which an IP address is considered an unusual source of role assignment operations\nlet alertOperationThreshold = 5;\nlet SensitiveOperationList = dynamic(\n[\"List keys\", \"List Storage Account Keys\", \"Register Subscription\", \"Create or Update Snapshot\", \"Create or Update Network Security Group\"]);\nlet SensitiveActivity = AzureActivity\n| where OperationName in~ (SensitiveOperationList)\n| where ActivityStatus =~ \"Succeeded\";\nSensitiveActivity\n| where TimeGenerated between (ago(starttime) .. ago(endtime))\n| summarize count() by CallerIpAddress, Caller\n| where count_ \u003e= alertOperationThreshold\n| join kind = rightanti ( \nSensitiveActivity\n| where TimeGenerated \u003e= ago(endtime)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), ActivityTimeStamp = makelist(TimeGenerated), ActivityStatus = makelist(ActivityStatus), \nOperationIds = makelist(OperationId), CorrelationIds = makelist(CorrelationId), Resources = makelist(Resource), ResourceGroups = makelist(ResourceGroup), ResourceIds = makelist(ResourceId), ActivityCountByCallerIPAddress = count()  \nby CallerIpAddress, Caller, OperationName\n) on CallerIpAddress, Caller\n| extend timestamp = StartTimeUtc, AccountCustomEntity = Caller, IPCustomEntity = CallerIpAddress",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+                                          "T1003",
+                                          "T1098"
+                                      ],
+                       "displayName":  "Rare subscription-level operations in Azure",
+                       "enabled":  true,
+                       "description":  "This query looks for a few sensitive subscription-level events based on Azure Activity Logs. \n For example this monitors for the operation name \u0027Create or Update Snapshot\u0027 which is used for creating backups but could be misused by attackers \n to dump hashes or extract sensitive information from the disk.",
+                       "alertRuleTemplateName":  "23de46ea-c425-4a77-b456-511ae4855d69",
+                       "lastModifiedUtc":  "2024-12-03T20:47:52.1491474Z"
+                   }
+}

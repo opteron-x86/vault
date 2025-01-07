@@ -1,0 +1,73 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/563b01b5-5792-40cb-a475-91af0fb7ae85",
+    "name":  "563b01b5-5792-40cb-a475-91af0fb7ae85",
+    "etag":  "\"8700a5e4-0000-2700-0000-66fdcabc0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "//Updated 11/2 and removed firewall enumeration since it is not a indication of a disabled firewall\r\n//Also adjusted how data is projected and added AAD lookup to query\r\n//Russian-linked Shuckworm espionage group (aka Gamaredon, Armageddon) uses this technique in several versions of it\u0027s Pterodo series of backdoors.\r\n//See the following for references\r\n//https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/shuckworm-intense-campaign-ukraine\r\n//Gamaredon Group - https://attack.mitre.org/groups/G0047/\r\n//Impair Defenses: Disable or Modify System Firewall - https://attack.mitre.org/techniques/T1562/004/\r\n//If any of the following registry keys is set to DWORD (0x00000000) it could indicate the windows firewall is disabled.\r\n//#HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile\\EnableFirewall\r\n//#HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\PublicProfile\\EnableFirewall\r\n//#HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile\\EnableFirewall\r\n//In a similar fashion firewall rules are stored in registry keys ending in the following \\Parameters\\FirewallPolicy\\FirewallRules and contain the term Action=Allow when adding a new rule\r\n//https://www.winhelponline.com/blog/enable-and-disable-windows-firewall-quickly-using-command-line/\r\n//Given the appropriate permission firewall can be disabled or modified using the following commands\r\n//netsh advfirewall set \u003cprivateprofile/publicprofile/domainprofile\u003e state off\r\n//netsh a s \u003cprofile\u003e state off\r\n//Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False\r\n//An attacked can enumerate the current state of the firewall before making changes, this also could be indication of malicious behavior. Examples below\r\n//\u0027netsh advfirewall show allprofiles\u0027\r\n//\u0027netsh a show allprofiles\u0027\r\n//false positives could occur with administrative activities or programs that alter the Windows Firewall as part of the installation process.\r\nlet signInLookup = (\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\r\n);\r\n(union isfuzzy=true(\r\nDeviceRegistryEvents\r\n| where RegistryValueName startswith @\u0027HKLM\\System\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\u0027 and RegistryValueName endswith @\u0027\\EnableFirewall\u0027 and RegistryValueData == 0\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project Timestamp = TimeGenerated, \r\nHostCustomEntity = DeviceName, \r\nDeviceId, \r\nAccountCustomName = UserPrincipalName,\r\nInitiatingProcessAccountName, \r\nAccountCustomDomain = InitiatingProcessAccountDomain, \r\nRegistryValueName, \r\nRegistryValueData, \r\nNote = \"Firewall Disabled\"\r\n),\r\n(DeviceRegistryEvents\r\n| where RegistryValueName startswith @\u0027HKLM\\System\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\u0027 and RegistryValueName endswith @\u0027\\FirewallRules\u0027 and RegistryValueData contains \"Action=Allow\"\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project Timestamp = TimeGenerated, \r\nHostCustomEntity = DeviceName, \r\nDeviceId, \r\nAccountCustomName = UserPrincipalName,\r\nInitiatingProcessAccountName, \r\nAccountCustomDomain = InitiatingProcessAccountDomain, \r\nRegistryValueName, \r\nRegistryValueData, \r\nNote = \"Firewall Modified\"\r\n),\r\n(DeviceEvents\r\n| where InitiatingProcessCommandLine has_all (\"netsh\", \"advfirewall\", \"set\", \"state\", \"\u0027off\u0027\") or InitiatingProcessCommandLine has_all (\"netsh\", \"a\", \"s\", \"state\", \"\u0027off\u0027\")\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project Timestamp = TimeGenerated, \r\nHostCustomEntity = DeviceName, \r\nDeviceId, \r\nAccountCustomName = UserPrincipalName,\r\nInitiatingProcessAccountName, \r\nAccountCustomDomain = InitiatingProcessAccountDomain, \r\nInitiatingProcessCommandLine, \r\nNote = \"Firewall Disabled\"\r\n),\r\n(DeviceEvents\r\n| where ActionType == \"PowerShellCommand\"\r\n| where AdditionalFields has \"Set-NetFirewallProfile\"\r\n| extend PowershellCommand = parse_json(AdditionalFields).Command\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project Timestamp = TimeGenerated, \r\nHostCustomEntity = DeviceName, \r\nDeviceId,\r\nAccountCustomName = UserPrincipalName,\r\nInitiatingProcessAccountName, \r\nAccountCustomDomain = InitiatingProcessAccountDomain, \r\nInitiatingProcessCommandLine, \r\nNote = \"Firewall Altered by PowerShell\"\r\n)\r\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "NTDomain",
+                                                                            "columnName":  "AccountCustomDomain"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1562"
+                                      ],
+                       "displayName":  "BAH_Firewall_Tampering",
+                       "enabled":  true,
+                       "description":  "One way that malicious actors use to avoid detection is to disable or change firewall rules. This analytic seeks to detect various ways the windows firewall can be manipulated.\nPLATFORM:Windows\nMITRE:TA0005;T1562",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:35:39.0091648Z"
+                   }
+}

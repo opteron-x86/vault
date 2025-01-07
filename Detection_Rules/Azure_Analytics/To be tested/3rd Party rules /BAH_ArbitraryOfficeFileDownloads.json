@@ -1,0 +1,45 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/6a2e6d09-669e-4055-bcf4-7787cd7f6db4",
+    "name":  "6a2e6d09-669e-4055-bcf4-7787cd7f6db4",
+    "etag":  "\"8800c208-0000-2700-0000-66fdcd1d0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Title: BAH_ArbitraryOfficeFileDownloads\n//Description: Detects potential arbitrary file download using a Microsoft Office application. This threat was discovered through the BazarCall malware utilized by call centers in late January 2022.\n//Author: Steven Wan\n//False Positives: None applicable at this time.\n\nlet BazarCallHashes = dynamic ([\n    \"2632c0cc222a6d436b50a418605a7bd4fa8f363ab8d93d10b831cdb28a2ac1bc\", // SHA256 Hash for BazarLoader Malware\n    \"f3b5cf1e40aed4567a8996cf107285907d432b4bc8cc3d0b46aae628813d82d4\", // BazarLoader DLL\n\t\"db53f42e13d2685bd34dbc5c79fad637c9344e72e210ca05504420874e98c2a6\" // SHA256 Hash for BazarLoader Malware\n    ]);\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nDeviceProcessEvents | where (((InitiatingProcessFolderPath endswith @\"\\EXCEL.EXE\" or InitiatingProcessFolderPath endswith @\"\\POWERPNT.EXE\" or InitiatingProcessFolderPath endswith @\"\\WINWORD.exe\")) and (InitiatingProcessCommandLine contains \"http://\" or InitiatingProcessCommandLine contains \"https://\") and InitiatingProcessSHA256 has_any(BazarCallHashes))\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0]) // for signin lookup by device will find last user signed into device if it was in the last 24 hours\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI // this join will add UserPrincipalName from here forward based on device name\n| project TimeGenerated,SILogDeviceName,AccountName,ActionType,InitiatingProcessCommandLine,InitiatingProcessFolderPath,InitiatingProcessSHA256,ProcessCommandLine",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1202"
+                                      ],
+                       "displayName":  "BAH_ArbitraryOfficeFileDownloads",
+                       "enabled":  true,
+                       "description":  "Detects potential arbitrary file download using a Microsoft Office application. This threat was discovered through the BazarCall malware utilized by call centers in late January 2022.\nPLATFORM:Windows\nMITRE:TA0005;T1202",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:45:48.5980856Z"
+                   }
+}

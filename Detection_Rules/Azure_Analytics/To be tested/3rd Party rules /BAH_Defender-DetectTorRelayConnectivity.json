@@ -1,0 +1,86 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/DoD365-LAW-RG2/providers/Microsoft.OperationalInsights/workspaces/DOD365-LAW/providers/Microsoft.SecurityInsights/alertRules/d53acf5e-429e-479c-ba8b-4109a3e1098c",
+    "name":  "d53acf5e-429e-479c-ba8b-4109a3e1098c",
+    "etag":  "\"3308c5c3-0000-2700-0000-67360e390000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Steven Wan and Shawn McWhirter\n//Descripton: This query detects processes communicating with known Tor relay IP addresses.\n//False Positives: None known\nlet TorRelayData = (\n    externaldata (Nickname: string, Fingerprint: string, EntryAddress: string, IPAddress: string, Port: string, AddressType: string, Hostname: string, CountryCode: string, IsRunning: bool, LastChangedIPData: string)\n    [h@\u0027https://torinfo.blob.core.windows.net/public/TorRelayIPs.csv\u0027] with (ignoreFirstRecord=true, format=\"csv\")\n    | where AddressType == \"IPv4\"\n    | join kind=inner DeviceNetworkEvents on $left.IPAddress == $right.RemoteIP\n    | join kind=inner (DeviceInfo\n    | distinct DeviceId, PublicIP)\n    on DeviceId\n    );\n    TorRelayData\n    | summarize count() by bin(TimeGenerated, 10m),\n    AccountCustomEntity = InitiatingProcessAccountName,\n    HostCustomEntity = DeviceName,\n    DeviceId,\n    IPCustomEntity = LocalIP,\n    RemoteIP,\n    LocalPublicIP = PublicIP,\n    TorIP = IPAddress,\n    TorHostName = Hostname,\n    TorCountryCode = CountryCode,\n    ActionType,\n    InitiatingProcessFileName,\n    InitiatingProcessFolderPath,\n    Tactic = \"ToR IP address activity, either successful connection or mulitple connection attempts\"\n    | where (count_ \u003e5 and ActionType == \"ConnectionAttempt\") or ActionType == \"ConnectionSuccess\"",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "ActionType"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "RemoteIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "tactics":  [
+                                       "CommandAndControl",
+                                       "Discovery"
+                                   ],
+                       "techniques":  [
+                                          "T1071",
+                                          "T1090"
+                                      ],
+                       "displayName":  "BAH_Defender-DetectTorRelayConnectivity",
+                       "enabled":  true,
+                       "description":  "This advanced hunting query detects processes communicating with known Tor relay IP addresses.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-11-14T14:50:29.388722Z"
+                   }
+}

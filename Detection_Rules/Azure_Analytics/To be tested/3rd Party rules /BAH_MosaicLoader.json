@@ -1,0 +1,45 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8163e8ee-7ce4-4f6f-8756-4e039d16050f",
+    "name":  "8163e8ee-7ce4-4f6f-8756-4e039d16050f",
+    "etag":  "\"870004cb-0000-2700-0000-66fdc9010000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Title: BAH_MosaicLoader\r\n//Description: Looks for attempts to create Windows Defender exclusions through registry value keys being set in various different methods (e.g., PowerShell, Registry key value modifications, and via Defender Security Panel. Catches on exclusion paths, extensions, and processes.\r\n//Author: Steven Wan\r\n//False Positives: None applicable at this time.\r\n\r\nlet signInLookup = (\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\r\n);\r\nDeviceRegistryEvents\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where ((ActionType == \"RegistryValueSet\") and (RegistryKey startswith @\"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Exclusions\\Paths\" \r\n  or RegistryKey startswith @\"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Exclusions\\Extensions\"\r\n  or RegistryKey startswith @\"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Exclusions\\Processes\"))\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0]) // for signin lookup by device will find last user signed into device if it was in the last 24 hours\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI // this join will add UserPrincipalName from here forward based on device name\r\n| project TimeGenerated, InitiatingProcessAccountName, UserPrincipalName, ActionType,  DeviceId, DeviceName, RegistryKey, RegistryValueName",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_MosaicLoader",
+                       "enabled":  true,
+                       "description":  "Looks for attempts to create Windows Defender exclusions through registry value keys being set in various different methods (e.g., PowerShell, Registry key value modifications, and via Defender Control Panel. Catches on exclusion paths, extensions, and processes.\nPLATFORM:Windows\nMITRE:TA0005;T1112",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:28:13.7072368Z"
+                   }
+}

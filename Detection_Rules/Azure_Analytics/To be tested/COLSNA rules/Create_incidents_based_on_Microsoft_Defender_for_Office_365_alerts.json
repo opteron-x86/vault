@@ -1,0 +1,18 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/80a73e0c-af35-4327-a8db-b3df743acc22",
+    "name":  "80a73e0c-af35-4327-a8db-b3df743acc22",
+    "etag":  "\"530079ad-0000-2700-0000-64a2e2170000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "MicrosoftSecurityIncidentCreation",
+    "properties":  {
+                       "productFilter":  "Office 365 Advanced Threat Protection",
+                       "severitiesFilter":  null,
+                       "displayNamesFilter":  null,
+                       "displayNamesExcludeFilter":  null,
+                       "displayName":  "Create incidents based on Microsoft Defender for Office 365 alerts",
+                       "enabled":  false,
+                       "description":  "Create incidents based on all alerts generated in Microsoft Defender for Office 365",
+                       "alertRuleTemplateName":  "ee1d718b-9ed9-4a71-90cd-a483a4f008df",
+                       "lastModifiedUtc":  "2023-07-03T14:58:31.6811968Z"
+                   }
+}

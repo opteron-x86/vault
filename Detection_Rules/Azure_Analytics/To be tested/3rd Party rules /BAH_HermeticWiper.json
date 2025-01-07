@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/de1dcf3d-eaac-4b3c-a32f-c5ca43bf620b",
+    "name":  "de1dcf3d-eaac-4b3c-a32f-c5ca43bf620b",
+    "etag":  "\"45016365-0000-2700-0000-65aa8bb10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "// Detects evidence of HermeticWiper activity based on the drivers is uses, certificate signer, and registry change that it makes.\n// HemeticWiper loads a driver prior to performing destructive actions, the SHA265\u0027s listed are meant to detect the compressed and uncompressed version of this driver for all Windows operating systems\n// The executable used to perform destructive actions is signed by \"Hermetica Digital LTD\" a certificate stolen from an indie game developer. This certificate is currently revoked.\n// Before performing a destructive wipe HermeticWiper sets the registry value HKLM\\System\\CurrentControlSet\\Control\\CrashControl\\CrashDumpEnabled to 0, this could detect false positives\n// See the fololowing for more informaion on HermeticWiper:\n// https://www.zscaler.com/blogs/security-research/hermeticwiper-resurgence-targeted-attacks-ukraine\n// https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ukraine-wiper-malware-russia\n// https://www.sentinelone.com/labs/hermetic-wiper-ukraine-under-attack/\n\nlet HWdriverSHA256 = dynamic([\"e5f3ef69a534260e899a36cec459440dc572388defd8f1d98760d31c700f42d5\",\n\"96b77284744f8761c4f2558388e0aee2140618b484ff53fa8b222b340d2a9c84\",\n\"b01e0c6ac0b8bcde145ab7b68cf246deea9402fa7ea3aede7105f7051fe240c1\",\n\"b01e0c6ac0b8bcde145ab7b68cf246deea9402fa7ea3aede7105f7051fe240c1\",\n\"b6f2e008967c5527337448d768f2332d14b92de22a1279fd4d91000bb3d4a0fd\",\n\"23ef301ddba39bb00f0819d2061c9c14d17dc30f780a945920a51bc3ba0198a4\",\n\"fd7eacc2f87aceac865b0aa97a50503d44b799f27737e009f91f3c281233c17d\",\n\"2c7732da3dcfc82f60f063f2ec9fa09f9d38d5cfbe80c850ded44de43bdb666d\"]);\n(union isfuzzy=true\n(DeviceImageLoadEvents\n| where SHA256 has_any(HWdriverSHA256)\n| extend Timestamp = TimeGenerated, HostCustomEntity = DeviceName, DeviceId, AccountCustomName = InitiatingProcessAccountName, AccountCustomDomain = InitiatingProcessAccountDomain, SHA256\n),\n(DeviceFileCertificateInfo\n| where Signer == \"Hermetica Digital LTD\"\n| extend Timestamp = TimeGenerated\n| extend Timestamp = TimeGenerated, HostCustomEntity = DeviceName, DeviceId, Signer\n),\n(DeviceRegistryEvents\n| where ActionType == \"RegistryValueSet\"\n| where RegistryValueName has(\"CrashDumpEnabled\")\n| where RegistryValueData == 0\n| extend Timestamp = TimeGenerated\n| extend Timestamp = TimeGenerated, HostCustomEntity = DeviceName, DeviceId, AccountCustomName = InitiatingProcessAccountName, AccountCustomDomain = InitiatingProcessAccountDomain, RegistryValueName, RegistryValueData\n)\n)",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "Persistence",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion",
+                                       "CredentialAccess",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1569",
+                                          "T1547",
+                                          "T1574",
+                                          "T1112",
+                                          "T1027",
+                                          "T1553",
+                                          "T1003",
+                                          "T1485",
+                                          "T1490"
+                                      ],
+                       "displayName":  "BAH_HermeticWiper",
+                       "enabled":  true,
+                       "description":  "COA#4 DoD365-J Rollup (task list) response due to DEOS ISSM\n\nAlert: This alert Is based on SYSTEM logs generated by the Azure Fabric Defender when malicious files are detected. The alerted files are sandboxed within Azure, but with current DOD365 capabilities, the files are able to be shared between users within the environment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // Detects evidence of HermeticWiper activity based on the drivers is uses, certificate signer, and registry change that it makes.\n HemeticWiper loads a driver prior to performing destructive actions, the SHA265\u0027s listed are meant to detect the compressed and uncompressed version of this driver for all Windows operating systems\n The executable used to perform destructive actions is signed by \"Hermetica Digital LTD\" a certificate stolen from an indie game developer. This certificate is currently revoked.\n Before performing a destructive wipe HermeticWiper sets the registry value HKLM\\System\\CurrentControlSet\\Control\\CrashControl\\CrashDumpEnabled to 0, this could detect false positives\nSee the fololowing for more informaion on HermeticWiper:\nhttps://www.zscaler.com/blogs/security-research/hermeticwiper-resurgence-targeted-attacks-ukraine                                                                                                                                                                                                                                                                                                                         https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ukraine-wiper-malware-russia\nhttps://www.sentinelone.com/labs/hermetic-wiper-ukraine-under-attack/\nhttps://attack.mitre.org/software/S0697/",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-01-19T14:48:13.9996289Z"
+                   }
+}

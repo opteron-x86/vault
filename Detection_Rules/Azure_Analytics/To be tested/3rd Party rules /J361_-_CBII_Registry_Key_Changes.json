@@ -1,0 +1,68 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/d4ba925e-4d55-4f1d-b764-2a1829bc4b72",
+    "name":  "d4ba925e-4d55-4f1d-b764-2a1829bc4b72",
+    "etag":  "\"3f0e9113-0000-2700-0000-674662e40000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5H",
+                       "queryPeriod":  "PT5H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "DeviceProcessEvents\n| where InitiatingProcessCommandLine has_all(@\u0027\"reg\"\u0027, \u0027add\u0027, @\u0027\"HKLM\\SOFTWARE\\Policies\\\u0027, \u0027/v\u0027, \u0027/t\u0027, \u0027REG_DWORD\u0027, \u0027/d\u0027, \u0027/f\u0027)\n    and InitiatingProcessCommandLine has_any(\u0027DisableRealtimeMonitoring\u0027, \u0027UseTPMKey\u0027, \u0027UseTPMKeyPIN\u0027, \u0027UseAdvancedStartup\u0027, \n    \u0027EnableBDEWithNoTPM\u0027, \u0027RecoveryKeyMessageSource\u0027)\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "RegistryKey",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Key",
+                                                                            "columnName":  "InitiatingProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1112"
+                                      ],
+                       "displayName":  "J361 - CBII Registry Key Changes",
+                       "enabled":  true,
+                       "description":  "Detects attempts to modify the registry key to remove CBII from the machine. MITRE:T1112",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-11-27T00:08:00.3137819Z"
+                   }
+}

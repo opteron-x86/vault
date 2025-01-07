@@ -1,0 +1,97 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/bf32bb9b-60f1-4703-a320-4791f4509f12",
+    "name":  "bf32bb9b-60f1-4703-a320-4791f4509f12",
+    "etag":  "\"8700fbcf-0000-2700-0000-66fdc9620000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT30M",
+                       "queryPeriod":  "PT30M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Rob Russell\n// Description:\n// Updated 10/3: Removed curl analytic and added AAD lookup where applicable\n// ATT\u0026CK Techniques, Initial Access T1566, Execution T1204, Persistence T1546, Privilege Escalation T1546\n// This analytic is based on KNOTWEED analytics listed here\n// https://github.com/Azure/Azure-Sentinel/tree/master/Hunting%20Queries/Microsoft%20365%20Defender/Campaigns/KNOTWEED\n// MS article with more background here\n// https://www.microsoft.com/security/blog/2022/07/27/untangling-knotweed-european-private-sector-offensive-actor-using-0-day-exploits/\n// KNOTWEED uses curl and public file shares to download 2nd stage tools/malware.\n// False Positives: Almost all sections of this analytic make use of static IOCs except for file activity in the \"C:\\\\Windows\\\\System32\\\\spool\\\\drivers\\\\color\\\\\" directory. This may produce a false positive.\nlet c2domains = dynamic([\"acrobatrelay.com\", \"finconsult.cc\", \"realmetaldns.com\"]);\nlet hashes = dynamic([ \n    \"78c255a98003a101fa5ba3f49c50c6922b52ede601edac5db036ab72efc57629\", // SHA-256 Malicious Excel document and VBA  \n    \"0588f61dc7e4b24554cffe4ea56d043d8f6139d2569bc180d4a77cf75b68792f\", // SHA-256 Malicious Excel document and VBA  \n    \"441a3810b9e89bae12eea285a63f92e98181e9fb9efd6c57ef6d265435484964\", // SHA-256 Jumplump malware  \n    \"cbae79f66f724e0fe1705d6b5db3cc8a4e89f6bdf4c37004aa1d45eeab26e84b\", // SHA-256 Jumplump malware  \n    \"fd6515a71530b8329e2c0104d0866c5c6f87546d4b44cc17bbb03e64663b11fc\", // SHA-256 Jumplump malware  \n    \"5d169e083faa73f2920c8593fb95f599dad93d34a6aa2b0f794be978e44c8206\", // SHA-256 Jumplump malware  \n    \"7f29b69eb1af1cc6c1998bad980640bfe779525fd5bb775bc36a0ce3789a8bfc\", // SHA-256 Jumplump malware  \n    \"02a59fe2c94151a08d75a692b550e66a8738eb47f0001234c600b562bf8c227d\", // SHA-256 Jumplump malware  \n    \"7f84bf6a016ca15e654fb5ebc36fd7407cb32c69a0335a32bfc36cb91e36184d\", // SHA-256 Jumplump malware  \n    \"afab2e77dc14831f1719e746042063a8ec107de0e9730249d5681d07f598e5ec\", // SHA-256 Jumplump malware  \n    \"894138dfeee756e366c65a197b4dbef8816406bc32697fac6621601debe17d53\", // SHA-256 Jumplump malware  \n    \"4611340fdade4e36f074f75294194b64dcf2ec0db00f3d958956b4b0d6586431\", // SHA-256 Jumplump malware  \n    \"7f29b69eb1af1cc6c1998bad980640bfe779525fd5bb775bc36a0ce3789a8bfc\", // SHA-256 Jumplump malware  \n    \"c96ae21b4cf2e28eec222cfe6ca903c4767a068630a73eca58424f9a975c6b7d\", // SHA-256 Corelump malware  \n    \"fa30be45c5c5a8f679b42ae85410f6099f66fe2b38eb7aa460bcc022babb41ca\", // SHA-256 Mex tool  \n    \"e64bea4032cf2694e85ede1745811e7585d3580821a00ae1b9123bb3d2d442d6\"  // SHA-256 Passlib tool  \n    ]);\nlet guids = dynamic([\n    \"{ddc05a5a-351a-4e06-8eaf-54ec1bc2dcea}\",\n    \"{1f486a52-3cb1-48fd-8f50-b8dc300d9f9d}\",\n    \"{4590f811-1d3a-11d0-891f-00aa004b2e24}\", \n    \"{4de225bf-cf59-4cfc-85f7-68b90f185355}\", \n    \"{F56F6FDD-AA9D-4618-A949-C1B91AF43B1A}\"\n    ]); \nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\n(union isfuzzy=True\n    (\n    union withsource=TableName Device* \n    | where SHA256 in (hashes)\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        timestamp = TimeGenerated,\n        AccountCustomEntity = UserPrincipalName,\n        HostCustomEntity = DeviceName,\n        FileHashCustomEntity = SHA256\n    ),\n    (\n    EmailAttachmentInfo\n    | where SHA256_s in (hashes)\n    | project\n        timestamp = TimeGenerated,\n        AccountCustomEntity = SenderFromAddress_s,\n        FileHashCustomEntity = SHA256_s\n    ),\n    (\n    DeviceNetworkEvents \n    | where RemoteUrl has_any(c2domains)\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        timestamp = TimeGenerated,\n        IPCustomEntity = RemoteIP,\n        AccountCustomEntity = UserPrincipalName,\n        HostCustomEntity = DeviceName, \n        UrlCustomEntity = RemoteUrl\n    ),\n    (\n    DeviceFileEvents\n    | where ActionType == \"FileCreated\" \n    | where FolderPath has \"C:\\\\Windows\\\\System32\\\\spool\\\\drivers\\\\color\\\\\" \n    | where FileName endswith \".exe\" or FileName endswith \".dll\"\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project timestamp = TimeGenerated, \n        HostCustomEntity = DeviceName, \n        AccountCustomEntity = UserPrincipalName,\n        InitiatingProcessAccountName, \n        ProcessCustomEntity = InitiatingProcessFileName, \n        FileHashCustomEntity = InitiatingProcessSHA256,  \n        CommandLine = InitiatingProcessCommandLine,\n        Image = InitiatingProcessFolderPath\n    ),\n    (\n    DeviceRegistryEvents \n    | where ActionType == \"RegistryValueSet\" \n    | where RegistryKey startswith \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Classes\\\\CLSID\" \n    | where RegistryKey has_any (guids) \n    | where RegistryValueData has \"System32\\\\spool\\\\drivers\\\\color\" \n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        timestamp = TimeGenerated,\n        HostCustomEntity = DeviceName,\n        AccountCustomEntity = UserPrincipalName,\n        InitiatingProcessAccountName,\n        ProcessCustomEntity = InitiatingProcessFileName,\n        RegistryKey,\n        RegistryValueData\n    )\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "FileHashCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "UrlCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "InitialAccess",
+                                       "Persistence",
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1204",
+                                          "T1566",
+                                          "T1546"
+                                      ],
+                       "displayName":  "BAH_KNOTWEED",
+                       "enabled":  true,
+                       "description":  "Detectes activity based on Knotweed campain. For more infromation see https://www.microsoft.com/security/blog/2022/07/27/untangling-knotweed-european-private-sector-offensive-actor-using-0-day-exploits/\nPLATFORM:Windows\nMITRE:TA0001;T1566;T1566.002;T1566.003,TA0002;T1204,TA0003;T1546,TA0004;T1546",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:29:53.396987Z"
+                   }
+}

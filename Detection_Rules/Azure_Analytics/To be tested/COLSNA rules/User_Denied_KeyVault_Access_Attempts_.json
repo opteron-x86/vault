@@ -1,0 +1,63 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/6dcf5820-8f24-4dc6-aaf5-97b79fc8cb6b",
+    "name":  "6dcf5820-8f24-4dc6-aaf5-97b79fc8cb6b",
+    "etag":  "\"850056b8-0000-2700-0000-66fdaa680000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let VaultTimeLookup = 24h;\r\nlet IdentityTimeLookup = 90d;\r\nlet IdentityLookup = IdentityInfo\r\n    | where TimeGenerated \u003e= ago(IdentityTimeLookup)\r\n    | distinct\r\n        AccountObjectId,\r\n        IsAccountEnabled,\r\n        AccountUPN,\r\n        AccountDisplayName;\r\nlet NonOKKeyVaultAccessAttempt =\r\n    AzureDiagnostics\r\n    | where TimeGenerated \u003e= ago(VaultTimeLookup)\r\n    | where ResourceProvider == \"MICROSOFT.KEYVAULT\"\r\n    | where ResultSignature != \"OK\"\r\n    | extend OID = split(ResultDescription, \u0027;\u0027)\r\n    | extend OID = tostring(split(OID.[1], \u0027=\u0027).[1]);\r\nNonOKKeyVaultAccessAttempt\r\n| join kind= inner  (IdentityLookup\r\n    )\r\n    on $left.OID == $right.AccountObjectId\r\n| project\r\n    TimeGenerated,\r\n    IsAccountEnabled,\r\n    AccountUPN,\r\n    AccountDisplayName,\r\n    CallerIPAddress,\r\n    isAddressAuthorized_b,\r\n    AuthorizedAddress = identity_claim_ipaddr_s,\r\n    httpStatusCode_d,\r\n    ResultSignature,\r\n    Resource,\r\n    ResultType,\r\n    ResultDescription,\r\n    ResourceType,\r\n    OperationName,\r\n    AccountObjectId,\r\n    ResourceId,\r\n    Category,\r\n    ResourceGroup,\r\n    SubscriptionId,\r\n    ResourceProvider,\r\n    requestUri_s,\r\n    DurationMs,\r\n    clientInfo_s,\r\n    isAccessPolicyMatch_b\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "AccountUPN"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion",
+                                       "InitialAccess",
+                                       "Persistence",
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "User Denied KeyVault Access Attempts ",
+                       "enabled":  true,
+                       "description":  "The alert rule was disabled due to too many consecutive failures. Reason: No permissions to run the query. Try resetting the alert rule by clicking edit, and save. This analytic looks at the past 24h to find access attempts to KeyVault entities where the user does not have access. It then looks up the identity table to gather information on the user.\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1078;T1078.004,TA0005;T1562;T1562.008,TA0006;T1552;T1552.001;T1552.005,TA0007;T1526,TA0040;T1485",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:17:43.5014303Z"
+                   }
+}

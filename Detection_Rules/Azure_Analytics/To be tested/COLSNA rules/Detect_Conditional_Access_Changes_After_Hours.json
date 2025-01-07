@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8dbdfe10-43d2-4c8d-a2df-3f5109bf5544",
+    "name":  "8dbdfe10-43d2-4c8d-a2df-3f5109bf5544",
+    "etag":  "\"3d00d596-0000-2700-0000-641c8ab40000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//Detect changes to Azure AD Conditional Access policies on weekends or outside of business hours and who made the change.\r\n//Maintenence window is Thursday evenings starting at approx. 5:00 PM EST\r\n//Change submitted to CI-CD 28 November by Brandon Conn (brandon.j.conn3.civ@dod365.adm.mil)\r\n//Data connector required for this query - Azure Active Directory - Audit Logs\r\nlet Saturday = time(6.00:00:00);\r\nlet Sunday = time(0.00:00:00);\r\nAuditLogs\r\n| where OperationName has \"conditional access\"\r\n// extend LocalTime to your time zone\r\n| extend LocalTime=TimeGenerated + 5h\r\n// Change hours of the day to suit your company, i.e this would find activations between 6pm and 6am\r\n| where dayofweek(LocalTime) in (Saturday, Sunday) or hourofday(LocalTime) !between (6 .. 18)\r\n| extend [\u0027Conditional Access Policy Name\u0027] = tostring(TargetResources[0].displayName)\r\n| extend Actor = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)\r\n| project LocalTime, \r\n    OperationName, \r\n    [\u0027Conditional Access Policy Name\u0027], \r\n    Actor\r\n| sort by LocalTime desc",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "OperationName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Detect Conditional Access Changes After Hours",
+                       "enabled":  false,
+                       "description":  "Detect changes to Azure AD Conditional Access policies on weekends or outside of business hours.\n",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-03-23T17:21:56.0248636Z"
+                   }
+}

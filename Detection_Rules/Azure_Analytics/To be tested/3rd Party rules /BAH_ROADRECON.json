@@ -1,0 +1,56 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e2dcd5a3-1253-4a09-8dc1-07410c4e65f5",
+    "name":  "e2dcd5a3-1253-4a09-8dc1-07410c4e65f5",
+    "etag":  "\"8700b3b7-0000-2700-0000-66fdc7aa0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5H",
+                       "queryPeriod":  "PT5H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Michael Gibbs\n// Description: Azure AD Enumeration scripts ran to discover users and group permissions using python\n// False Positives: If a normal process starts connecting to Azure via python will need to change analytic\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nDeviceNetworkEvents\n| where RemoteUrl contains @\"graph.windows\" and InitiatingProcessFileName contains \"python\"\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project TimeGenerated, DeviceName, InitiatingProcessAccountDomain, InitiatingProcessAccountName, UserDisplayName,  InitiatingProcessParentFileName, InitiatingProcessFileName, RemoteUrl",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Discovery"
+                                   ],
+                       "techniques":  [
+                                          "T1087"
+                                      ],
+                       "displayName":  "BAH_ROADRECON",
+                       "enabled":  true,
+                       "description":  "Python Azure AD Recon Module used to enumerate users and groups\nPLATFORM:Microsoft 365,Azure AD,IaaS,Windows\nMITRE:TA0007;T1087;T1087.001;T1087.002;T1087.003;T1087.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:22:32.5994924Z"
+                   }
+}

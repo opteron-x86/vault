@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8715cd4d-ed95-468a-8fd4-d63f4c50a09e",
+    "name":  "8715cd4d-ed95-468a-8fd4-d63f4c50a09e",
+    "etag":  "\"f304be3c-0000-2700-0000-62b99c250000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P2D",
+                       "queryPeriod":  "P2D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let lookback = ago(2d);\r\n// Set the watchlist variable.\r\nlet LinodeTable = _GetWatchlist(\u0027LinodeIPs\u0027);\r\nSigninLogs\r\n| where TimeGenerated \u003e= lookback\r\n| distinct IPAddress\r\n// SearchKey is the field provided from the Watchlist.  It is a CIDR notated IPv4 range.  The IPv6 values are ignored.\r\n| evaluate ipv4_lookup(LinodeTable, IPAddress, SearchKey, return_unmatched = false)\r\n// It was faster to 1) look at distinct IPs 2) use ipv4_lookup and 3) join the rest of the details, than it would have normally taken.\r\n| join kind=inner (\r\n    SigninLogs\r\n    | where TimeGenerated \u003e= lookback\r\n    | extend AdditionalDetails = tostring(Status.additionalDetails)\r\n    | summarize make_set(AdditionalDetails), min(TimeGenerated), max(TimeGenerated) by IPAddress, UserPrincipalName\r\n) on IPAddress\r\n| extend\r\n    timestamp = min_TimeGenerated,\r\n    AccountCustomEntity = UserPrincipalName,\r\n    IPCustomEntity = IPAddress,\r\n    LinodeNetwork = SearchKey\r\n| project IPCustomEntity, AccountCustomEntity, timestamp, max_TimeGenerated, set_AdditionalDetails, LinodeNetwork",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Sign-ins from Linode-owned IPs",
+                       "enabled":  false,
+                       "description":  "Looks for Sign-ins where the source IP is one that is owned by Linode.  Results do not automatically indicate malicious intent as VPNs are permitted for certain uses.  When investigating, look at the success/fail of the attempt, if conditional access policies resulted in failures, and OfficeActivity, to determine anomylous user behavior.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2022-06-27T12:01:41.3688889Z"
+                   }
+}

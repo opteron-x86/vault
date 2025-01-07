@@ -1,0 +1,88 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/59a21e3f-731a-4482-8806-ef34b2661375",
+    "name":  "59a21e3f-731a-4482-8806-ef34b2661375",
+    "etag":  "\"17001a20-0000-2700-0000-63c815080000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "SigninLogs\n| where AppId in (\"1b730954-1685-4b74-9bfd-dac224a7b894\", \"1950a258-227b-4e31-a9cf-717495945fc2\", \"fb78d390-0c51-40cd-8e17-fdbfab77341b\", \"9bc3ab49-b65d-410a-85ad-de819febfddc\", \"12128f48-ec9e-42f0-b203-ea49fb6af367\")\n| join kind=inner (IdentityInfo) on $left.UserId == $right.AccountObjectId\n| where GroupMembership !has \"NNWC Authorized PowerShell Users\" and UserPrincipalName !has \"@us.navy.mil\"\n| summarize arg_max(TimeGenerated, *) by CorrelationId\n| project\n    TimeGenerated,\n    UserPrincipalName,\n    AppDisplayName,\n    IPAddress,\n    ConditionalAccessStatus\n| sort by TimeGenerated desc\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "Selected",
+                                                                                   "groupByEntities":  [
+                                                                                                           "Account"
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+                                                                                                               "DisplayName"
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AppDisplayName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "ConditionalAccessStatus"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess",
+                                       "CredentialAccess"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - ADMIN Powershell Sign-ins not authorized",
+                       "enabled":  false,
+                       "description":  "Detects PowerShell sign-ins from any admin that is not authorized for powershell use.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T15:49:28.8493392Z"
+                   }
+}

@@ -1,0 +1,18 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/b2930154-a341-4463-9b4e-217dcd77479a",
+    "name":  "b2930154-a341-4463-9b4e-217dcd77479a",
+    "etag":  "\"0200e519-0000-2700-0000-624904f70000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "MicrosoftSecurityIncidentCreation",
+    "properties":  {
+                       "productFilter":  "Microsoft Defender Advanced Threat Protection",
+                       "severitiesFilter":  null,
+                       "displayNamesFilter":  null,
+                       "displayNamesExcludeFilter":  null,
+                       "displayName":  "Create incidents based on Microsoft Defender for Endpoint alerts",
+                       "enabled":  false,
+                       "description":  "Create incidents based on all alerts generated in Microsoft Defender for Endpoint",
+                       "alertRuleTemplateName":  "327cd4ed-ca42-454b-887c-54e1c91363c6",
+                       "lastModifiedUtc":  "2022-04-01T16:00:34.713751Z"
+                   }
+}

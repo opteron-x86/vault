@@ -1,0 +1,50 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8407314f-c6e3-4f28-8941-a69a43c1d35b",
+    "name":  "8407314f-c6e3-4f28-8941-a69a43c1d35b",
+    "etag":  "\"1218e641-0000-2700-0000-6763872b0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "DeviceProcessEvents\r\n| where Timestamp between (ago(1d) .. now())\r\n| where ProcessCommandLine contains \"\\\\\\\\.\\\\pipe\\\\\" and not(ProcessCommandLine contains \"\\\\program files\")\r\n| where DeviceId in (DeviceInfo | where MachineGroup contains \"JSP\" | project DeviceId)\r\n| where not(InitiatingProcessFileName in (\"AGSService.exe\", \"fcagte.exe\", \"chrome.exe\", \"msedge.exe\", \"fcag.exe\", \"agsservice.exe\", \"agmservice.exe\", \"secomn64.exe\", \"vmware-print-redir-client.exe\"))\r\n| summarize count(), firstTime = min(Timestamp), lastTime = max(Timestamp) by InitiatingProcessFileName, InitiatingProcessCommandLine, FileName, ProcessCommandLine, InitiatingProcessFolderPath, ProcessId, InitiatingProcessId, DeviceName, AccountName, FolderPath, MachineGroup\r\n| project DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessFolderPath, ProcessId, InitiatingProcessId, FolderPath, firstTime, lastTime, MachineGroup\r\n| extend firstTime = format_datetime(firstTime, \u0027yyyy-MM-dd HH:mm:ss\u0027), lastTime = format_datetime(lastTime, \u0027yyyy-MM-dd HH:mm:ss\u0027)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion",
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1055"
+                                      ],
+                       "displayName":  "J361 - Windows Process With NamedPipe CommandLine",
+                       "enabled":  true,
+                       "description":  "The following analytic detects processes with command lines containing named pipes. It leverages data from Endpoint Detection and Response (EDR) agents, focusing on process command-line executions. This behavior is significant as it is often used by adversaries, such as those behind the Olympic Destroyer malware, for inter-process communication post-injection, aiding in defense evasion and privilege escalation. If confirmed malicious, this activity could allow attackers to maintain persistence, escalate privileges, or evade defenses, potentially leading to further compromise of the system. \nMITRE: T1055",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-12-19T02:38:30.9069161Z"
+                   }
+}

@@ -1,0 +1,113 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/54b6cabc-8eb2-48ce-b6ff-83629052fae3",
+    "name":  "54b6cabc-8eb2-48ce-b6ff-83629052fae3",
+    "etag":  "\"850034bf-0000-2700-0000-66fdaac10000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "// Define the start and end times based on input values\nlet starttime = now()-1h;\nlet endtime = now();\n// Set a lookback period of 14 days\nlet lookback = starttime - 14d;\n// Define a reusable function to query audit logs\nlet awsFunc = (start:datetime, end:datetime) {\n  AuditLogs\n  | where TimeGenerated between (start..end)\n  | where Category =~ \"RoleManagement\"\n  | where AADOperationType in (\"Assign\", \"AssignEligibleRole\")\n  | where ActivityDisplayName has_any (\"Add eligible member to role\", \"Add member to role\")\n  | mv-apply TargetResource = TargetResources on\n    (\n      where TargetResource.type in~ (\"User\", \"ServicePrincipal\")\n      | extend Target = iff(TargetResource.type =~ \"ServicePrincipal\", tostring(TargetResource.displayName), tostring(TargetResource.userPrincipalName)),\n      props = TargetResource.modifiedProperties\n    )\n  | mv-apply Property = props on\n    (\n      where Property.displayName =~ \"Role.DisplayName\"\n      | extend RoleName = trim(\u0027\"\u0027, tostring(Property.newValue))\n    )\n  | where RoleName contains \"Admin\" and Result == \"success\"\n};\n// Query for audit events in the current day\nlet EventInfo_CurrentDay = awsFunc(starttime, endtime);\n// Query for audit events in the historical period (lookback)\nlet EventInfo_historical = awsFunc(lookback, starttime);\n// Find unseen events by performing a left anti-join\nlet EventInfo_Unseen = (EventInfo_CurrentDay\n  | join kind=leftanti(EventInfo_historical) on Target, RoleName, OperationName\n);\n// Extend and clean up the results\nEventInfo_Unseen\n| extend InitiatingAppName = tostring(InitiatedBy.app.displayName)\n| extend InitiatingAppServicePrincipalId = tostring(InitiatedBy.app.servicePrincipalId)\n| extend InitiatingUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName)\n| extend InitiatingAadUserId = tostring(InitiatedBy.user.id)\n| extend InitiatingIpAddress = tostring(iff(isnotempty(InitiatedBy.user.ipAddress), InitiatedBy.user.ipAddress, InitiatedBy.app.ipAddress))\n| extend Initiator = iif(isnotempty(InitiatingAppName), InitiatingAppName, InitiatingUserPrincipalName)\n// You can uncomment the lines below to filter out PIM activations\n// | where Initiator != \"MS-PIM\"\n// | summarize StartTime=min(TimeGenerated), EndTime=min(TimeGenerated) by OperationName, RoleName, Target, Initiator, Result\n// Project specific columns and split them for further analysis\n| project TimeGenerated, OperationName, RoleName, Target, Initiator, InitiatingUserPrincipalName, InitiatingAadUserId, InitiatingAppName, InitiatingAppServicePrincipalId, InitiatingIpAddress, Result\n| extend TargetName = tostring(split(Target,\u0027@\u0027,0)[0]), TargetUPNSuffix = tostring(split(Target,\u0027@\u0027,1)[0]), InitiatorName = tostring(split(InitiatingUserPrincipalName,\u0027@\u0027,0)[0]), InitiatorUPNSuffix = tostring(split(InitiatingUserPrincipalName,\u0027@\u0027,1)[0])\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Target"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "TargetName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "TargetUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "InitiatingUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatorName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "InitiatorUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatingAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatingAppServicePrincipalId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "InitiatingIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.1.0",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "New User Assigned to Privileged Role",
+                       "enabled":  true,
+                       "description":  "Identifies when a privileged role is assigned to a new user. Any account eligible for a role is now being given privileged access. If the assignment is unexpected or into a role that isn\u0027t the responsibility of the account holder, investigate.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1078;T1078.004;T1098;T1098.003,TA0004;T1078;T1078.004;T1098;T1098.003,TA0005;T1078;T1078.004",
+                       "alertRuleTemplateName":  "050b9b3d-53d0-4364-a3da-1b678b8211ec",
+                       "lastModifiedUtc":  "2024-10-02T20:19:10.497712Z"
+                   }
+}

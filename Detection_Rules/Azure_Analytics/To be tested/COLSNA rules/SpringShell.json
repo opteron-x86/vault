@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/ea4c8c82-ebc1-48d5-a09c-80704461cce1",
+    "name":  "ea4c8c82-ebc1-48d5-a09c-80704461cce1",
+    "etag":  "\"8600a896-0000-2700-0000-66fdb58e0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "DeviceNetworkEvents\r\n| where ActionType =~ \"NetworkSignatureInspected\"\r\n| where AdditionalFields contains \".jsp?cmd=\"\r\n| summarize make_set(AdditionalFields, 5), min(TimeGenerated), max(TimeGenerated) by DeviceId, DeviceName ",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "SpringShell",
+                       "enabled":  true,
+                       "description":  "This analytic looks for Spring 4 Shell activity\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1136;T1136.003",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T21:05:17.2391055Z"
+                   }
+}

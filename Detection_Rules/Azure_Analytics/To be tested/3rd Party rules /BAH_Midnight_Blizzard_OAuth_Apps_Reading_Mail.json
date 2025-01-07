@@ -1,0 +1,104 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/7e7bb6bf-6d73-47c9-bf30-3266c04ea8fa",
+    "name":  "7e7bb6bf-6d73-47c9-bf30-3266c04ea8fa",
+    "etag":  "\"9601825c-0000-2700-0000-666affc50000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//BAH_Midnight_Blizzard_OAuth_Apps_Reading_Mail\n//Author: Shawn McWhirter\n//Description:Nobelium may re-purpose legitimate existing OAuth Applications in the environment to their own ends. However, malicious activity patterns may be discernable from  legitimate ones. The following query returns OAuth Applications that access mail both directly and via Graph, allowing review of whether such dual access methods follow expected use patterns.\n//\"https://www.microsoft.com/en-us/security/blog/2024/01/25/midnight-blizzard-guidance-for-responders-on-nation-state-attack/\", \"https://github.com/Azure/Azure-Sentinel/blob/master/Hunting%20Queries/Microsoft%20365%20Defender/Exfiltration/OAuth%20Apps%20reading%20mail%20both%20via%20GraphAPI%20and%20directly%20%5BNobelium%5D.yaml\", \"https://msrc-blog.microsoft.com/2020/12/13/customer-guidance-on-recent-nation-state-cyber-attacks/\"\n//False Positives: Legitimate OAuth applications, possible misconfigurations.\nlet oAuthAppIdList = externaldata(OAuthAppId:string)[@\u0027https://dod365csspstorage.blob.core.usgovcloudapi.net/bah-midnight-blizard-whitelist/BAH_MidnightBlizzard_oAthAppIdList.csv\u0027] with (format=\u0027csv\u0027, ignoreFirstRecord=True);\nlet ioc_lookBack = 1d;\nlet appsReadingMailDirectly = CloudAppEvents\n  | where TimeGenerated \u003e= ago(ioc_lookBack)\n  | where ActionType == \"MailItemsAccessed\"\n  | where RawEventData has \"AppId\" \n  | extend rawData = parse_json(RawEventData) \n  | extend AppId = tostring(parse_json(rawData.AppId)) \n  | where AppId != \"00000003-0000-0000-c000-000000000000\" \n  | summarize by AppId, AccountId, AccountDisplayName, Application, ActionType, AccountObjectId, IPAddress \n  | project-rename OAuthAppId = AppId; \nlet appsReadingMailViaGraphAPI = CloudAppEvents \n  | where TimeGenerated \u003e= ago(ioc_lookBack)\n  | where ActionType == \"MailItemsAccessed\" \n  | where RawEventData has \"ClientAppId\" \n  | where RawEventData has \"00000003-0000-0000-c000-000000000000\" // performance check \n  | extend rawData = parse_json(RawEventData) \n  | extend AppId = tostring(parse_json(rawData.AppId)) \n  | extend OAuthAppId = tostring(parse_json(rawData.ClientAppId)) // extract OAuthAppId \n  | where AppId == \"00000003-0000-0000-c000-000000000000\" \n  | where not(OAuthAppId has_any (oAuthAppIdList)) //checks for whitelisted oauthappid\u0027s in the hashlist\n  | project OAuthAppId, AccountDisplayName, Application, ActionType, AccountObjectId, IPAddress;\n appsReadingMailDirectly \n  | join kind = inner appsReadingMailViaGraphAPI \n  on OAuthAppId",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "customDetails":  {
+
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "CloudApplication",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AppId",
+                                                                            "columnName":  "OAuthAppId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountDisplayName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "Application"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "AccountObjectId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion",
+                                       "CredentialAccess",
+                                       "Collection"
+                                   ],
+                       "techniques":  [
+                                          "T1550",
+                                          "T1528",
+                                          "T1114"
+                                      ],
+                       "displayName":  "BAH_Midnight_Blizzard_OAuth_Apps_Reading_Mail",
+                       "enabled":  true,
+                       "description":  "Nobelium may re-purpose legitimate existing OAuth Applications in the environment to their own ends. However, malicious activity patterns may be discernable from legitimate ones. The following query returns OAuth Applications that access mail both directly and via Graph, allowing review of whether such dual access methods follow expected use patterns.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-06-13T14:18:37.1540198Z"
+                   }
+}

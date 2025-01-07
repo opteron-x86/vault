@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/28d362f8-bb10-4400-b1f9-bd90888b4809",
+    "name":  "28d362f8-bb10-4400-b1f9-bd90888b4809",
+    "etag":  "\"87001672-0000-2700-0000-66fdc3630000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P7D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Set threshold value for deviation\nlet threshold = 25;\n// Set the time range for the query\nlet timeRange = 24h;\n// Set the authentication window duration\nlet authenticationWindow = 20m;\n// Define a reusable function \u0027aadFunc\u0027 that takes a table name as input\nlet aadFunc = (tableName: string) {\n  // Query the specified table\n  table(tableName)\n  // Filter data within the last 24 hours\n  | where TimeGenerated \u003e ago(1d)\n  // Filter records related to \"Azure Portal\" applications\n  | where AppDisplayName has \"Azure Portal\"\n  // Extract and transform some fields\n  | extend\n      DeviceDetail = todynamic(DeviceDetail),\n      LocationDetails = todynamic(LocationDetails)\n  | extend\n      OS = tostring(DeviceDetail.operatingSystem),\n      Browser = tostring(DeviceDetail.browser),\n      State = tostring(LocationDetails.state),\n      City = tostring(LocationDetails.city),\n      Region = tostring(LocationDetails.countryOrRegion)\n  // Categorize records as Success or Failure based on ResultType\n  | extend FailureOrSuccess = iff(ResultType in (\"0\", \"50125\", \"50140\", \"70043\", \"70044\"), \"Success\", \"Failure\")\n  // Sort and identify sessions\n  | sort by UserPrincipalName asc, TimeGenerated asc\n  | extend SessionStartedUtc = row_window_session(TimeGenerated, timeRange, authenticationWindow, UserPrincipalName != prev(UserPrincipalName) or prev(FailureOrSuccess) == \"Success\")\n  // Summarize data\n  | summarize FailureOrSuccessCount = count() by  FailureOrSuccess, UserId, UserDisplayName, AppDisplayName, IPAddress, Browser, OS, State, City, Region, Type, CorrelationId, bin(TimeGenerated, authenticationWindow), ResultType, UserPrincipalName, SessionStartedUtc\n  | summarize FailureCountBeforeSuccess = sumif(FailureOrSuccessCount, FailureOrSuccess == \"Failure\"), StartTime = min(TimeGenerated), EndTime = max(TimeGenerated), makelist(FailureOrSuccess), IPAddress = make_set(IPAddress, 15), make_set(Browser, 15), make_set(City, 15), make_set(State, 15), make_set(Region, 15), make_set(ResultType, 15) by SessionStartedUtc, UserPrincipalName, CorrelationId, AppDisplayName, UserId, Type\n  // Filter records where \"Success\" occurs in the middle of a session\n  | where array_index_of(list_FailureOrSuccess, \"Success\") != 0\n  | where array_index_of(list_FailureOrSuccess, \"Success\") == array_length(list_FailureOrSuccess) - 1\n  // Remove unnecessary columns from the output\n  | project-away SessionStartedUtc, list_FailureOrSuccess\n  // Join with another table and calculate deviation\n  | join kind=inner (\n      table(tableName)\n      | where TimeGenerated \u003e ago(7d)\n      | where AppDisplayName has \"Azure Portal\"\n      | extend FailureOrSuccess = iff(ResultType in (\"0\", \"50125\", \"50140\", \"70043\", \"70044\"), \"Success\", \"Failure\")\n      | summarize avgFailures = avg(todouble(FailureOrSuccess == \"Failure\")) by UserPrincipalName\n  ) on UserPrincipalName\n  | extend Deviation = abs(FailureCountBeforeSuccess - avgFailures) / avgFailures\n  // Filter records based on deviation and failure count criteria\n  | where Deviation \u003e threshold and FailureCountBeforeSuccess \u003e= 10\n  // Expand the IPAddress array\n  | mv-expand IPAddress\n  | extend IPAddress = tostring(IPAddress)\n  | extend timestamp = StartTime\n};\n// Call \u0027aadFunc\u0027 with different table names and union the results\nlet aadSignin = aadFunc(\"SigninLogs\");\nlet aadNonInt = aadFunc(\"AADNonInteractiveUserSignInLogs\");\nunion isfuzzy=true aadSignin, aadNonInt\n// Additional transformation - Split UserPrincipalName\n| extend Name = tostring(split(UserPrincipalName,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(UserPrincipalName,\u0027@\u0027,1)[0])\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "2.1.4",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1110"
+                                      ],
+                       "displayName":  "Brute force attack against Azure Portal",
+                       "enabled":  true,
+                       "description":  "Detects Azure Portal brute force attacks by monitoring for multiple authentication failures and a successful login within a 20-minute window. Default settings: 10 failures, 25 deviations.\nRef: https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-sign-ins-error-codes.\nPLATFORM:Azure AD\nMITRE:TA0007;T1087;T1087.004",
+                       "alertRuleTemplateName":  "28b42356-45af-40a6-a0b4-a554cdfd5d8a",
+                       "lastModifiedUtc":  "2024-10-02T22:04:18.6590938Z"
+                   }
+}

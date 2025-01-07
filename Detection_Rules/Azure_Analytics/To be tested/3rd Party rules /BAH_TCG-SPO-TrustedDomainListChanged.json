@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/afb5b6d6-2975-4f4d-a088-10e02a3df8d9",
+    "name":  "afb5b6d6-2975-4f4d-a088-10e02a3df8d9",
+    "etag":  "\"8700269a-0000-2700-0000-66fdc5a70000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Author: Stephen Rowley\n//Description: This analytic looks for activity related to use of the Set-SPOTenantSyncClientRestriction cmdlet and changing of the \u0027DomainGuids\u0027 parameter. This accepts a string that refers to the tenant GUID. \u0027-GrooveBlockOption\u0027 is referenced in this in this part of the TCG, but has since been deprecated so only changes to trusted tenants is monitored.\n//False Positives: This analytic could alert on legitimate activity, but should still be investigated to confirm.\nOfficeActivity\n| where RecordType == \"SharePoint\"\n| where Operation == \"TrustedSyncClientDomainListChanged\"\n| project TimeGenerated, Operation, UserId, ClientIP",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "ClientIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_TCG-SPO-TrustedDomainListChanged",
+                       "enabled":  true,
+                       "description":  "This analytic looks for activity related to use of the Set-SPOTenantSyncClientRestriction cmdlet and changing of the \u0027DomainGuids\u0027 parameter. This accepts a string that refers to the tenant GUID.\n\n\u0027-GrooveBlockOption\u0027 is referenced in this in this part of the TCG, but has since been deprecated so only changes to trusted tenants is monitored.\nPLATFORM:Microsoft 365\nMITRE:TA0006;T1552;T1552.008,TA0007;T1526",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:13:59.1523444Z"
+                   }
+}

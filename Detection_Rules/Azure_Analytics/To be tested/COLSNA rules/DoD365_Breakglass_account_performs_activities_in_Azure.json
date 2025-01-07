@@ -1,0 +1,52 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/54690c01-1d9b-435a-b71d-e56e11c86169",
+    "name":  "54690c01-1d9b-435a-b71d-e56e11c86169",
+    "etag":  "\"87008e55-0000-2700-0000-66fdc1690000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "AzureActivity\r\n| where Caller == \"dodina@dod365.onmicrosoft.us\"",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1499",
+                                          "T0815",
+                                          "T0826",
+                                          "T0827"
+                                      ],
+                       "displayName":  "DoD365 Breakglass account performs activities in Azure",
+                       "enabled":  true,
+                       "description":  "Created by DEOS team to generate a Sentinel alert when the breakglass account performs activity in Azure\nPLATFORM:Azure AD,IaaS,Microsoft 365\nMITRE:TA0003;T1098;T1098.001;T1098.003,TA0004;T1078;T1078.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T21:55:51.2220509Z"
+                   }
+}

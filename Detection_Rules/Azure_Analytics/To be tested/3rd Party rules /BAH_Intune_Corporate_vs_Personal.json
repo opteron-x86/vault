@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/ef202719-8e75-4fc1-a1c5-eb9ed0cd1495",
+    "name":  "ef202719-8e75-4fc1-a1c5-eb9ed0cd1495",
+    "etag":  "\"870079d7-0000-2700-0000-66fdc9e70000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "//Author: Stephen Rowley\r\n//Description: Intune devices can be registered as either personal or corporate devices. All devices in the tenant should be marked as corporate, so this analytic will report on any misconfigurations.\r\n//False Positives: None known\r\nIntuneManagedDevices_CL\r\n| where managedDeviceOwnerType_s in (\"Personal\", \"personal\" \"\")\r\n| project\r\n    DeviceType = case(isempty(managedDeviceOwnerType_s), \"Unknown\", managedDeviceOwnerType_s),\r\n    TimeGenerated,\r\n    DeviceName = deviceName_s,\r\n    ID = id_g,\r\n    DeviceId = easDeviceId_s,\r\n    Compliant = complianceState_s,\r\n    ManagementAgent = managementAgent_s,\r\n    OS = operatingSystem_s",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1200"
+                                      ],
+                       "displayName":  "BAH_Intune_Corporate_vs_Personal",
+                       "enabled":  false,
+                       "description":  "Intune devices can be registered as either personal or corporate devices. All devices in the tenant should be marked as corporate, so this analytic will report on any misconfigurations.\nPLATFORM:Windows\nMITRE:T00001;T1200",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:32:07.41036Z"
+                   }
+}

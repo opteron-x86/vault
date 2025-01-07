@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4147efc5-fe4d-41c4-9b48-cd9e7bde509e",
+    "name":  "4147efc5-fe4d-41c4-9b48-cd9e7bde509e",
+    "etag":  "\"10182f32-0000-2700-0000-676380230000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "DeviceFileEvents\r\n| where Timestamp between (ago(1d) .. now())\r\n| where FileName endswith \".cab\"\r\n| where DeviceId in (DeviceInfo | where MachineGroup contains \"JSP\" | project DeviceId)\r\n| summarize count(), file_path = make_list(FolderPath), firstTime = min(Timestamp), lastTime = max(Timestamp) by DeviceName, ActionType, InitiatingProcessId, FileName, MachineGroup\r\n| project DeviceName, ActionType, InitiatingProcessId, FileName, file_path, firstTime, lastTime, MachineGroup\r\n| extend firstTime = format_datetime(firstTime, \u0027yyyy-MM-dd HH:mm:ss\u0027), lastTime = format_datetime(lastTime, \u0027yyyy-MM-dd HH:mm:ss\u0027)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1566"
+                                      ],
+                       "displayName":  "J361 - Windows CAB File on Disk - Rule",
+                       "enabled":  true,
+                       "description":  "The following analytic detects .cab files being written to disk. It leverages data from Endpoint Detection and Response (EDR) agents, focusing on events where the file name is \u0027*.cab\u0027 and the action is \u0027write\u0027. This activity is significant as .cab files can be used to deliver malicious payloads, including embedded .url files that execute harmful code. If confirmed malicious, this behavior could lead to unauthorized code execution and potential system compromise. Analysts should review the file path and associated artifacts for further investigation.\n\nMITRE:T1566.001",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-12-19T02:08:32.618452Z"
+                   }
+}

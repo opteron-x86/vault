@@ -1,0 +1,100 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/39a7eff4-defd-44df-8001-ece1ada06995",
+    "name":  "39a7eff4-defd-44df-8001-ece1ada06995",
+    "etag":  "\"4e01e833-0000-2700-0000-66b9fc1c0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Title: TI Map File Hash to DeviceFileEvents\n// Author: Edward Jiang\n// Description: Alerts when Sentinel Threat Intelligence MD5 file hash indicators are detected in the DeviceFileEvents table.\n// False Positives: Check confidence score for low-confidence matches.\n\nlet dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nThreatIntelligenceIndicator\n| where TimeGenerated \u003e= ago(ioc_lookBack) and ExpirationDateTime \u003e now()\n| summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n| where Active == true\n| where isnotempty(FileHashValue)\n| extend FileHashValue = toupper(FileHashValue)\n// using innerunique to keep perf fast and result set low, we only need one match to indicate potential malicious activity that needs to be investigated\n| join kind=innerunique (\n  DeviceFileEvents\n    | where TimeGenerated \u003e= ago(dt_lookBack)\n    | where ActionType in (\"FileCreated\",\"FileModified\")\n    | where isnotempty(MD5)\n    | extend DeviceFileEvents_TimeGenerated = TimeGenerated, Event = ActionType, FileHash = toupper(MD5)\n)\non $left.FileHashValue == $right.FileHash\n| where DeviceFileEvents_TimeGenerated \u003c ExpirationDateTime\n| summarize DeviceFileEvents_TimeGenerated = arg_max(DeviceFileEvents_TimeGenerated, *) by IndicatorId, FileHash\n| project DeviceFileEvents_TimeGenerated, Description, ActivityGroupNames, IndicatorId, ThreatType, Url, ExpirationDateTime, ConfidenceScore,\nInitiatingProcessCommandLine, InitiatingProcessFileName, InitiatingProcessFolderPath, FileHash, DeviceName, DeviceId, InitiatingProcessAccountName, Event, FileHashValue, FileHashType\n| extend timestamp = DeviceFileEvents_TimeGenerated\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatingProcessAccountName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Algorithm",
+                                                                            "columnName":  "FileHashType"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "FileHashValue"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "InitiatingProcessFolderPath"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "InitiatingProcessFileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "InitiatingProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "TI Map File Hash to DeviceFileEvents",
+                       "enabled":  false,
+                       "description":  "Identifies a match in DeviceFileEvents data from any File Hash IOC from TI",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-08-12T12:12:12.4207401Z"
+                   }
+}

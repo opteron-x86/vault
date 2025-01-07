@@ -1,0 +1,74 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/945098cb-29bd-476b-bdaf-e8c449085b0c",
+    "name":  "945098cb-29bd-476b-bdaf-e8c449085b0c",
+    "etag":  "\"8700d192-0000-2700-0000-66fdc5360000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "//Author: Ginna Woo\r\n//Description: Detects uncommon actions performed and uncommon high volume of actions performed by administrators. \r\n//False Positive(s): None known \r\nlet getAdminRoleUsers = (adminroles:dynamic) {\r\nIdentityInfo\r\n| where AssignedRoles has_any (adminroles)\r\n| extend UserPrincipalName=AccountUPN\r\n| distinct UserPrincipalName, tostring(AssignedRoles)\r\n};\r\nBehaviorAnalytics\r\n| where TimeGenerated \u003e= ago(30d)\r\n| where InvestigationPriority \u003e= 0\r\n| evaluate bag_unpack(ActivityInsights, columnsConflict=\"replace_source\")\r\n| extend ActionUncommonlyPerformedByUser = column_ifexists(\"ActionUncommonlyPerformedByUser\", \"\")\r\n| extend UncommonHighVolumeOfActions = column_ifexists(\"UncommonHighVolumeOfActions\", \"\")\r\n| where ActionUncommonlyPerformedByUser == \u0027True\u0027 or UncommonHighVolumeOfActions == \u0027True\u0027\r\n| join kind=inner (\r\n        OfficeActivity\r\n        | where TimeGenerated \u003e= ago(1d)\r\n        | extend UserPrincipalName = UserId\r\n        | project-away UserId, Site_, Start_Time, Type, UserKey, UserType, OfficeObjectId, UserAgent, OrganizationId, SourceSystem, SourceRecordId, Site_Url, ClientIP, OfficeWorkload, EventSource, OfficeTenantId, OfficeId) on UserPrincipalName, TimeGenerated\r\n| join kind=inner getAdminRoleUsers(dynamic([\"Global Administrator\", \"Compliance Administrator\"])) on UserPrincipalName, $left.UserPrincipalName == $right.UserPrincipalName\r\n| project-away UsersInsights, UserPrincipalName1, UserPrincipalName2, TimeGenerated1, TimeGenerated, TimeProcessed, TenantId1, EventSource, Type, OrganizationId_, SourceFileName_, SourceRelativeUrl_, UserId_, SourceRecordId\r\n| project-rename TimeGenerated=ElevationTime",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "TargetUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "BAH_UEBA_1-UncommonActivities",
+                       "enabled":  true,
+                       "description":  "Detects uncommon actions performed and uncommon high volume of actions performed by administrators. \nPLATFORM:Microsoft 365\nMITRE:TA0004;T1548;T1548.005",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:11:55.2084456Z"
+                   }
+}

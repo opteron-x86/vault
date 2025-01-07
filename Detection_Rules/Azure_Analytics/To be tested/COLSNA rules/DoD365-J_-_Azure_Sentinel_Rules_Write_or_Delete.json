@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/7cf59e77-9733-4745-a721-d5fc0b0775ce",
+    "name":  "7cf59e77-9733-4745-a721-d5fc0b0775ce",
+    "etag":  "\"1700fd92-0000-2700-0000-63c820b50000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let opValues = dynamic([\"Microsoft.SecurityInsights/alertRules/write\", \"Microsoft.SecurityInsights/alertRules/delete\"]);\n// Azure Sentinel Data Connectors Update / Delete\nAzureActivity\n| where Category == \"Administrative\"\n| where OperationName in (opValues)\n| where ActivityStatus == \"Succeeded\"\n| sort by TimeGenerated desc\n| extend AccountCustomEntity = Caller\n| extend IPCustomEntity = CallerIpAddress\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "OperationName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "CallerIpAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - Azure Sentinel Rules Write or Delete",
+                       "enabled":  false,
+                       "description":  "",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T16:39:17.4187073Z"
+                   }
+}

@@ -1,0 +1,53 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e26f26c7-789d-4bea-a9a5-0be8cdc25cef",
+    "name":  "e26f26c7-789d-4bea-a9a5-0be8cdc25cef",
+    "etag":  "\"47016db1-0000-2700-0000-65aa960c0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let commandlineStrings = dynamic([\u0027cmd.exe\u0027, \u0027\u00261\u0027,\u0027/Q\u0027,\u0027/c\u0027,@\u0027\\\\\\\\127.0.0.1\u0027]);\nDeviceEvents\n| where InitiatingProcessCommandLine endswith @\u0027\\wmiprvse.exe\u0027 or\nInitiatingProcessCommandLine endswith @\u0027\\mmc.exe\u0027 or\nInitiatingProcessCommandLine endswith @\u0027\\explorer.exe\u0027 or\nInitiatingProcessCommandLine endswith @\u0027\\services.exe\u0027 or\nInitiatingProcessCommandLine endswith @\u0027\\rundll32.exe\u0027 or\nInitiatingProcessCommandLine endswith @\u0027\\services.exe\u0027 and\nProcessCommandLine has_all (commandlineStrings)\n| project TimeGenerated, ProcessCommandLine, InitiatingProcessCommandLine, AccountName, AccountDomain, DeviceName, DeviceId",
+                       "suppressionDuration":  "PT1H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution",
+                                       "CredentialAccess",
+                                       "Discovery",
+                                       "Collection"
+                                   ],
+                       "techniques":  [
+                                          "T1569",
+                                          "T1047",
+                                          "T1557",
+                                          "T1040",
+                                          "T1003",
+                                          "T1558"
+                                      ],
+                       "displayName":  "BAH_Impacket",
+                       "enabled":  true,
+                       "description":  "The provided Kusto Query Language (KQL) query is used to look for client behavior related to the Impacket series of Python classes. Impacket is often used by threat actors for lateral movement and execution. The query checks for specific patterns in process command lines, looking for indications that Impacket or similar tools might be in use.                                                                                                                                                                                         https://attack.mitre.org/software/S0357/",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-01-19T15:32:27.5002204Z"
+                   }
+}

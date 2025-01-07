@@ -1,0 +1,97 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/db800c0d-3498-444b-be57-12482f681264",
+    "name":  "db800c0d-3498-444b-be57-12482f681264",
+    "etag":  "\"870012d1-0000-2700-0000-66fdc9770000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "// BAH_Ivanti\n// Author: Edward Jiang\n// Description: Detects vulnerabilities affecting Ivanti Connect Secure VPN and Ivanti Policy Secure solutions. More information: https://www.mandiant.com/resources/blog/investigating-ivanti-zero-day-exploitation\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d) \n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n);\nlet ActionTypes = dynamic([\"FileCreated\", \"FileModified\"]);\nlet FileNames = dynamic([\"health.py\", \"compcheckresult.cgi\", \"lastauthserverused.js\", \"category.py\"]);\nlet WarpWireHashes = dynamic([\"2ec505088b942c234f39a37188e80d7a\", \"8eb042da6ba683ef1bae460af103cc44\", \"a739bd4c2b9f3679f43579711448786f\", \"a81813f70151a022ea1065b7f4d6b5ab\", \"d0c7a334a4d9dcd3c6335ae13bee59ea\", \"e8489983d73ed30a4240a14b1f161254\"]);\nlet FilteredDevices = materialize(\n    DeviceFileEvents\n    | where ActionType in (ActionTypes) and FileName in (FileNames)\n    );\nunion isfuzzy=true \n(\n    FilteredDevices\n    | where ActionType == \"FileCreated\" and FileName == \"health.py\" and FolderPath contains \"/home/venv3/lib/python3.6/site-packages/cav-0.1-py3.6.egg/cav/api/resources/\"\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project TimeGenerated, DeviceName, UserPrincipalName, RequestAccountName, FileName, FolderPath, MD5, Tactic = \"CHAINLINE Web Shell\"\n),\n(\n    FilteredDevices\n    | where ActionType == \"FileModified\" and FileName == \"compcheckresult.cgi\" and MD5 == \"3d97f55a03ceb4f71671aa2ecf5b24e9\"\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project TimeGenerated, DeviceName, UserPrincipalName, RequestAccountName, FileName, FolderPath, MD5, Tactic = \"LIGHTWIRE Web Shell\"\n),\n(\n    FilteredDevices\n    | where FileName == \"lastauthserverused.js\" and MD5 in (WarpWireHashes)\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project TimeGenerated, DeviceName, UserPrincipalName, RequestAccountName, FileName, FolderPath, MD5, Tactic = \"WARPWIRE credential harvester\"\n),\n(\n    FilteredDevices\n    | where FileName == \"category.py\" and MD5 == \"465600cece80861497e8c1c86a07a23e\"\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project TimeGenerated, DeviceName, UserPrincipalName, RequestAccountName, FileName, FolderPath, MD5, Tactic = \"FRAMESTING web shell\"\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "customDetails":  {
+                                             "Ivanti_Behavior":  "Tactic"
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "FolderPath"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "MD5"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "alertDetailsOverride":  {
+                                                    "alertDynamicProperties":  [
+
+                                                                               ]
+                                                },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1505",
+                                          "T1041"
+                                      ],
+                       "displayName":  "BAH_Ivanti",
+                       "enabled":  true,
+                       "description":  "Looks for behavior related to the Ivanti Emergency Directive 24-01. The behaviors detected are: CHAINLINE Web Shell, LIGHTWIRE Web Shell, WARPWIRE Credential Harvester Variant, and FRAMESTING Web Shell.\nFor more info: https://www.mandiant.com/resources/blog/investigating-ivanti-zero-day-exploitation\nPLATFORM:Windows\nMITRE:TA0003;T1505,TA0010;T1041",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:30:14.2743427Z"
+                   }
+}

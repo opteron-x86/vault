@@ -1,0 +1,83 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/8dde7f87-64c0-4701-989b-4c6210d4e05b",
+    "name":  "8dde7f87-64c0-4701-989b-4c6210d4e05b",
+    "etag":  "\"2e0125af-0000-2700-0000-6707e8290000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let riskScoreCutoff = 20; //Adjust this based on volume of results\nlet logonDiff = 10m; let aadFunc = (tableName:string){ table(tableName)\n| where ResultType == \"0\"\n| where AppDisplayName !in (\"Office 365 Exchange Online\", \"Skype for Business Online\") // To remove false-positives, add more Apps to this array\n// ---------- Fix for SuccessBlock to also consider IPv6\n| extend SuccessIPv6Block = strcat(split(IPAddress, \":\")[0], \":\", split(IPAddress, \":\")[1], \":\", split(IPAddress, \":\")[2], \":\", split(IPAddress, \":\")[3])\n| extend SuccessIPv4Block = strcat(split(IPAddress, \".\")[0], \".\", split(IPAddress, \".\")[1])\n// ------------------\n| project SuccessLogonTime = TimeGenerated, UserPrincipalName, SuccessIPAddress = IPAddress, SuccessLocation = Location, AppDisplayName, SuccessIPBlock = iff(IPAddress contains \":\", strcat(split(IPAddress, \":\")[0], \":\", split(IPAddress, \":\")[1]), strcat(split(IPAddress, \".\")[0], \".\", split(IPAddress, \".\")[1])), Type\n| join kind= inner (\ntable(tableName)\n| where ResultType !in (\"0\", \"50140\", \"501314\")\n| where ResultDescription !~ \"Other\"\n| where AppDisplayName !in (\"Office 365 Exchange Online\", \"Skype for Business Online\")\n| project FailedLogonTime = TimeGenerated, UserPrincipalName, FailedIPAddress = IPAddress, FailedLocation = Location, AppDisplayName, ResultType, ResultDescription, Type\n) on UserPrincipalName, AppDisplayName\n| where SuccessLogonTime \u003c FailedLogonTime and FailedLogonTime - SuccessLogonTime \u003c= logonDiff and FailedIPAddress !startswith SuccessIPBlock\n| summarize FailedLogonTime = max(FailedLogonTime), SuccessLogonTime = max(SuccessLogonTime) by UserPrincipalName, SuccessIPAddress, SuccessLocation, AppDisplayName, FailedIPAddress, FailedLocation, ResultType, ResultDescription, Type\n| extend timestamp = SuccessLogonTime\n| extend UserPrincipalName = tolower(UserPrincipalName)};\nlet aadSignin = aadFunc(\"SigninLogs\");\nlet aadNonInt = aadFunc(\"AADNonInteractiveUserSignInLogs\");\nunion isfuzzy=true aadSignin, aadNonInt\n| extend Name = tostring(split(UserPrincipalName,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(UserPrincipalName,\u0027@\u0027,1)[0])\n//UEBA context below - make sure you have these 2 datatypes, otherwise the query will not work. If so, comment all that is below.\n| join kind=leftouter (\nIdentityInfo\n| summarize LatestReportTime = arg_max(TimeGenerated, *) by AccountUPN\n| extend BlastRadiusInt = iif(BlastRadius == \"High\", 1, 0)\n| project AccountUPN, Tags, JobTitle, GroupMembership, AssignedRoles, UserType, IsAccountEnabled, BlastRadiusInt\n| summarize\nTags = make_set(Tags, 1000),\nGroupMembership = make_set(GroupMembership, 1000),\nAssignedRoles = make_set(AssignedRoles, 1000),\nBlastRadiusInt = sum(BlastRadiusInt),\nUserType = make_set(UserType, 1000),\nUserAccountControl = make_set(UserType, 1000)\nby AccountUPN\n| extend UserPrincipalName=tolower(AccountUPN)\n) on UserPrincipalName\n| join kind=leftouter (\nBehaviorAnalytics\n| where ActivityType in (\"FailedLogOn\", \"LogOn\")\n| where isnotempty(SourceIPAddress)\n| project UsersInsights, DevicesInsights, ActivityInsights, InvestigationPriority, SourceIPAddress\n| project-rename FailedIPAddress = SourceIPAddress\n| summarize\nUsersInsights = make_set(UsersInsights, 1000),\nDevicesInsights = make_set(DevicesInsights, 1000),\nIPInvestigationPriority = sum(InvestigationPriority)\nby FailedIPAddress)\non FailedIPAddress\n| extend UEBARiskScore = BlastRadiusInt + IPInvestigationPriority\n| where UEBARiskScore \u003e riskScoreCutoff\n| sort by UEBARiskScore desc",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "SuccessIPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "FailedIPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Successful logon from IP and failure from a different IP",
+                       "enabled":  true,
+                       "description":  "Identifies when a user account successfully logs onto an Azure App from one IP and within 10 mins failed to logon to the same App via a different IP.\nThis may indicate a malicious attempt at password guessing based on knowledge of the users account. Version 2.0\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1078;T1078.001;T1078.004,TA0006;T1110;T1110.001;T1110.003;T1110.004",
+                       "alertRuleTemplateName":  "02ef8d7e-fc3a-4d86-a457-650fa571d8d2",
+                       "lastModifiedUtc":  "2024-10-10T14:43:52.8675277Z"
+                   }
+}

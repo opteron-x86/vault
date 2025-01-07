@@ -1,0 +1,76 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/855357a3-1451-41ce-aaf3-5abc6c13a849",
+    "name":  "855357a3-1451-41ce-aaf3-5abc6c13a849",
+    "etag":  "\"8700c33d-0000-2700-0000-66fdbfc80000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Collect the alert events\nlet alertData = SecurityAlert\n| where DisplayName has \"Potential malware uploaded to\"\n| extend Entities = parse_json(Entities)\n| mv-expand Entities;\n//Parse the IP address data\nlet ipData = alertData\n| where Entities[\u0027Type\u0027] =~ \"ip\"\n| extend AttackerIP = tostring(Entities[\u0027Address\u0027]), AttackerCountry = tostring(Entities[\u0027Location\u0027][\u0027CountryName\u0027]);\n//Parse the file data\nlet FileData = alertData\n| where Entities[\u0027Type\u0027] =~ \"file\"\n| extend MaliciousFileDirectory = tostring(Entities[\u0027Directory\u0027]), MaliciousFileName = tostring(Entities[\u0027Name\u0027]), MaliciousFileHashes = tostring(Entities[\u0027FileHashes\u0027]);\n//Combine the File and IP data together\nipData\n| join (FileData) on VendorOriginalId\n| summarize by TimeGenerated, AttackerIP, AttackerCountry, DisplayName, ResourceId, AlertType, MaliciousFileDirectory, MaliciousFileName, MaliciousFileHashes\n//Create a type column so we can track if it was a File storage or blobl storage upload\n| extend type = iff(DisplayName has \"file\", \"File\", \"Blob\")\n| join (\n  union\n  StorageFileLogs,\n  StorageBlobLogs\n  //File upload operations\n  | where OperationName =~ \"PutBlob\" or OperationName =~ \"PutRange\"\n  //Parse out the uploader IP\n  | extend ClientIP = tostring(split(CallerIpAddress, \":\", 0)[0])\n  //Extract the filename from the Uri\n  | extend FileName = extract(@\"\\/([\\w\\-. ]+)\\?\", 1, Uri)\n  //Base64 decode the MD5 filehash, we will encounter non-ascii hex so string operations don\u0027t work\n  //We can work around this by making it an array then converting it to hex from an int\n  | extend base64Char = base64_decode_toarray(ResponseMd5)\n  | mv-expand base64Char\n  | extend hexChar = tohex(toint(base64Char))\n  | extend hexChar = iff(strlen(hexChar) \u003c 2, strcat(\"0\", hexChar), hexChar)\n  | extend SourceTable = iff(OperationName has \"range\", \"StorageFileLogs\", \"StorageBlobLogs\")\n  | summarize make_list(hexChar, 1000) by CorrelationId, ResponseMd5, FileName, AccountName, TimeGenerated, RequestBodySize, ClientIP, SourceTable\n  | extend Md5Hash = strcat_array(list_hexChar, \"\")\n  //Pack the file information the summarise into a ClientIP row\n  | extend p = pack(\"FileName\", FileName, \"FileSize\", RequestBodySize, \"Md5Hash\", Md5Hash, \"Time\", TimeGenerated, \"SourceTable\", SourceTable)\n  | summarize UploadedFileInfo=make_list(p, 10000), FilesUploaded=count() by ClientIP\n      | join kind=leftouter (\n        union\n        StorageFileLogs,\n        StorageBlobLogs\n        | where OperationName =~ \"DeleteFile\" or OperationName =~ \"DeleteBlob\"\n        | extend ClientIP = tostring(split(CallerIpAddress, \":\", 0)[0])\n        | extend FileName = extract(@\"\\/([\\w\\-. ]+)\\?\", 1, Uri)\n        | extend SourceTable = iff(OperationName has \"range\", \"StorageFileLogs\", \"StorageBlobLogs\")\n        | extend p = pack(\"FileName\", FileName, \"Time\", TimeGenerated, \"SourceTable\", SourceTable)\n        | summarize DeletedFileInfo=make_list(p, 10000), FilesDeleted=count() by ClientIP\n        ) on ClientIP\n  ) on $left.AttackerIP == $right.ClientIP\n| mvexpand UploadedFileInfo\n| extend LinkedMaliciousFileName = tostring(UploadedFileInfo.FileName)\n| extend LinkedMaliciousFileHash = tostring(UploadedFileInfo.Md5Hash)\n| extend HashAlgorithm = \"MD5\"\n| project AlertTimeGenerated = TimeGenerated, LinkedMaliciousFileName, LinkedMaliciousFileHash, HashAlgorithm, AlertType, AttackerIP, AttackerCountry, MaliciousFileDirectory, MaliciousFileName, FilesUploaded, UploadedFileInfo",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "AttackerIP"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Algorithm",
+                                                                            "columnName":  "HashAlgorithm"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "LinkedMaliciousFileHash"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CommandAndControl",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1071",
+                                          "T1567"
+                                      ],
+                       "displayName":  "Linked Malicious Storage Artifacts",
+                       "enabled":  true,
+                       "description":  "This query identifies the additional files uploaded by the same IP address which triggered a malware alert for malicious content upload on Azure Blob or File Storage Container.\nPLATFORM:Azure AD\nMITRE:TA0003;T1098;T1098.005",
+                       "alertRuleTemplateName":  "b9e3b9f8-a406-4151-9891-e5ff1ddd8c1d",
+                       "lastModifiedUtc":  "2024-10-02T21:48:56.0668232Z"
+                   }
+}

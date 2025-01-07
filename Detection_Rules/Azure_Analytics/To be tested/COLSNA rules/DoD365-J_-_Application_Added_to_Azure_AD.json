@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/41fc1b40-b2bd-4ded-a3b1-da2ed48b6cc2",
+    "name":  "41fc1b40-b2bd-4ded-a3b1-da2ed48b6cc2",
+    "etag":  "\"1700998f-0000-2700-0000-63c820590000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5H",
+                       "queryPeriod":  "PT5H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "AuditLogs\n| where ActivityDisplayName contains \"Add app\"\n| extend userPrincipalName_ = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)\n| extend displayName_ = tostring(TargetResources[0].displayName)\n| extend TimeGenerated\n| project displayName_, userPrincipalName_, TimeGenerated\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - Application Added to Azure AD",
+                       "enabled":  false,
+                       "description":  "Detect additions of new applications to Azure AD",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T16:37:45.6435076Z"
+                   }
+}

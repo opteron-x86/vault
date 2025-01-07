@@ -1,0 +1,83 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/DoD365-LAW-RG2/providers/Microsoft.OperationalInsights/workspaces/DOD365-LAW/providers/Microsoft.SecurityInsights/alertRules/fa74e7a6-d7d2-419b-a8c1-30dc19801ba6",
+    "name":  "fa74e7a6-d7d2-419b-a8c1-30dc19801ba6",
+    "etag":  "\"04153ce4-0000-2700-0000-675af4320000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//BAH_SharePoint_Remote_Code_Execution\n//Author: Shawn McWhirter\n//Description: The rule monitors for suspicious activities involving .bdcm files on SharePoint. These files contain metadata for connecting to external data sources. Overwriting these files could be linked to deserialization exploits, thus any actions modifying a .bdcm file should warrant immediate investigation.\n//https://app.snapattack.com/detection/7efa6497-477e-48ae-addd-569488ed65e9\n//https://app.snapattack.com/detection/4330446a-f4cb-40a8-a4fa-3147cf453513\n//https://github.com/testanull/MS-SharePoint-July-Patch-RCE-PoC\n//https://www.rapid7.com/blog/post/2024/07/09/patch-tuesday-july-2024/\n//https://thehackernews.com/2024/10/cisa-warns-of-active-exploitation-of.html\n//False Positives: None known.\nlet signInLookup = (\n    SigninLogs\n    | where DeviceDetail contains \"displayName\"\n    | extend DeviceDetailJson = parse_json(DeviceDetail)\n    | extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n    | distinct DeviceNameSI, UserPrincipalName\n    );\nlet urlparts = dynamic([@\"_api/web\", @\"overwrite=true\"\n    ]);\n(union isfuzzy=true\n    (\n    DeviceEvents\n    | where FileOriginUrl has_all(urlparts) or RemoteUrl has_all(urlparts)\n    | project\n        TimeGenerated,\n        ActionType,\n        FileOriginUrl,\n        RemoteUrl,\n        AccountName,\n        AccountDomain,\n        DeviceName,\n        DeviceId,\n        Tactic = \"Possible deserialization exploit on SharePoint (CVE 2024-38094)\"\n    ),\n    (\n    DeviceNetworkEvents\n    | where RemoteUrl has_all(urlparts)\n    | project\n        TimeGenerated,\n        ActionType,\n        RemoteUrl,\n        DeviceName,\n        DeviceId,\n        Tactic = \"Possible deserialization exploit on SharePoint (CVE 2024-38094)\"\n    ),\n    (\n    DeviceFileEvents\n    | where FileOriginUrl has_all(urlparts) or FileOriginReferrerUrl has_all(urlparts)\n    | project\n        TimeGenerated,\n        ActionType,\n        FileOriginUrl,\n        FileOriginReferrerUrl,\n        DeviceName,\n        DeviceId,\n        Tactic = \"Possible deserialization exploit on SharePoint (CVE 2024-38094)\"\n    )\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FileOriginUrl"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "RemoteUrl"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "ActionType"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "tactics":  [
+                                       "Collection",
+                                       "InitialAccess",
+                                       "CommandAndControl"
+                                   ],
+                       "techniques":  [
+                                          "T1213",
+                                          "T1190",
+                                          "T1102"
+                                      ],
+                       "displayName":  "BAH_SharePoint_RCE",
+                       "enabled":  true,
+                       "description":  "A critical deserialization vulnerability in Microsoft SharePoint, identified as CVE-2024-38094, is currently being exploited in the wild. This flaw allows authenticated attackers with Site Owner permissions to inject and execute arbitrary code within the SharePoint Server context, posing a significant threat to federal enterprises.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-12-12T14:33:20.5249692Z"
+                   }
+}

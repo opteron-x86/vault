@@ -1,0 +1,53 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/7ecb568f-517f-4ef8-abf6-291e96f8c5e7",
+    "name":  "7ecb568f-517f-4ef8-abf6-291e96f8c5e7",
+    "etag":  "\"1302cd36-0000-2700-0000-67168b690000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Michael Gibbs\n// Description: Remote Access and Meeting tools not approved by DISA https://aplits.disa.mil/processAPList.action\n// False Positives: If another application uses a similar named DLL or exe\nlet signInLookup = (\nSigninLogs \n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName\n);\nlet files = dynamic([@\"BAConsoleAppEN\",\n@\"takecontroltechconsole\",\n@\"baconsoleapp\",\n@\"GoTo Meeting Opener\",\n@\"GoToOpener.exe\",\n@\"G2MCoreInstExtractor\"\n]);\n(union isfuzzy = true\n(\nfind in (DeviceImageLoadEvents, DeviceEvents, DeviceFileEvents, DeviceImageLoadEvents)\n    where FileName has_any (files)\n)\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | extend ProcessDetails = pack(\"FileName\", FileName, \"FolderPath\",FolderPath,\"InitiatingProcessCommandLine\", InitiatingProcessCommandLine)\n    | summarize min(TimeGenerated), max(TimeGenerated), make_set(ProcessDetails) by DeviceName, UserPrincipalName, InitiatingProcessAccountName, MachineGroup\n    )",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CommandAndControl",
+                                       "Execution",
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+                                          "T1219",
+                                          "T1133",
+                                          "T1505"
+                                      ],
+                       "displayName":  "BAH_Remote_Software",
+                       "enabled":  true,
+                       "description":  "Software used for remote meetings or remote interaction. Remote Access and Meeting tools not approved by DISA https://aplits.disa.mil/processAPList.action\nFalse Positives: If another application uses a similar named DLL or exe\nPLATFORM:Windows\nMITRE:TA0003;T1133;T1505,TA0011;T1219",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-21T17:12:08.4361006Z"
+                   }
+}

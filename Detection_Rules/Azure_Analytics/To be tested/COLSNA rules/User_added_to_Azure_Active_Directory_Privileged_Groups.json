@@ -1,0 +1,80 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/32c9cfbe-991e-44d9-bdbf-c7977308c891",
+    "name":  "32c9cfbe-991e-44d9-bdbf-c7977308c891",
+    "etag":  "\"850025cb-0000-2700-0000-66fdab4b0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// If access was granted by a User (InitiatedByDisplayName), app information will say **User**\n// If access was granted by an app (AppId), this information will display for the application used.\n// Currently, this analytic is set to remove entries set by App \"MS-PIM-Fairfax\"\nlet timeframe = 24h;\nlet OperationList = dynamic([\"Add member to role\", \"Add member to role in PIM requested (permanent)\"]);\nlet PrivilegedGroups = dynamic([\"UserAccountAdmins\",\"PrivilegedRoleAdmins\",\"TenantAdmins\"]);\nAuditLogs\n| where TimeGenerated \u003e= ago(timeframe)\n| where LoggedByService =~ \"Core Directory\"\n| where Category =~ \"RoleManagement\"\n| where OperationName in~ (OperationList)\n| mv-expand TargetResources\n| extend modifiedProperties = parse_json(TargetResources).modifiedProperties\n| mv-expand modifiedProperties\n| extend\n    DisplayName = tostring(parse_json(modifiedProperties).displayName),\n    GroupName =  trim(@\u0027\"\u0027, tostring(parse_json(modifiedProperties).newValue))\n| extend\n    AppId = iif(isnotnull(InitiatedBy.app.appId), InitiatedBy.app.appId, \"**User**\"),\n    InitiatedByUserId = iif(isnotnull(InitiatedBy.user.id), InitiatedBy.user.id, \"**See AppInitiated Column**\"),\n    InitiatedByDisplayName = iif(isnotnull(InitiatedBy.app.displayName), InitiatedBy.app.displayName, InitiatedBy.user.userPrincipalName),\n    ServicePrincipalId = iif(isnotnull(InitiatedBy.app.servicePrincipalId), InitiatedBy.app.servicePrincipalId, \"**User**\"),\n    ServicePrincipalName = iif(isnotnull(InitiatedBy.app.servicePrincipalName), InitiatedBy.app.servicePrincipalName, \"**User**\"),\n    TargetUserAdded = iif(isempty(TargetResources.userPrincipalName), TargetResources.displayName, TargetResources.userPrincipalName)\n| where DisplayName =~ \"Role.WellKnownObjectName\"\n| where GroupName contains \"admins\" or GroupName in (PrivilegedGroups)\n// If you want to still alert for operations from PIM, remove below filtering for MS-PIM.\n| where InitiatedByDisplayName != \"MS-PIM-Fairfax\"\n| extend AppInitiated = pack(\"AppId\", AppId, \"ServicePrincipalId\", ServicePrincipalId, \"ServicePrincipalName\", ServicePrincipalName)\n| summarize Groups =make_list(GroupName), Count =count()\n    by\n    AADOperationType,\n    OperationName,\n    AADTenantId,\n    tostring(TargetUserAdded),\n    InitiatedByUserId,\n    tostring(InitiatedByDisplayName),\n    tostring(AppInitiated)\n| sort by Count",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "TargetUserAdded"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatedByDisplayName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "SecurityGroup",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "DistinguishedName",
+                                                                            "columnName":  "Groups"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "PrivilegeEscalation"
+                                   ],
+                       "techniques":  [
+                                          "T1098",
+                                          "T1078"
+                                      ],
+                       "displayName":  "User added to Azure Active Directory Privileged Groups",
+                       "enabled":  true,
+                       "description":  "This will alert when a user is added to any of the Privileged Groups.\nFor further information on AuditLogs please see https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-audit-activities.\nFor Administrator role permissions in Azure Active Directory please see https://docs.microsoft.com/azure/active-directory/users-groups-roles/directory-assign-admin-roles\nPLATFORM:Azure AD,IaaS,Microsoft 365,Windows\nMITRE:TA0001;T1078;T1078.001;T1078.004,TA0003;T1078;T1078.004;T1098;T1098.001",
+                       "alertRuleTemplateName":  "4d94d4a9-dc96-410a-8dea-4d4d4584188b",
+                       "lastModifiedUtc":  "2024-10-02T20:21:30.659471Z"
+                   }
+}

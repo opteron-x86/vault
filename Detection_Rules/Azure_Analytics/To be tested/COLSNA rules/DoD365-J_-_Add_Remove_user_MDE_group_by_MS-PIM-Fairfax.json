@@ -1,0 +1,49 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/e4953b61-c690-45ab-873a-07d231127471",
+    "name":  "e4953b61-c690-45ab-873a-07d231127471",
+    "etag":  "\"1700f395-0000-2700-0000-63c821040000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5M",
+                       "queryPeriod":  "PT5M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Informational",
+                       "query":  "AuditLogs \n| where TargetResources[1].id in (\n    \"cb21406c-0618-4e49-86a7-93abc9d1872e\", \n    \"647e5928-aeaf-4b1d-9490-824d4b8f45b7\", \n    \"47c6de91-8541-4bdd-bd50-b930e05da61b\",\n    \"587eadc5-af10-4adf-b060-9ddf0f268977\",\n    \"ea7064c5-64e7-4031-b8c5-a2cf6743916b\",\n    \"b8956462-7dbc-4b72-9e29-8bd7bb9c4a36\",\n    \"dee258d7-4694-410f-9fdd-d741fbae967b\",\n    \"91418588-9647-4cfa-b281-def02e53b166\",\n    \"e7c7dab7-25b1-4eb0-8ebe-0f442b608a89\",\n    \"f190ed26-6097-4eaa-a4a4-510462004015\",\n    \"05b2ec2c-3636-4db4-bdaf-fcd2d86aa105\",\n    \"d9f58cc8-3410-4609-87af-83d4f6e86aa7\",\n    \"e2eba35f-28ed-465f-b9f0-3d35653ae3dd\",\n    \"be82d229-e98f-43a9-a4ad-8ca5f11a12bf\",\n    \"b9ca7afe-0749-4a35-8d87-654302351b7b\",\n    \"25f6d28d-9d2e-427e-b887-ea058ed0bbfa\",\n    \"ea18eb62-3117-421e-b09b-612f4096146d\",\n    \"7cc65410-e12e-412e-92ba-a7ca72a25111\",\n    \"151c3002-3eb1-434e-9d6b-e1a797eb3cf1\",\n    \"b24dfbed-e5f5-4f2f-883b-16b32c213fcd\",\n    \"da817b7c-a00e-459d-874e-48c54ed0d83b\",\n    \"21a109fd-e49c-4d81-9863-593132b35447\",\n    \"38ebeba9-b7a3-41bd-a949-e344b848db2b\",\n    \"188cbf79-5dc5-4f77-b646-a2711c03fc00\",\n    \"f402686b-5726-479c-bcc0-fda957c9b007\",\n    \"4e34bcf0-3b87-4fb6-a15c-bc7fdcd8602b\",\n    \"a438dd8f-6ae5-4d93-a918-d978daab39b6\"\n    )\n| where parse_json(tostring(InitiatedBy.app)).displayName == \"MS-PIM-Fairfax\"\n| sort by TimeGenerated desc nulls last \n| project TimeGenerated, ActivityDisplayName, Result, GroupName = parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[1].newValue)), UserInitiated = parse_json(tostring(InitiatedBy.app)).displayName, TargetUser = TargetResources[0].userPrincipalName\n\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - Add/Remove user MDE group by MS-PIM-Fairfax",
+                       "enabled":  false,
+                       "description":  "MDE Group Modification by MS-PIM-Fairfax",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T16:40:36.5919704Z"
+                   }
+}

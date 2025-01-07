@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/72f50721-4261-47eb-83de-c84109122a0a",
+    "name":  "72f50721-4261-47eb-83de-c84109122a0a",
+    "etag":  "\"d600d469-0000-2700-0000-65a7cc890000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "// Look within the OfficeActivity table for \u0027FileDownloaded\u0027 operations across multiple SharePoint sites.\r\nlet DownloadActivity = OfficeActivity\r\n    | where TimeGenerated \u003e= ago(24h)\r\n    | where Operation == \"FileDownloaded\"\r\n    // Documents that are uploaded and shared within teams will reside in a \u0027SourceRelativeUrl\u0027 of \"Documents/Microsoft Teams Chat Files\"\r\n    // These are excluded because they are not the type of data-exfiltration indication that we are looking for.\r\n    | where SourceRelativeUrl != \"Documents/Microsoft Teams Chat Files\";\r\nDownloadActivity\r\n// Deduplicate Site_Urls (based around the individual accessing) so we can count the unique sites.\r\n| distinct UserId, Site_Url\r\n// Count the number of sites and create a list of them with a maximum number (required of 1000 - which we will probably never hit).\r\n| summarize Sites = make_set(Site_Url, 1000), SiteCount = count() by UserId\r\n// Join the following table to the table we created above.  The join kind is innerunique (see Microsoft Documentation for clarification).\r\n| join kind=innerunique (\r\n    // Look for the same activity but grab the total number of downloaded files.\r\n    DownloadActivity\r\n    // We perform a distinct here and include TimeGenerated because duplication of logs can occur and will affect the count.\r\n    | distinct UserId, OfficeObjectId\r\n    // This will result in a table with UserId and DownloadCount\r\n    | summarize DownloadCount = count() by UserId\r\n    // The tables join on the field \u0027UserId\u0027\r\n    )\r\n    on UserId\r\n// The threshold we set for SiteCount is 4 (within our time window).  This can change, we have to find a balance of\r\n// data-exfil indication and not working events for normal activity.\r\n| where SiteCount \u003e= 4\r\n| where DownloadCount \u003e= 10\r\n// Create our final table based on the following fields.\r\n| project UserId, DownloadCount, SiteCount, Sites\r\n// Commented out extend below as not needed\r\n//| extend AccountCustomEntity = UserId\r\n// Added join of IdentityInfo to pull user\u0027s Department and most current GroupMemberships for comparison to download activity\r\n| join (IdentityInfo\r\n    | where TimeGenerated \u003e= ago(30d)\r\n    | distinct AccountUPN, Department, tostring(GroupMembership))\r\n    on ($left.UserId == $right.AccountUPN)\r\n| summarize GroupMembership = make_list(GroupMembership) by UserId, DownloadCount, SiteCount, tostring(Sites), Department\r\n| project\r\n    UserId,\r\n    Department,\r\n    DownloadCount,\r\n    SiteCount,\r\n    Sites,\r\n    MostCurrentGroupMembership= GroupMembership.[0]",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "MostCurrentGroupMembership"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Downloads Across Multiple SharePoint Sites v3",
+                       "enabled":  true,
+                       "description":  " Commented out an unneeded extend.\nJoined the IdentityInfo table to lookup User\u0027s Department and most recent group memberships.\nThis will allow the analyst to do a comparison of sites downloaded from to their department and the most recent Sharepoint sites that they are a member of, that have been processed in the past 30 days.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-01-17T12:48:09.2454109Z"
+                   }
+}

@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/bf517753-2fab-418f-813b-d9eb5beaa848",
+    "name":  "bf517753-2fab-418f-813b-d9eb5beaa848",
+    "etag":  "\"870038a6-0000-2700-0000-66fdc6680000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Rob Russell, Michael Gibbs\r\n// Description: Detects command line based behavior related to ATT\u0026CK technique T1218 System Binary Proxy Execution: Mshta\r\n// This alert can not determine if a .hta file contains malicious commands\r\n// False Positives: It has been noted that some HP printer driver uninstallers make use of mshta commands in the command line and could trigger a false positive\r\nlet mshtaCMDs = dynamic([\"javascript\", \u0027ActiveXObject\u0027, \u0027vbscript\u0027]);\r\nlet signInLookup = (\r\nSigninLogs \r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName\r\n);\r\n(union isfuzzy=True\r\n    (\r\n    DeviceProcessEvents\r\n    | where FolderPath endswith \"mshta.exe\"\r\n    | where ProcessCommandLine startswith \"mshta.exe \"// this space is intentional, meant to detect follow on commands and filter our mshta.exe on its own\r\n    | where ProcessCommandLine != \"mshta.exe -Embedding\"\r\n    | where ProcessCommandLine has_any (mshtaCMDs)\r\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n    | project TimeGenerated, AccountName, UserPrincipalName, DeviceName, ProcessCommandLine\r\n    ),(\r\n     DeviceImageLoadEvents\r\n    | where InitiatingProcessCommandLine startswith \"mshta\"\r\n    | where InitiatingProcessCommandLine has_any (mshtaCMDs)\r\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n    | project TimeGenerated, InitiatingProcessAccountName, UserPrincipalName, DeviceName, ProcessCommandLine=InitiatingProcessCommandLine\r\n    )\r\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "ProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1218"
+                                      ],
+                       "displayName":  "BAH_T1218SystemBinaryProxyExecutionMSHTA",
+                       "enabled":  true,
+                       "description":  "Detects command line based behavior related to ATT\u0026CK technique T1218 System Binary Proxy Execution: Mshta\nThis alert can not determine if a .hta file contains malicious commands\nPLATFORM:Windows\nMITRE:TA0005;T1218",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:17:11.619568Z"
+                   }
+}

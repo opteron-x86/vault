@@ -1,0 +1,71 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/b73f0088-f106-4988-8062-699eb9e29c28",
+    "name":  "b73f0088-f106-4988-8062-699eb9e29c28",
+    "etag":  "\"59003f1b-0000-2700-0000-62cc54cc0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let timeframe = 8h;\nlet exclusions = dynamic([\"SpoolsProvisioning-ApplicationAccount@NAMP111.PROD.OUTLOOK.COM,52.182.49.149\", \"SpoolsProvisioning-ApplicationAccount@NAMP111.PROD.OUTLOOK.COM,52.182.49.195\"]);\n// This filters records that have \"UserSMimeCertificate\", \"UserCertificate\", and \"ForwardingSmtpAddress\" fields in the Parameters. These do not appear to have a security importance as the fields are blank. The first two *may* be related to migrations. Forwarding is disabled to external domains.\nlet ParamsExcluded = dynamic([\"UserSMimeCertificate\", \"UserCertificate\", \"ForwardingSmtpAddress\"]);\nOfficeActivity\n| where TimeGenerated \u003e= ago(timeframe)\n| where Operation in~ (\"Add-MailboxPermission\", \"Add-MailboxFolderPermission\", \"Set-Mailbox\", \"New-ManagementRoleAssignment\")\n    and not(UserId has_any (\u0027NT AUTHORITY\\\\SYSTEM (Microsoft.Exchange.ServiceHost)\u0027, \u0027devilfish-applicationaccount\u0027) and Operation in~ (\"Add-MailboxPermission\", \"Set-Mailbox\"))\n| extend timestamp = TimeGenerated, InitiatedBy = UserId, ActionAccountSrcIP = ClientIP\n| project TimeGenerated, InitiatedByIP = iff(ClientIP contains_cs \":\", split(ClientIP, \":\")[0], split(ClientIP, \"-\")[0]), ActionAccountSrcIP, InitiatedBy, RecordType, Operation, TargetedMbx = OfficeObjectId, ParamsModified = Parameters\n| extend client_pair = strcat(InitiatedBy, \",\", InitiatedByIP)\n| where client_pair !in~ (exclusions)\n// This is the App ID for the Identity-Graph-API-Connector - believed to be used for migrations\n| where InitiatedBy !contains \"234797b6-5624-4e53-8f94-45c02d08e86d\"\n| extend Params1 = parse_json(ParamsModified).[1].Name\n| where Params1 !in~ (ParamsExcluded)\n| project-away client_pair, ActionAccountSrcIP",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "InitiatedBy"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "InitiatedByIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence",
+                                       "Collection"
+                                   ],
+                       "techniques":  [
+                                          "T1098",
+                                          "T1114"
+                                      ],
+                       "displayName":  "Rare and potentially high-risk Office operations",
+                       "enabled":  false,
+                       "description":  "Identifies Office operations that are typically rare and can provide capabilities useful to attackers. Examples include; changing/modifying mailbox permissions.",
+                       "alertRuleTemplateName":  "957cb240-f45d-4491-9ba5-93430a3c08be",
+                       "lastModifiedUtc":  "2022-07-11T16:50:20.2203451Z"
+                   }
+}

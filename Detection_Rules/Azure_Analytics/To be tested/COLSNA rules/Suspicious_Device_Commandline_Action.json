@@ -1,0 +1,89 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/f96c6faf-68de-4e69-911f-b52d2eafdee0",
+    "name":  "f96c6faf-68de-4e69-911f-b52d2eafdee0",
+    "etag":  "\"8600a829-0000-2700-0000-66fdafde0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "find\r\n    in (Device*) where * has \"C:\\\\:\" // This looks to find commandline that is using alternate data streams in cmd\r\n    or (\"-Stream \" and \"powershell\")  // This looks to find poweshell command with the -Stream parameter which indicates alternate data stream\r\n    or \"lsass.dmp\"                   // This looks to find cases where the lsass has been dumped\r\n    or \"//hide\"                      // This looks to find cases where a tool may have been used to hide data inside another file\r\n    or (\"wevtutil.exe set-log\" and \"/enabled:false\")  // This looks for commandline that sets a Windows Event type to enabled:false\r\n    or \"disablerestrictedadmin\"      // This looks to find commandline that disables restricted admin, potentially on RDP\r\n| project-reorder *",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "Type"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "Type"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "Type"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "Type"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion",
+                                       "Exfiltration",
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "Suspicious Device Commandline Action",
+                       "enabled":  true,
+                       "description":  "This analytic looks through device commandline for evidence of alternate data streams, disabling of event logs and lsass dumps.\nPLATFORM:Microsoft 365,IaaS\nMITRE:TA0005;T1562;T1562.008",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:40:58.2869618Z"
+                   }
+}

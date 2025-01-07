@@ -1,0 +1,72 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/33b069c8-9ad3-4b39-bb96-cca33791b954",
+    "name":  "33b069c8-9ad3-4b39-bb96-cca33791b954",
+    "etag":  "\"87009165-0000-2700-0000-66fdc2720000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT6H",
+                       "queryPeriod":  "PT6H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "DeviceProcessEvents \n| where (InitiatingProcessCommandLine has_all(@\u0027\"reg\"\u0027, \u0027add\u0027, @\u0027\"HKLM\\SOFTWARE\\Policies\\\u0027, \u0027/v\u0027,\u0027/t\u0027, \u0027REG_DWORD\u0027, \u0027/d\u0027, \u0027/f\u0027) \n   and InitiatingProcessCommandLine has_any(\u0027DisableRealtimeMonitoring\u0027, \u0027UseTPMKey\u0027, \u0027UseTPMKeyPIN\u0027, \u0027UseAdvancedStartup\u0027, \u0027EnableBDEWithNoTPM\u0027, \u0027RecoveryKeyMessageSource\u0027) ) \n   or InitiatingProcessCommandLine has_all(\u0027\"reg\"\u0027, \u0027add\u0027, @\u0027\"HKLM\\SOFTWARE\\Policies\\\u0027, \u0027/v\u0027,\u0027/t\u0027, \u0027REG_DWORD\u0027, \u0027/d\u0027, \u0027/f\u0027, \u0027RecoveryKeyMessage\u0027, \u0027Your drives are Encrypted!\u0027, \u0027@\u0027)\n| extend timestamp = TimeGenerated, AccountCustomEntity =  InitiatingProcessAccountName, HostCustomEntity = DeviceName\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.1",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1562",
+                                          "T1486"
+                                      ],
+                       "displayName":  "Dev-0270 Registry IOC - September 2022",
+                       "enabled":  true,
+                       "description":  "The query below identifies modification of registry by Dev-0270 actor to disable security feature as well as to add ransom notes\nPLATFORM:Microsoft 365,IaaS,Windows\nMITRE:TA0005;T1562",
+                       "alertRuleTemplateName":  "2566e99f-ad0f-472a-b9ac-d3899c9283e6",
+                       "lastModifiedUtc":  "2024-10-02T22:00:13.9673245Z"
+                   }
+}

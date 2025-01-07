@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/cf34554c-47b7-4770-b89d-9452089c9ce8",
+    "name":  "cf34554c-47b7-4770-b89d-9452089c9ce8",
+    "etag":  "\"8500d8d1-0000-2700-0000-66fdab9f0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// This query is to indicate when an account is added and then quickly deleted\r\n// get all users added between 14 and 1 days ago\r\nlet getaddeduserspast14d =AuditLogs\r\n    | where TimeGenerated between (ago(14d) .. ago(1d))\r\n    | where OperationName == \"Add user\"\r\n    | extend userinfo = todynamic(TargetResources)[0]\r\n    | extend UserName = userinfo[\u0027userPrincipalName\u0027]\r\n    | extend UserId = tostring(userinfo[\u0027id\u0027])\r\n    // | where UserName !has \".mbx.\" and UserName !startswith \"disable\"\r\n    | project-away userinfo\r\n;\r\n// get all deleted user accounts in the past 1 day\r\nlet getdeleteduserspast24h = AuditLogs\r\n    | where TimeGenerated \u003e= ago(1d)\r\n    | where OperationName == \"Delete user\"\r\n    | extend userinfo = todynamic(TargetResources)[0]\r\n    | extend UserId = tostring(replace_regex(tostring(userinfo[\u0027id\u0027]), \u0027-\u0027, \u0027\u0027))\r\n    | extend UserName = tostring(split(userinfo[\u0027userPrincipalName\u0027], UserId)[1])\r\n    | project-away userinfo\r\n;\r\n// make a set from the deleted users\r\nlet deleteduser = getdeleteduserspast24h\r\n    | summarize make_set(UserId)\r\n;\r\n// make a set of the added users\r\nlet addeduser = getaddeduserspast14d\r\n    | summarize make_set(UserId)\r\n;\r\n// finally, get the deleted user logs from users that were added between 14 and 1 day ago\r\ngetdeleteduserspast24h\r\n| extend\r\n    AdditionalDetails = tostring(AdditionalDetails),\r\n    InitiatedBy = tostring(InitiatedBy),\r\n    TargetResources = tostring(TargetResources)\r\n| distinct *\r\n| sort by UserName asc\r\n| where UserId in (addeduser)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "InitiatedBy"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "UserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "User Account Added Then Deleted Shortly After",
+                       "enabled":  true,
+                       "description":  "This analytic searches for all user accounts created between the last day and the last 14 days. Then searches those accounts to see if they\u0027ve been deleted in the past 24 hours. This may find evidence of covering tracks.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1078;T1078.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T20:22:54.5034449Z"
+                   }
+}

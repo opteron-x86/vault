@@ -1,0 +1,63 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/4f7c5c9c-15f2-4f48-95fa-fc8a20b1cdbf",
+    "name":  "4f7c5c9c-15f2-4f48-95fa-fc8a20b1cdbf",
+    "etag":  "\"1600f8d2-0000-2700-0000-63c80d3a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT8H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "AuditLogs\r\n//This query will find the most recent \"IsCompliant == false\" updates and filter out any devices that have been corrected.\r\n    //filters events on a modified boolean property labeled as \"IsCompliant\"\r\n    | where parse_json(tostring(TargetResources[0].modifiedProperties))[0].displayName == \"IsCompliant\"\r\n    //displays relevant fields and renames them\r\n    | project\r\n        IsCompliant = tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[0].newValue))[0]),\r\n        DeviceName = TargetResources[0].displayName,\r\n        TimeGenerated\r\n    //finds only the most recent updated modified value by unique device ID\r\n    | summarize arg_max(TimeGenerated, IsCompliant) by tostring(DeviceName)\r\n    //filters out the only the devices marked as not compliant\r\n    | where IsCompliant == \"false\"",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  true,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT8H",
+                                                                                   "matchingMethod":  "AnyAlert",
+                                                                                   "groupByEntities":  [
+                                                                                                           "Host"
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "customDetails":  {
+                                             "DeviceName":  "DeviceName"
+                                         },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+
+                                      ],
+                       "displayName":  "DoD365-J - Intune Managed Device(s) No Longer Compliant (policy)",
+                       "enabled":  false,
+                       "description":  "Searches \u0027AuditLogs\u0027 for devices updated by Microsoft Intune as no longer compliant.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2023-01-18T15:16:10.1107361Z"
+                   }
+}

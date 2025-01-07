@@ -1,0 +1,78 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/459f4c98-72b0-4adc-9e11-56d406a46010",
+    "name":  "459f4c98-72b0-4adc-9e11-56d406a46010",
+    "etag":  "\"87001816-0000-2700-0000-66fdbd300000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let match_window = 3m;\nAzureActivity\n| where ResourceGroup has \"cloud-shell\"\n| where (OperationNameValue =~ \"Microsoft.Storage/storageAccounts/listKeys/action\")\n| where ActivityStatusValue =~ \"Success\"\n| extend TimeKey = bin(TimeGenerated, match_window), AzureIP = CallerIpAddress\n| join kind = inner\n(AzureActivity\n| where ResourceGroup has \"cloud-shell\"\n| where (OperationNameValue =~ \"Microsoft.Storage/storageAccounts/write\")\n| extend TimeKey = bin(TimeGenerated, match_window), UserIP = CallerIpAddress\n) on Caller, TimeKey\n| summarize count() by TimeKey, Caller, ResourceGroup, SubscriptionId, TenantId, AzureIP, UserIP, HTTPRequest, Type, Properties, CategoryValue, OperationList = strcat(OperationNameValue, \u0027 , \u0027, OperationNameValue1)\n| extend Name = tostring(split(Caller,\u0027@\u0027,0)[0]), UPNSuffix = tostring(split(Caller,\u0027@\u0027,1)[0])\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Caller"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "Name"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "UPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "UserIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "2.0.3",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+                                          "T1059"
+                                      ],
+                       "displayName":  "New CloudShell User",
+                       "enabled":  true,
+                       "description":  "Identifies when a user creates an Azure CloudShell for the first time.\nMonitor this activity to ensure only the expected users are using CloudShell.\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1078;T1078.001;T1078.004,TA0002;T1059;T1059.009",
+                       "alertRuleTemplateName":  "6d7214d9-4a28-44df-aafb-0910b9e6ae3e",
+                       "lastModifiedUtc":  "2024-10-02T21:37:52.381615Z"
+                   }
+}

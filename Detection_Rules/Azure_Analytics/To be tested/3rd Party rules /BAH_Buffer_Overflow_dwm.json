@@ -1,0 +1,66 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/DoD365-LAW-RG2/providers/Microsoft.OperationalInsights/workspaces/DOD365-LAW/providers/Microsoft.SecurityInsights/alertRules/7d08259a-8c79-4054-9a6f-8bff7d0d8d57",
+    "name":  "7d08259a-8c79-4054-9a6f-8bff7d0d8d57",
+    "etag":  "\"6501e4dc-0000-2700-0000-66be03c40000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//BAH_Buffer_Overflow_dwm\n//Author: Shawn McWhirter\n//Description: Detects the loading of a dll outside of the System directories by dwm.exe. The dwm.exe process stands for Desktop Window Manager, a critical system process in Windows operating systems. It is responsible for managing and rendering the graphical effects in Windows, including visual effects such as transparent windows, live taskbar thumbnails, and Flip3D. This vulnerability is a Heap-based Buffer Overflow vulnerability that, when exploited, allows a local, privileged attacker to escalate privileges to SYSTEM. Also, detection of suspicious child processes of consent.exe. This can indicate attempts at privilege escalation. It is highly unusual for the consent process to spawn executable child processes and any such activity should be investigated.\n//References: \n//https://app.snapattack.com/detection/44eecf6f-cbb0-4035-aa62-6849a6a9a5c7\n//https://app.snapattack.com/detection/8194b5d4-41ae-4ce7-adfb-92d375e341d2\n//https://app.snapattack.com/threat/385546fd-6bec-88c4-cfee-004ba18d832f?tk=2121\u0026topic=marker\n//False Positives: Acceptable use of Desktop Windows Manager (dwm.exe) or consent.exe. Possibly misconfigured.\nlet file_lookBack = 7d;\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(file_lookBack)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\n); \n(union isfuzzy=True\n  (\n  DeviceFileEvents\n  | where (ActionType == \"FileCreated\") and (InitiatingProcessFileName == \"dwm.exe\" and FolderPath endswith \".dll\")\n  | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n  | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n  | project TimeGenerated, DeviceName, UserPrincipalName, InitiatingProcessFileName, FolderPath, MD5, Tactic = \"Possible Desktop Windows Manager Buffer Overflow\"\n  ),(\n  DeviceProcessEvents\n  | where ((ActionType == \"ImageLoaded\") and (InitiatingProcessFileName == \"dwm.exe\" and FolderPath endswith \".dll\") and not ((FolderPath contains @\"Windows\\System32\" or FolderPath contains @\"Windows\\Sysnative\" or FolderPath contains @\"Windows\\SysWOW64\")))\n  | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n  | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n  | project TimeGenerated, DeviceName, UserPrincipalName, InitiatingProcessFileName, FolderPath, MD5, Tactic = \"Possible Desktop Windows Manager Privilege Escalation\"\n  ),(\n  DeviceProcessEvents\n  | where ((InitiatingProcessFileName == \"consent.exe\" and ProcessCommandLine contains \".exe\") and not (ProcessCommandLine contains \"WerFault.exe\" or ProcessCommandLine contains \"PNotif.exe\"))\n  | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n  | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n  | project TimeGenerated, DeviceName, UserPrincipalName, InitiatingProcessFileName, FolderPath, ProcessCommandLine, MD5, Tactic = \"Possible Privilege Escalation via Suspicious Child of Consent.exe\")\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "ProcessCommandLine"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "tactics":  [
+                                       "PrivilegeEscalation",
+                                       "Execution",
+                                       "LateralMovement"
+                                   ],
+                       "techniques":  [
+                                          "T1068",
+                                          "T1059",
+                                          "T1021"
+                                      ],
+                       "displayName":  "BAH_Buffer_Overflow_dwm",
+                       "enabled":  true,
+                       "description":  "Detects the loading of a dll outside of the System directories by dwm.exe. This vulnerability is a Heap-based Buffer Overflow vulnerability that, when exploited, allows a local, privileged attacker to escalate privileges to SYSTEM. Also, detection of suspicious child processes of consent.exe. This can indicate attempts at privilege escalation. It is highly unusual for the consent process to spawn executable child processes and any such activity should be investigated.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-08-15T13:33:54.7963649Z"
+                   }
+}

@@ -1,0 +1,60 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/5dc1c7a9-b865-4e50-85b9-0f4145bd6242",
+    "name":  "5dc1c7a9-b865-4e50-85b9-0f4145bd6242",
+    "etag":  "\"870090fd-0000-2700-0000-66fdcc570000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Michael Gibbs\r\n// Description: Microsoft\u0027s Certutil and Copy utility can be used to decode encoded files to run an executable or dll\r\n// False Positives: Forensics team certutil decode and encode for iocs.\r\nlet signInLookup = (\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\r\n);\r\n(union isfuzzy = true\r\n    (\r\n    union withsource = TableName DeviceImageLoadEvents, DeviceFileEvents \r\n    | where ((InitiatingProcessFileName == \"certutil.exe\" and InitiatingProcessCommandLine contains \"decode\") // looks for certutil decode events\r\n    and (not(InitiatingProcessCommandLine has_any(@\".p7b\",@\".crl\") or FileName endswith @\".crl\"))) // but not when used to decode certs\r\n    or  ( InitiatingProcessCommandLine contains @\"copy /b\") // looks for copy /b commands\r\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n    | project DeviceName, InitiatingProcessAccountDomain, InitiatingProcessAccountName, UserDisplayName, InitiatingProcessCommandLine\r\n    )\r\n)",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  false,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "HostName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1140"
+                                      ],
+                       "displayName":  "BAH_Decode_Files",
+                       "enabled":  true,
+                       "description":  "Microsoft\u0027s Certutil and Copy utility can be used to decode encoded files to run an executable or dll. Certutil can be used to encode files so that the hash and malicious content inside of the file isn\u0027t easily readable by defenders and anti-virus software. \nPLATFORM:Windows\nMITRE:TA0005;T1140",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:42:30.0884203Z"
+                   }
+}

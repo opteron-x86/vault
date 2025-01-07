@@ -1,0 +1,83 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/02b671b9-f034-46cd-8d59-d7b2f04be96e",
+    "name":  "02b671b9-f034-46cd-8d59-d7b2f04be96e",
+    "etag":  "\"87000da7-0000-2700-0000-66fdc6820000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "\r\n//Title: BAH_T1112Activity\r\n//Description: Looks for common registry keys and commands relatated to MITRE technique T1112\r\n//https://attack.mitre.org/techniques/T1112/\r\n//https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1112/T1112.md\r\n//Author: Mike Gibbs, Rob Russell\r\nlet signInLookup = (\r\nSigninLogs\r\n| where TimeGenerated \u003e= ago(1d)\r\n| where DeviceDetail contains \"displayName\"\r\n| extend DeviceDetailJson = parse_json(DeviceDetail)\r\n| extend DeviceNameSI = tostring(DeviceDetail.displayName)\r\n| distinct DeviceNameSI, UserPrincipalName, UserDisplayName\r\n);\r\nlet RegKeysToSearch = dynamic([@\"Software\\Classes\\.wav\\OpenWithProgIds\", \r\n                               @\"Software\\Wow6432Node\\Facebook_Assistant\",\r\n                               @\"Software\\Wow6432Node\\BlackLivesMatter\",\r\n                               @\"Software\\Classes\\ms-settings\\shell\\open\\command\",\r\n                               @\"Software\\Firm\\Soft\",\r\n                               @\"Software\\Wow6432Node\\Facebook_Assistant\",\r\n                               @\"Security\\Policy\\Secrets\\n\"]); //Revil Ransomware , Snake Malware and fodhelper UAC bypass win10+, Hive Ransomware\r\nlet RegExeKeysToSearch = dynamic([@\"AppDataLow\\Software\\Microsoft\", \r\n                                  @\"Policies\\Microsoft\\Windows\\OOBE\",\r\n                                  @\"Policies\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\",\r\n                                  @\"SOFTWARE\\Microsoft\\Windows NT\\Currentversion\\Winlogon\",\r\n                                  @\"\\CurrentControlSet\\Control\\SecurityProviders\\WDigest\",\r\n                                  @\"Microsoft\\Windows Defender\",\r\n                                  @\"Software\\Classes\\.wav\\OpenWithProgIds\",\r\n                                  @\"Software\\Wow6432Node\\Facebook_Assistant\",\r\n                                  @\"Software\\Wow6432Node\\BlackLivesMatter\",\r\n                                  @\"Software\\Classes\\ms-settings\\shell\\open\\command\",\r\n                                  @\"Security\\Policy\\Secrets\\\"]);  //turla\r\nsearch in (DeviceRegistryEvents, DeviceProcessEvents)*\r\n| where (\r\n((RegistryKey has_any (RegKeysToSearch))) \r\nor\r\n((RegistryKey endswith @\"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UMe\" or \r\nRegistryKey endswith @\"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UT\")) \r\nor\r\n((RegistryKey contains @\"SOFTWARE\\Microsoft\\Active Setup\\Installed Components\" and RegistryKey endswith @\"\\StubPath\"))\r\nor \r\n((InitiatingProcessFolderPath endswith @\"reg.exe\") and \r\n(InitiatingProcessCommandLine has_any (RegExeKeysToSearch))))\r\n| extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\r\n| join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\r\n| project TimeGenerated, DeviceName, UserPrincipalName, RegistryKey, InitiatingProcessFileName, Reference = \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1112/T1112.md\"",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "RegistryKey",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Key",
+                                                                            "columnName":  "RegistryKey"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "URL",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Url",
+                                                                            "columnName":  "Reference"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "DefenseEvasion"
+                                   ],
+                       "techniques":  [
+                                          "T1112"
+                                      ],
+                       "displayName":  "BAH_T1112ModifyRegistry",
+                       "enabled":  true,
+                       "description":  "Looks for common registry keys and commands relatated to MITRE Technique T1112\nPLATFORM:Windows\nMITRE:TA0005;T1112",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:17:37.6751524Z"
+                   }
+}

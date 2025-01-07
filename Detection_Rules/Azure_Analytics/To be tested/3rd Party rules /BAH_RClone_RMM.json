@@ -1,0 +1,91 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/DoD365-LAW-RG2/providers/Microsoft.OperationalInsights/workspaces/DOD365-LAW/providers/Microsoft.SecurityInsights/alertRules/6d86c9c5-5722-40ef-b713-e3365ab35ea5",
+    "name":  "6d86c9c5-5722-40ef-b713-e3365ab35ea5",
+    "etag":  "\"30086a9c-0000-2700-0000-67360a250000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//BAH_RClone_and_Remote_Monitoring_and_Management_Tool_usage\n//Author: Shawn McWhirter\n//Description: Detects service installation of various remote access tools. Remote management tools, when used for legitimate purposes, can help IT professionals and system administrators remotely access and manage computer systems. However, threat actors may exploit these tools for malicious purposes.\n//https://www.helpnetsecurity.com/2024/09/30/ransomware-cloud-compromise/\n//https://app.snapattack.com/detection/2a43b331-55d1-4ee5-a95e-8b4ad7e4a178\n//https://app.snapattack.com/detection/4afbd373-b769-4f82-8375-41e0153e46f9\n//https://attack.mitre.org/techniques/T1021/006/\n//https://attack.mitre.org/techniques/T1567/002/\n//False Positives: IT support professionals using remote tools for admin purposes.\nlet signInLookup = (\nSigninLogs\n| where TimeGenerated \u003e= ago(1d)\n| where DeviceDetail contains \"displayName\"\n| extend DeviceDetailJson = parse_json(DeviceDetail)\n| extend DeviceNameSI = tostring(DeviceDetailJson.displayName)\n| distinct DeviceNameSI, UserPrincipalName\n);\nlet ActionTypes = dynamic([\"FileCreated\", \"FileModified\", \"ImageLoaded\", \"ProcessCreated\"]);\nlet FileNames = dynamic([\n            @\"Advanced Monitoring Agent\",\n            @\"Ammyy\",\n            @\"AnyDesk\",\n            @\"Atera\",\n            @\"baconsoleapp\",\n            @\"BAConsoleAppEN\",\n            @\"BeyondTrust Remote Support\",\n            @\"chromoting\",\n            @\"FleetDeck\",\n            @\"g2mcomm.exe\",\n            @\"G2MCoreInstExtractor\",\n            @\"g2mstart\",\n            @\"GoToAssist\",\n            @\"GoTo Meeting Opener\",\n            @\"GoToMyPC\",\n            @\"GoToOpener.exe\",\n            @\"jumpcloud\",\n            @\"Kaseya Live Connect\",\n            @\"Level\",\n            @\"LMIGuardianSvc\",\n            @\"LogMeIn\",\n            @\"Mesh Agent\",\n            @\"N-Able\",\n            @\"NinjaRMM\",\n            @\"NinjaOne\",\n            @\"Parsec\",\n            @\"PC Monitor\",\n            @\"Pulseway\",\n            @\"RClone\",\n            @\"RealVNC\",\n            @\"RemotePC\",\n            @\"Remote Utilities\",\n            @\"RManService\",\n            @\"ScreenConnect\",\n            @\"Splashtop\",\n            @\"SSUService\",\n            @\"TacticalRMM\",\n            @\"takecontroltechconsole\",\n            @\"TailScale\",\n            @\"TeamViewer\",\n            @\"TightVNC\",\n            @\"UltraVNC\",\n            @\"vncserver\",\n            @\"Zoho\"\n            ]);\n(union isfuzzy = true\n(\nDeviceProcessEvents\n    | where FileName has_any (FileNames) and ActionType has_any (ActionTypes))\n    | where FileName contains \".exe\"\n    | where not(ProcessCommandLine has_any(FileNames))\n    | extend SILogDeviceName = toupper((split(DeviceName, \".\"))[0])\n    | join kind=leftouter signInLookup on $left.SILogDeviceName == $right.DeviceNameSI\n    | project\n        TimeGenerated,\n        DeviceName,\n        UserPrincipalName,\n        FileName,\n        ProcessCommandLine,\n        ActionType,\n        FolderPath,\n        Tactic = \"Detects service installation of various remote access tools.\")",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "File",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Directory",
+                                                                            "columnName":  "FolderPath"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "FileName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "UserPrincipalName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "DeviceName"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "CommandLine",
+                                                                            "columnName":  "ProcessCommandLine"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "ActionType"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "tactics":  [
+                                       "Exfiltration",
+                                       "LateralMovement"
+                                   ],
+                       "techniques":  [
+                                          "T1021",
+                                          "T1537",
+                                          "T1567"
+                                      ],
+                       "displayName":  "BAH_RClone_RMM",
+                       "enabled":  true,
+                       "description":  "Detects service installation of various remote access tools. Remote management tools, when used for legitimate purposes, can help IT professionals and system administrators remotely access and manage computer systems. However, threat actors may exploit these tools for malicious purposes.",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-11-14T14:33:08.6674474Z"
+                   }
+}

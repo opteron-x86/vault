@@ -1,0 +1,56 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/fff004dd-fa14-415f-bdb2-4550f6a4c5e7",
+    "name":  "fff004dd-fa14-415f-bdb2-4550f6a4c5e7",
+    "etag":  "\"870040b6-0000-2700-0000-66fdc7860000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT5H",
+                       "queryPeriod":  "PT5H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "// Author: Michael Gibbs\n// Description: scheduled tasks creation and write all folder\n// False Positives: Legitimate task being created in write-all folder\nlet knowntasks = dynamic ([\"Windows Defender Cleanup\",  \n     \"nessus\",\n    \"sdelete\",\n    \"SupportAssistAgent\",\n     @\"/XML\",\n     @\"msoia.exe\"]);\n     let executable = dynamic ([\n     \".exe\",     \n     \".msi\",\n     \".hta\",\n     \".bat\"]);\n     let path = dynamic ([\"temp\",  \n     \"programdata\",\n    \"perflogs\",\n    @\"tasks\\\",\n    @\"intel\\\",\n    @\"debug\\\"\n    ]);\n     (DeviceProcessEvents     \n     | where TimeGenerated \u003e= ago(1d)\n     | where FileName contains \"schtasks\" \n     | where not(ProcessCommandLine has_any (knowntasks))\n     | extend value = split(tolower(ProcessCommandLine), \"schtasks.exe\")\n     | extend values = split(value, \"schtasks\")\n     | where value has_any(path) // Usually writable location for everyone\n     | where value has_any (executable)\n     | project DeviceName, AccountName, value\n);",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountName"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+                                          "T1053"
+                                      ],
+                       "displayName":  "BAH_Scheduled_Tasks",
+                       "enabled":  true,
+                       "description":  "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code. There are multiple ways to access the Task Scheduler in Windows. The schtasks utility can be run directly on the command line, or the Task Scheduler can be opened through the GUI within the Administrator Tools section of the Control Panel. In some cases, adversaries have used a .NET wrapper for the Windows Task Scheduler, and alternatively, adversaries have used the Windows netapi32 library to create a scheduled task.\nAn adversary may use Windows Task Scheduler to execute programs at system startup or on a scheduled basis for persistence. The Windows Task Scheduler can also be abused to conduct remote Execution as part of Lateral Movement and/or to run a process under the context of a specified account (such as SYSTEM). Similar to System Binary Proxy Execution, adversaries have also abused the Windows Task Scheduler to potentially mask one-time execution undersigned/trusted system processes.\nPLATFORM:Windows\nMITRE:TA0003;T1053",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:21:57.6270231Z"
+                   }
+}

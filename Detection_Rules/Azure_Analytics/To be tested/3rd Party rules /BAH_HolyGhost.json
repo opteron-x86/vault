@@ -1,0 +1,108 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/36120b15-66bd-4ad3-8827-59e48d9ea7f0",
+    "name":  "36120b15-66bd-4ad3-8827-59e48d9ea7f0",
+    "etag":  "\"870080db-0000-2700-0000-66fdca3a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT30M",
+                       "queryPeriod":  "PT30M",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "//Author: Rob Russell\r\n//Description:\r\n// Updated 11/15 Changed EmailEvents_CL to EmailEvents\r\n// Looks for IOCs and behavior related to HolyGhost ransomware\r\n// This analytic combines MS created analytics from the following locations and is adjusted for the CSSP environments\r\n// Since the IOC list is relatively small it has been hardcoded into the analytic.\r\n// https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/Dev-0530_FileExtRename.yaml\r\n// https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/Dev-0530_July2022.yaml\r\n// More details about the HolyGhost ransomware can be found here:\r\n// https://www.microsoft.com/security/blog/2022/07/14/north-korean-threat-actor-targets-small-and-midsize-businesses-with-h0lygh0st-ransomware/\r\n// https://www.bleepingcomputer.com/news/security/microsoft-links-holy-ghost-ransomware-operation-to-north-korean-hackers/\r\n//False Positives: Could be normal administrative activity, however all the behavior delectated in this analytic should be investigated.\r\nlet iocs = datatable(DateAdded:string,IoC:string,Type:string) [\r\n\"7/14/2022\",\"99fc54786a72f32fd44c7391c2171ca31e72ca52725c68e2dde94d04c286fccd\",\"sha256\",\r\n\"7/14/2022\",\"f8fc2445a9814ca8cf48a979bff7f182d6538f4d1ff438cf259268e8b4b76f86\",\"sha256\",\r\n\"7/14/2022\",\"bea866b327a2dc2aa104b7ad7307008919c06620771ec3715a059e675d9f40af\",\"sha256\",\r\n\"7/14/2022\",\"193.56.29.23\",\"IP\",\r\n\"7/14/2022\",\"H0lyGh0st@mail2tor[.]com\",\"Email\",\r\n\"7/14/2022\",@\"C:\\FOR_DECRYPT.html\",\"FilePath\",\r\n\"7/14/2022\",@\"cmd.exe /Q /c schtasks /create /tn lockertask /tr [File] /sc minute /mo 1 /F /ru system 1\u003e \\\\127.0.0.1\\ADMIN$\\__[randomnumber] 2\u003e\u00261\",\"CommandLine\"];\r\nlet sha256Hashes = (iocs | where Type =~ \"sha256\" | project IoC);\r\nlet IPList = (iocs | where Type =~ \"ip\"| project IoC);\r\n(union isfuzzy=true \r\n(DeviceProcessEvents\r\n| where InitiatingProcessSHA256 in (sha256Hashes) or SHA256 in (sha256Hashes) or ( InitiatingProcessCommandLine has (\u0027cmd.exe /Q /c schtasks /create /tn lockertask /tr\u0027) \r\nand InitiatingProcessCommandLine has (\u0027sc minute /mo 1 /F /ru system\u0027))\r\n| project TimeGenerated, ActionType, DeviceId, DeviceName, InitiatingProcessAccountDomain, InitiatingProcessAccountName, InitiatingProcessCommandLine, InitiatingProcessFolderPath, InitiatingProcessId, InitiatingProcessParentFileName, InitiatingProcessFileName,  InitiatingProcessSHA256, Type, AccountName, SHA256\r\n| extend Account = AccountName, Computer = DeviceName,  CommandLine = InitiatingProcessCommandLine, FileHash = case(InitiatingProcessSHA256 in (sha256Hashes), \"InitiatingProcessSHA256\", SHA256 in (sha256Hashes), \"SHA256\", \"No Match\")\r\n| extend timestamp = TimeGenerated, HostCustomEntity = Computer , AccountCustomEntity = Account, ProcessCustomEntity = InitiatingProcessFileName, FileHashCustomEntity = case(FileHash == \"InitiatingProcessSHA256\", InitiatingProcessSHA256, FileHash == \"SHA256\", SHA256, \"No Match\")\r\n),\r\n(DeviceFileEvents\r\n| where SHA256 has_any (sha256Hashes)\r\n| project TimeGenerated, ActionType, DeviceId, DeviceName, InitiatingProcessAccountDomain, InitiatingProcessAccountName, InitiatingProcessCommandLine, InitiatingProcessFolderPath, InitiatingProcessId, InitiatingProcessParentFileName, InitiatingProcessFileName, InitiatingProcessSHA256, Type\r\n| extend timestamp = TimeGenerated, HostCustomEntity = DeviceName , AccountCustomEntity = InitiatingProcessAccountName, ProcessCustomEntity = InitiatingProcessFileName, AlgorithmCustomEntity = \"SHA256\", FileHashCustomEntity = InitiatingProcessSHA256,  CommandLine = InitiatingProcessCommandLine,Image = InitiatingProcessFolderPath\r\n),\r\n(EmailEvents\r\n| where SenderFromAddress == \u0027H0lyGh0st@mail2tor.com\u0027\r\n| extend timestamp = TimeGenerated, IPCustomEntity = SenderIPv4, AccountCustomEntity = SenderFromAddress\r\n),\r\n(OfficeActivity \r\n|extend SourceIPAddress = ClientIP, Account = UserId \r\n| where  SourceIPAddress in (IPList) \r\n| extend timestamp = TimeGenerated , IPCustomEntity = SourceIPAddress , AccountCustomEntity = Account \r\n),\r\n(SigninLogs \r\n| where isnotempty(IPAddress) \r\n| where IPAddress in (IPList) \r\n| extend timestamp = TimeGenerated, AccountCustomEntity = UserPrincipalName, IPCustomEntity = IPAddress \r\n), \r\n(AzureActivity  \r\n| where isnotempty(CallerIpAddress) \r\n| where CallerIpAddress in (IPList) \r\n| extend timestamp = TimeGenerated, IPCustomEntity = CallerIpAddress, AccountCustomEntity = Caller \r\n), \r\n( \r\nDeviceNetworkEvents \r\n| where isnotempty(RemoteIP)  \r\n| where RemoteIP in (IPList)  \r\n| extend timestamp = TimeGenerated, IPCustomEntity = RemoteIP, HostCustomEntity = DeviceName  \r\n),\r\n(\r\n DeviceFileEvents\r\n| where ActionType == \"FileCreated\"\r\n| where FileName endswith \".h0lyenc\" or FolderPath == \"C:\\\\FOR_DECRYPT.html\" \r\n| summarize StartTime = min(TimeGenerated), EndTime = max(TimeGenerated) by AccountCustomEntity = iff(isnotempty(InitiatingProcessAccountUpn), InitiatingProcessAccountUpn, InitiatingProcessAccountName), HostCustomEntity = DeviceName, Type, InitiatingProcessId, FileName, FolderPath, EventType = ActionType, Commandline = InitiatingProcessCommandLine, InitiatingProcessFileName, InitiatingProcessSHA256, FileHashCustomEntity = SHA256\r\n)\r\n)\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  null,
+                                                                                   "groupByCustomDetails":  null
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "FileHash",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Value",
+                                                                            "columnName":  "FileHashCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess",
+                                       "Execution",
+                                       "Persistence",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion",
+                                       "CredentialAccess",
+                                       "Discovery",
+                                       "Collection",
+                                       "CommandAndControl",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1190",
+                                          "T1133",
+                                          "T1059",
+                                          "T1134",
+                                          "T1027",
+                                          "T1056",
+                                          "T1012",
+                                          "T1033",
+                                          "T1057",
+                                          "T1049",
+                                          "T1082",
+                                          "T1083",
+                                          "T1135",
+                                          "T1114",
+                                          "T1571",
+                                          "T1573",
+                                          "T1486"
+                                      ],
+                       "displayName":  "BAH_HolyGhost",
+                       "enabled":  true,
+                       "description":  "This query aims to detect and respond to various stages of a ransomware attack involving HolyGhost ransomware, including initial access, execution, data encryption, and data destruction. It also focuses on the specific indicators of compromise associated with HolyGhost ransomware.\nPLATFORM:Windows\nMITRE:TA0002;T1059",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:33:29.3455966Z"
+                   }
+}
