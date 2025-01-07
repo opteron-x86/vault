@@ -1,6 +1,5 @@
 stages:
   - build
-  - testing
   - deploy
 
 build:
@@ -23,40 +22,7 @@ build:
         Write-Host 'Build completed successfully.';
       }"
 
-testing:
-  stage: testing
-  tags:
-    - azure
-    - powershell
-    - cte
-  script:
-    - |
-      powershell -Command "& {
-        Write-Host 'Starting testing stage...';
-
-        # Debugging: Output environment variable values
-        if ($env:resourceGroupName -eq $null -or $env:resourceGroupName -eq '') {
-            Write-Error 'Error: resourceGroupName is not set or empty. Exiting.';
-            Exit 1;
-        } else {
-            Write-Host \"resourceGroupName: $env:resourceGroupName\";
-        }
-
-        if ($env:subscriptionid -eq $null -or $env:subscriptionid -eq '') {
-            Write-Error 'Error: subscriptionid is not set or empty. Exiting.';
-            Exit 1;
-        } else {
-            Write-Host \"subscriptionid: $env:subscriptionid\";
-        }
-
-        Write-Host 'Environment validation successful. Running tests...';
-
-        # Placeholder for test scripts
-        Write-Host 'Tests completed successfully.';
-      }"
-
-
-backup:
+deploy:
   stage: deploy
   variables:
     GIT_USERNAME: "danielle.m.torrence.ctr@mail.mil"  # Replace with your GitLab username
@@ -78,11 +44,35 @@ backup:
       }"
   script:
     - |
-      pwsh './scripts/Backup.ps1' -resourceGroupName "$resourceGroupName" -subscriptionID "$subscriptionid"
+      powershell -Command "& {
+        Write-Host 'Deploying Azure Sentinel rules...';
+        
+        # Log in to Azure
+        Connect-AzAccount -SubscriptionId $env:subscriptionid;
+
+        # Define path to rule JSON files
+        $rulesPath = './Detection_Rules/Azure_Analytics/*.json';
+
+        foreach ($file in Get-ChildItem -Path $rulesPath) {
+          $ruleContent = Get-Content -Path $file.FullName -Raw | ConvertFrom-Json;
+          $ruleId = $file.BaseName;
+          
+          # Deploy the rule using Azure REST API
+          $body = $ruleContent | ConvertTo-Json -Depth 10;
+          $uri = \"https://management.azure.com/subscriptions/$($env:subscriptionid)/resourceGroups/$($env:resourceGroupName)/providers/Microsoft.OperationalInsights/workspaces/$($env:workspaceName)/providers/Microsoft.SecurityInsights/alertRules/$ruleId?api-version=2022-11-01-preview\";
+
+          Invoke-RestMethod -Uri $uri -Method PUT -Headers @{
+            Authorization = \"Bearer $(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv)\"
+          } -Body $body -ContentType 'application/json';
+          
+          Write-Host \"Successfully deployed rule: $ruleId\";
+        }
+      }"
     - |
       powershell -Command "& {
-        git add './Detection_Rules/Azure_Analytics/Backup';
-        git commit -m \"CI BACKUP - $env:CI_JOB_STARTED_AT\";
+        Write-Host 'Backing up rules to GitLab...';
+        git add './Detection_Rules/Azure_Analytics/';
+        git commit -m \"CI Backup - $env:CI_JOB_STARTED_AT\";
         git push origin HEAD:$env:CI_COMMIT_REF_NAME;
       }"
   tags:
