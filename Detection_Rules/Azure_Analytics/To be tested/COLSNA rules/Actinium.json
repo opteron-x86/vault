@@ -1,0 +1,87 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/2ae8de69-7f72-446d-9144-55d19bf86b02",
+    "name":  "2ae8de69-7f72-446d-9144-55d19bf86b02",
+    "etag":  "\"0e009d1c-0000-2700-0000-62716f1c0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "//Identifies a match across various data feeds for domains, hashes and commands related to an actor tracked by Microsoft as Actinium.\u0027\r\n// based on the following analytic, https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/ActiniumFeb2022.yaml\r\nlet iocs = externaldata(DateAdded:string,IoC:string,Type:string) [@\"https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Sample%20Data/Feeds/ActiniumIOC.csv\"] with (format=\"csv\", ignoreFirstRecord=True);\r\nlet domains = (iocs | where Type =~ \"domainname\"| project IoC);\r\nlet sha256Hashes = (iocs | where Type =~ \"sha256\" | project IoC);\r\n(union isfuzzy=true\r\n(DeviceProcessEvents\r\n| where InitiatingProcessSHA256 in (sha256Hashes) or SHA256 in (sha256Hashes) or  (ProcessCommandLine has (\u0027schtasks.exe /CREATE /sc minute /mo 12 /tn\u0027)  and ProcessCommandLine has (\u0027/tr \"wscript.exe\u0027) and ProcessCommandLine has (\u0027\"%PUBLIC%\\\\Pictures\\\\\u0027) and ProcessCommandLine has (\u0027//e:VBScript //b\" /F\u0027)) or (ProcessCommandLine has (\u0027wscript.exe C:\\\\Users\\\\\u0027) and ProcessCommandLine has (\u0027.wav\u0027) and  ProcessCommandLine has (\u0027//e:VBScript //b\u0027))\r\n| project TimeGenerated, ActionType, DeviceId, DeviceName, ProcessCommandLine, InitiatingProcessAccountName, InitiatingProcessCommandLine, FolderPath, InitiatingProcessFolderPath, ProcessId, InitiatingProcessId, InitiatingProcessParentFileName, InitiatingProcessFileName,  InitiatingProcessSHA256, Type, AccountName, SHA256, FileName\r\n| extend Account = AccountName, Computer = DeviceName,  FileHash = case(InitiatingProcessSHA256 in (sha256Hashes), \"InitiatingProcessSHA256\", SHA256 in (sha256Hashes), \"SHA256\", \"No Match\")\r\n| extend timestamp = TimeGenerated, HostCustomEntity = Computer , AccountCustomEntity = Account, ProcessCustomEntity = FileName, FileHashCustomEntity = case(FileHash == \"InitiatingProcessSHA256\", InitiatingProcessSHA256, FileHash == \"SHA256\", SHA256, \"No Match\")\r\n),\r\n(DeviceNetworkEvents \r\n| where isnotempty(RemoteUrl) \r\n| where RemoteUrl  in~ (domains)  \r\n| project Type, TimeGenerated, DeviceName, RemoteIP, RemoteUrl, InitiatingProcessAccountName\r\n| extend timestamp = TimeGenerated, HostCustomEntity = DeviceName , AccountCustomEntity = InitiatingProcessAccountName, DNSName = RemoteUrl, IPCustomEntity = RemoteIP\r\n)\r\n)\r\n\r\n\r\n\r\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Process",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "ProcessId",
+                                                                            "columnName":  "ProcessCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "Execution"
+                                   ],
+                       "techniques":  [
+                                          "T1203"
+                                      ],
+                       "displayName":  "Actinium",
+                       "enabled":  true,
+                       "description":  "Identifies a match across various data feeds for domains, hashes and commands related to an actor tracked by Microsoft as Actinium.\u0027",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2022-05-03T18:06:19.9344635Z"
+                   }
+}

@@ -1,0 +1,139 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/80ad1a9a-2d53-4d1f-acef-37084e2dfa44",
+    "name":  "80ad1a9a-2d53-4d1f-acef-37084e2dfa44",
+    "etag":  "\"1b008db1-0000-2700-0000-66d8a33a0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let queryfrequency = 1h;\nlet queryperiod = 1d;\nAuditLogs\n| where TimeGenerated \u003e ago(queryfrequency)\n| where OperationName =~ \"Delete user\"\n| mv-apply TargetResource = TargetResources on \n  (\n      where TargetResource.type == \"User\"\n      | extend TargetUserPrincipalName = extract(@\u0027([a-f0-9]{32})?(.*)\u0027, 2, tostring(TargetResource.userPrincipalName))\n  )\n| extend DeletedByApp = tostring(InitiatedBy.app.displayName),\nDeletedByAppServicePrincipalId = tostring(InitiatedBy.app.servicePrincipalId),\nDeletedByUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName),\nDeletedByAadUserId = tostring(InitiatedBy.user.id),\nDeletedByIPAddress = tostring(InitiatedBy.user.ipAddress)\n| project Deletion_TimeGenerated = TimeGenerated, TargetUserPrincipalName, DeletedByApp, DeletedByAppServicePrincipalId, DeletedByUserPrincipalName, DeletedByAadUserId, DeletedByIPAddress, \nDeletion_AdditionalDetails = AdditionalDetails, Deletion_InitiatedBy = InitiatedBy, Deletion_TargetResources = TargetResources\n| join kind=inner (\n    AuditLogs\n    | where TimeGenerated \u003e ago(queryperiod)\n    | where OperationName =~ \"Add user\"      \n    | mv-apply TargetResource = TargetResources on \n      (\n          where TargetResource.type == \"User\"\n          | extend TargetUserPrincipalName = trim(@\u0027\"\u0027,tostring(TargetResource.userPrincipalName))\n      )\n    | project-rename Creation_TimeGenerated = TimeGenerated\n) on TargetUserPrincipalName\n| extend TimeDelta = Deletion_TimeGenerated - Creation_TimeGenerated\n| where  TimeDelta between (time(0s) .. queryperiod)\n| extend CreatedByApp = tostring(InitiatedBy.app.displayName),\nCreatedByAppServicePrincipalId = tostring(InitiatedBy.app.servicePrincipalId),\nCreatedByUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName),\nCreatedByAadUserId = tostring(InitiatedBy.user.id),\nCreatedByIPAddress = tostring(InitiatedBy.user.ipAddress)\n| project Creation_TimeGenerated, Deletion_TimeGenerated, TimeDelta, TargetUserPrincipalName, DeletedByApp, DeletedByAppServicePrincipalId, DeletedByUserPrincipalName, DeletedByAadUserId, DeletedByIPAddress, \nCreatedByApp, CreatedByAppServicePrincipalId, CreatedByUserPrincipalName, CreatedByAadUserId, CreatedByIPAddress, Creation_AdditionalDetails = AdditionalDetails, Creation_InitiatedBy = InitiatedBy, Creation_TargetResources = TargetResources, Deletion_AdditionalDetails, Deletion_InitiatedBy, Deletion_TargetResources\n| extend TargetName = tostring(split(TargetUserPrincipalName,\u0027@\u0027,0)[0]), TargetUPNSuffix = tostring(split(TargetUserPrincipalName,\u0027@\u0027,1)[0])\n| extend CreatedByName = tostring(split(CreatedByUserPrincipalName,\u0027@\u0027,0)[0]), CreatedByUPNSuffix = tostring(split(CreatedByUserPrincipalName,\u0027@\u0027,1)[0])\n| extend DeletedByName = tostring(split(DeletedByUserPrincipalName,\u0027@\u0027,0)[0]), DeletedByUPNSuffix = tostring(split(DeletedByUserPrincipalName,\u0027@\u0027,1)[0])\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "TargetUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "TargetName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "TargetUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "CreatedByUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "CreatedByName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "CreatedByUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "CreatedByAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "DeletedByUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "DeletedByName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "DeletedByUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "DeletedByAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "CreatedByIPAddress"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "DeletedByIPAddress"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.1.0",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "Account Created and Deleted in Short Timeframe",
+                       "enabled":  true,
+                       "description":  "Search for user principal name (UPN) events. Look for accounts created and then deleted in under 24 hours. Attackers may create an account for their use, and then remove the account when no longer needed.\n\nRef : https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-user-accounts#short-lived-account\nPLATFORM:Azure AD,Microsoft 365,IaaS;MITRE:TA0001;T1078;T1078.004",
+                       "alertRuleTemplateName":  "bb616d82-108f-47d3-9dec-9652ea0d3bf6",
+                       "lastModifiedUtc":  "2024-09-04T18:13:11.4057717Z"
+                   }
+}

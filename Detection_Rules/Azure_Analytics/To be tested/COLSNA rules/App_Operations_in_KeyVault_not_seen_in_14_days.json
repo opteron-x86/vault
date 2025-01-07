@@ -1,0 +1,50 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/2cb57ac7-b1c7-4d19-9950-dc153597619d",
+    "name":  "2cb57ac7-b1c7-4d19-9950-dc153597619d",
+    "etag":  "\"88004833-0000-2700-0000-66fdd0250000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P14D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "//Searches for access by applications that have not previously accessed an Azure Key Vault in the last 14 days and returns all actions by those applications\r\nlet operationlist = dynamic([\"SecretGet\", \"KeyGet\", \"VaultGet\"]);\r\nlet starttime = 14d;\r\nlet endtime = 1d;\r\nlet detection=\r\n    AzureDiagnostics\r\n    | where TimeGenerated between (ago(starttime) .. ago(endtime))\r\n    | where ResourceType == \"VAULTS\"\r\n    | where ResultType == \"Success\"\r\n    | where OperationName in (operationlist)\r\n    | where isnotempty(identity_claim_appid_g)\r\n    | project-rename KeyVaultName=Resource, AppId=identity_claim_appid_g\r\n    | distinct KeyVaultName, AppId\r\n    | join kind=rightanti  (\r\n        AzureDiagnostics\r\n        | where TimeGenerated \u003e ago(endtime)\r\n        | where ResourceType == \"VAULTS\"\r\n        | where ResultType == \"Success\"\r\n        | where OperationName in (operationlist)\r\n        | where isnotempty(identity_claim_appid_g)\r\n        | project-rename\r\n            KeyVaultName=Resource,\r\n            AppId=identity_claim_appid_g\r\n        | distinct KeyVaultName, AppId)\r\n        on KeyVaultName, AppId;\r\nAzureDiagnostics\r\n| where TimeGenerated \u003e ago(endtime)\r\n| where ResourceType == \"VAULTS\"\r\n| where ResultType == \"Success\"\r\n| project-rename\r\n    KeyVaultName=Resource,\r\n    AppId=identity_claim_appid_g\r\n| join kind=inner detection on KeyVaultName, AppId\r\n| project\r\n    TimeGenerated,\r\n    CallerIPAddress,\r\n    Action = split(requestUri_s, \"\u0026\")[1],\r\n    AppId,\r\n    AppInfo =clientInfo_s,\r\n    ResourceGroup,\r\n    SubscriptionId,\r\n    KeyVaultName,\r\n    KeyVaultTarget=id_s,\r\n    OperationName\r\n// Removing false positive call from Microsoft that appears to happen daily\r\n| where not(CallerIPAddress == \"52.244.48.88\" and Action == \"MaskCMKEnabledProperties=true\")\r\n| where not(CallerIPAddress == \"52.244.16.218\" and Action == \"MaskCMKEnabledProperties=true\")",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "CredentialAccess",
+                                       "Exfiltration"
+                                   ],
+                       "techniques":  [
+                                          "T1555"
+                                      ],
+                       "displayName":  "App Operations in KeyVault not seen in 14 days",
+                       "enabled":  true,
+                       "description":  "Searches for access by applications that have not previously accessed an Azure Key Vault in the last 14 days and returns all actions by those applications.\nPLATFORM:Azure AD,Microsoft 365,IaaS\nMITRE:TA0003;T1078;T1078.004,TA0004;T1078;T1078.004,TA0005;T1078;T1078.004",
+                       "alertRuleTemplateName":  null,
+                       "lastModifiedUtc":  "2024-10-02T22:58:45.1562534Z"
+                   }
+}

@@ -1,0 +1,89 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/deb7c7e9-fff8-45ee-bb63-385563de1835",
+    "name":  "deb7c7e9-fff8-45ee-bb63-385563de1835",
+    "etag":  "\"88002628-0000-2700-0000-66fdcf5c0000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let Hive_threats = dynamic([\"Ransom:Win64/Hive\", \"Ransom:Win32/Hive\"]);\nDeviceInfo\n| extend DeviceName = tolower(DeviceName)\n| join kind=inner ( SecurityAlert\n| where ProviderName == \"MDATP\"\n| extend ThreatName = tostring(parse_json(ExtendedProperties).ThreatName)\n| extend ThreatFamilyName = tostring(parse_json(ExtendedProperties).ThreatFamilyName)\n| where ThreatName in~ (Hive_threats) or ThreatFamilyName in~ (Hive_threats)\n| extend CompromisedEntity = tolower(CompromisedEntity)\n) on $left.DeviceName == $right.CompromisedEntity\n| summarize by DisplayName, ThreatName, ThreatFamilyName, PublicIP, AlertSeverity, Description, tostring(LoggedOnUsers), DeviceId, TenantId , bin(TimeGenerated, 1d), CompromisedEntity, tostring(LoggedOnUsers), ProductName, Entities",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "CompromisedEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "PublicIP"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess",
+                                       "Execution",
+                                       "Persistence",
+                                       "PrivilegeEscalation",
+                                       "DefenseEvasion",
+                                       "CredentialAccess",
+                                       "Discovery",
+                                       "LateralMovement",
+                                       "CommandAndControl",
+                                       "Impact"
+                                   ],
+                       "techniques":  [
+                                          "T1190",
+                                          "T1204",
+                                          "T1136",
+                                          "T1078",
+                                          "T1140",
+                                          "T1070",
+                                          "T1003",
+                                          "T1018",
+                                          "T1021",
+                                          "T1071",
+                                          "T1486"
+                                      ],
+                       "displayName":  "AV detections related to Hive Ransomware",
+                       "enabled":  true,
+                       "description":  "This query looks for Microsoft Defender AV detections related to Hive Ransomware . In Microsoft Sentinel the SecurityAlerts table includes only the Device Name of the affected device,\nthis query joins the DeviceInfo table to clearly connect other information such as Device group, ip, logged on users etc. This would allow the Microsoft Sentinel analyst to have more context related to the alert, if available. https://www.microsoft.com/en-us/security/blog/2022/07/05/hive-ransomware-gets-upgrades-in-rust/                                                                                The impact of these updates is far-reaching, considering that Hive is a RaaS payload that Microsoft has observed in attacks against organizations in the healthcare and software industries by large ransomware affiliates like DEV-0237.\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1190,TA0003;T1078;T1078.004;T1136;T1136.003,TA0004;T1078;T1078.004,TA0008;T1021,TA0040;T1486",
+                       "alertRuleTemplateName":  "4e5914a4-2ccd-429d-a845-fa597f0bd8c5",
+                       "lastModifiedUtc":  "2024-10-02T22:55:23.5213943Z"
+                   }
+}

@@ -1,0 +1,136 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/77fac525-2e00-4088-83bd-7f86c7e0d65b",
+    "name":  "77fac525-2e00-4088-83bd-7f86c7e0d65b",
+    "etag":  "\"1b007cc8-0000-2700-0000-66d8a5c40000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT2H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "High",
+                       "query":  "let query_frequency = 1h;\nlet query_period = 2h;\nAuditLogs\n| where TimeGenerated \u003e ago(query_period)\n| where Category =~ \"ApplicationManagement\" and LoggedByService =~ \"Core Directory\"\n| where OperationName =~ \"Add app role assignment to service principal\"\n| mv-expand TargetResource = TargetResources\n| mv-expand modifiedProperty = TargetResource[\"modifiedProperties\"]\n| where tostring(modifiedProperty[\"displayName\"]) == \"AppRole.Value\"\n| extend PermissionGrant = tostring(modifiedProperty[\"newValue\"])\n| where PermissionGrant has \"RoleManagement.ReadWrite.Directory\"\n| mv-apply modifiedProperty = TargetResource[\"modifiedProperties\"] on (\n    summarize modifiedProperties = make_bag(\n        bag_pack(tostring(modifiedProperty[\"displayName\"]),\n            bag_pack(\"oldValue\", trim(@\u0027[\\\"\\s]+\u0027, tostring(modifiedProperty[\"oldValue\"])),\n                \"newValue\", trim(@\u0027[\\\"\\s]+\u0027, tostring(modifiedProperty[\"newValue\"])))), 100)\n)\n| project\n    PermissionGrant_TimeGenerated = TimeGenerated,\n    PermissionGrant_OperationName = OperationName,\n    PermissionGrant_Result = Result,\n    PermissionGrant,\n    AppDisplayName = tostring(modifiedProperties[\"ServicePrincipal.DisplayName\"][\"newValue\"]),\n    AppServicePrincipalId = tostring(modifiedProperties[\"ServicePrincipal.ObjectID\"][\"newValue\"]),\n    PermissionGrant_InitiatedBy = InitiatedBy,\n    PermissionGrant_TargetResources = TargetResources,\n    PermissionGrant_AdditionalDetails = AdditionalDetails,\n    PermissionGrant_CorrelationId = CorrelationId\n| join kind=inner (\n    AuditLogs\n    | where TimeGenerated \u003e ago(query_frequency)\n    | where Category =~ \"RoleManagement\" and LoggedByService =~ \"Core Directory\" and AADOperationType =~ \"Assign\"\n    | where isnotempty(InitiatedBy[\"app\"])\n    | mv-expand TargetResource = TargetResources\n    | mv-expand modifiedProperty = TargetResource[\"modifiedProperties\"]\n    | where tostring(modifiedProperty[\"displayName\"]) in (\"Role.DisplayName\", \"RoleDefinition.DisplayName\")\n    | extend RoleAssignment = tostring(modifiedProperty[\"newValue\"])\n    | where RoleAssignment contains \"Admin\"\n    | project\n        RoleAssignment_TimeGenerated = TimeGenerated,\n        RoleAssignment_OperationName = OperationName,\n        RoleAssignment_Result = Result,\n        RoleAssignment,\n        TargetType = tostring(TargetResources[0][\"type\"]),\n        Target = iff(isnotempty(TargetResources[0][\"displayName\"]), tostring(TargetResources[0][\"displayName\"]), tolower(TargetResources[0][\"userPrincipalName\"])),\n        TargetId = tostring(TargetResources[0][\"id\"]),\n        RoleAssignment_InitiatedBy = InitiatedBy,\n        RoleAssignment_TargetResources = TargetResources,\n        RoleAssignment_AdditionalDetails = AdditionalDetails,\n        RoleAssignment_CorrelationId = CorrelationId,\n        AppServicePrincipalId = tostring(InitiatedBy[\"app\"][\"servicePrincipalId\"])\n    ) on AppServicePrincipalId\n| where PermissionGrant_TimeGenerated \u003c RoleAssignment_TimeGenerated\n| extend\n    TargetName = tostring(split(Target, \"@\")[0]),\n    TargetUPNSuffix = tostring(split(Target, \"@\")[1])\n| project PermissionGrant_TimeGenerated, PermissionGrant_OperationName, PermissionGrant_Result, PermissionGrant, AppDisplayName, AppServicePrincipalId, PermissionGrant_InitiatedBy, PermissionGrant_TargetResources, PermissionGrant_AdditionalDetails, PermissionGrant_CorrelationId, \nRoleAssignment_TimeGenerated, RoleAssignment_OperationName, RoleAssignment_Result, RoleAssignment, TargetType, Target, TargetName, TargetUPNSuffix, TargetId, RoleAssignment_InitiatedBy, RoleAssignment_TargetResources, RoleAssignment_AdditionalDetails, RoleAssignment_CorrelationId\n| extend PermissionGrant_InitiatingUserPrincipalName = tostring(PermissionGrant_InitiatedBy.user.userPrincipalName)\n| extend PermissionGrant_InitiatingAadUserId = tostring(PermissionGrant_InitiatedBy.user.id)\n| extend PermissionGrant_InitiatingIpAddress = tostring(iff(isnotempty(PermissionGrant_InitiatedBy.user.ipAddress), PermissionGrant_InitiatedBy.user.ipAddress, PermissionGrant_InitiatedBy.app.ipAddress))\n| extend PermissionGrant_InitiatingAccountName = tostring(split(PermissionGrant_InitiatingUserPrincipalName, \"@\")[0]), PermissionGrant_InitiatingAccountUPNSuffix = tostring(split(PermissionGrant_InitiatingUserPrincipalName, \"@\")[1])\n| extend RoleAssignment_InitiatingUserPrincipalName = tostring(RoleAssignment_InitiatedBy.user.userPrincipalName)\n| extend RoleAssignment_InitiatingAadUserId = tostring(RoleAssignment_InitiatedBy.user.id)\n| extend RoleAssignment_InitiatingIpAddress = tostring(iff(isnotempty(RoleAssignment_InitiatedBy.user.ipAddress), RoleAssignment_InitiatedBy.user.ipAddress, RoleAssignment_InitiatedBy.app.ipAddress))\n| extend RoleAssignment_InitiatingAccountName = tostring(split(RoleAssignment_InitiatingUserPrincipalName, \"@\")[0]),  RoleAssignment_InitiatingAccountUPNSuffix = tostring(split(RoleAssignment_InitiatingUserPrincipalName, \"@\")[1])\n",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "AppDisplayName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "AppServicePrincipalId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "Target"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "TargetName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "TargetUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "PermissionGrant_InitiatingUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "PermissionGrant_InitiatingAccountName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "PermissionGrant_InitiatingAccountUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "PermissionGrant_InitiatingAadUserId"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "RoleAssignment_InitiatingUserPrincipalName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "Name",
+                                                                            "columnName":  "RoleAssignment_InitiatingAccountName"
+                                                                        },
+                                                                        {
+                                                                            "identifier":  "UPNSuffix",
+                                                                            "columnName":  "RoleAssignment_InitiatingAccountUPNSuffix"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "AadUserId",
+                                                                            "columnName":  "RoleAssignment_InitiatingAadUserId"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.1.0",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "PrivilegeEscalation",
+                                       "Persistence"
+                                   ],
+                       "techniques":  [
+                                          "T1098",
+                                          "T1078"
+                                      ],
+                       "displayName":  "Admin promotion after Role Management Application Permission Grant",
+                       "enabled":  true,
+                       "description":  "This rule looks for a service principal being granted the Microsoft Graph RoleManagement.ReadWrite.Directory (application) permission before being used to add an Microsoft Entra ID object or user account to an Admin directory role (i.e. Global Administrators).\nThis is a known attack path that is usually abused when a service principal already has the AppRoleAssignment.ReadWrite.All permission granted. This permission allows an app to manage permission grants for application permissions to any API.\nA service principal can promote itself or other service principals to admin roles (i.e. Global Administrators). This would be considered a privilege escalation technique.\nRef : https://docs.microsoft.com/graph/permissions-reference#role-management-permissions, https://docs.microsoft.com/graph/api/directoryrole-post-members?view=graph-rest-1.0\u0026tabs=http\n\nPLATFORM:Azure AD,Microsoft 365,IaaS;MITRE:TA0003;T1078;T1078.004,TA0004;T1078;T1078.004;T1098;T1098.003",
+                       "alertRuleTemplateName":  "f80d951a-eddc-4171-b9d0-d616bb83efdc",
+                       "lastModifiedUtc":  "2024-09-04T18:24:02.4829029Z"
+                   }
+}

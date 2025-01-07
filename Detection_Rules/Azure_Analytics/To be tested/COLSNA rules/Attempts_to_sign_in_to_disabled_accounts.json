@@ -1,0 +1,69 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/f08d4f8f-1fbd-4c69-8f2b-5ef58cbe8b07",
+    "name":  "f08d4f8f-1fbd-4c69-8f2b-5ef58cbe8b07",
+    "etag":  "\"7607904c-0000-2700-0000-6734ad130000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "PT1H",
+                       "queryPeriod":  "PT1H",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Medium",
+                       "query":  "let timeframe = 1h;\nlet threshold = 3;\nSigninLogs\n| where TimeGenerated \u003e= ago(timeframe)\n| where ResultType == \"50057\"\n| where ResultDescription =~ \"User account is disabled. The account has been disabled by an administrator.\"\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), count(), applicationCount = dcount(AppDisplayName), \napplicationSet = makeset(AppDisplayName) by UserPrincipalName, IPAddress\n| where applicationCount \u003e= threshold\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserPrincipalName, IPCustomEntity = IPAddress",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5M",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1078"
+                                      ],
+                       "displayName":  "Attempts to sign in to disabled accounts",
+                       "enabled":  true,
+                       "description":  "Identifies failed attempts to sign in to disabled accounts across multiple Azure Applications.\nDefault threshold for Azure Applications attempted to sign in to is 3.\nReferences: https://docs.microsoft.com/azure/active-directory/reports-monitoring/reference-sign-ins-error-codes\n50057 - User account is disabled. The account has been disabled by an administrator.\nPLATFORM:Azure AD,Microsoft 365,IaaS,Windows\nMITRE:TA0001;T1078;T1078.001;T1078.002;T1078.003;T1078.004,TA0003;T1078;T1078.001;T1078.002;T1078.003;T1078.004,TA0006;T1110;T1110.001;T1110.002;T1110.003;T1110.004",
+                       "alertRuleTemplateName":  "75ea5c39-93e5-489b-b1e1-68fa6c9d2d04",
+                       "lastModifiedUtc":  "2024-11-13T13:43:46.0632634Z"
+                   }
+}

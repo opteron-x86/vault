@@ -1,0 +1,79 @@
+﻿{
+    "id":  "/subscriptions/41de2c2e-1ec0-4d1b-b768-edd976cdd8fe/resourceGroups/dod365-law-rg2/providers/Microsoft.OperationalInsights/workspaces/dod365-law/providers/Microsoft.SecurityInsights/alertRules/ace22128-528d-4aae-b9f0-34c346f347ff",
+    "name":  "ace22128-528d-4aae-b9f0-34c346f347ff",
+    "etag":  "\"1b009ddd-0000-2700-0000-66d8a7f90000\"",
+    "type":  "Microsoft.SecurityInsights/alertRules",
+    "kind":  "Scheduled",
+    "properties":  {
+                       "queryFrequency":  "P1D",
+                       "queryPeriod":  "P1D",
+                       "triggerOperator":  "GreaterThan",
+                       "triggerThreshold":  0,
+                       "severity":  "Low",
+                       "query":  "let short_uaLength = 5;\nlet long_uaLength = 1000;\nlet c_threshold = 100;\nW3CIISLog\n// Exclude local IPs as these create noise\n| where cIP !startswith \"192.168.\" and cIP != \"::1\"\n| where isnotempty(csUserAgent) and csUserAgent !in~ (\"-\", \"MSRPC\") and (string_size(csUserAgent) \u003c= short_uaLength or string_size(csUserAgent) \u003e= long_uaLength)\n| extend csUserAgent_size = string_size(csUserAgent)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), ConnectionCount = count() by Computer, sSiteName, sPort, csUserAgent, csUserAgent_size, csUserName , csMethod, csUriStem, sIP, cIP, scStatus, scSubStatus, scWin32Status\n| where ConnectionCount \u003c c_threshold\n| extend timestamp = StartTimeUtc, AccountCustomEntity = csUserName, HostCustomEntity = Computer, IPCustomEntity = cIP",
+                       "suppressionDuration":  "PT5H",
+                       "suppressionEnabled":  false,
+                       "incidentConfiguration":  {
+                                                     "createIncident":  true,
+                                                     "groupingConfiguration":  {
+                                                                                   "enabled":  false,
+                                                                                   "reopenClosedIncident":  false,
+                                                                                   "lookbackDuration":  "PT5H",
+                                                                                   "matchingMethod":  "AllEntities",
+                                                                                   "groupByEntities":  [
+
+                                                                                                       ],
+                                                                                   "groupByAlertDetails":  [
+
+                                                                                                           ],
+                                                                                   "groupByCustomDetails":  [
+
+                                                                                                            ]
+                                                                               }
+                                                 },
+                       "entityMappings":  [
+                                              {
+                                                  "entityType":  "Account",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "AccountCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "Host",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "FullName",
+                                                                            "columnName":  "HostCustomEntity"
+                                                                        }
+                                                                    ]
+                                              },
+                                              {
+                                                  "entityType":  "IP",
+                                                  "fieldMappings":  [
+                                                                        {
+                                                                            "identifier":  "Address",
+                                                                            "columnName":  "IPCustomEntity"
+                                                                        }
+                                                                    ]
+                                              }
+                                          ],
+                       "templateVersion":  "1.0.2",
+                       "eventGroupingSettings":  {
+                                                     "aggregationKind":  "SingleAlert"
+                                                 },
+                       "tactics":  [
+                                       "InitialAccess"
+                                   ],
+                       "techniques":  [
+                                          "T1190"
+                                      ],
+                       "displayName":  "Anomalous User Agent connection attempt",
+                       "enabled":  true,
+                       "description":  "Identifies connection attempts (success or fail) from clients with very short or very long User Agent strings and with less than 100 connection attempts.\n\nPLATFORM:IaaS,Windows;MITRE:TA0001;T1190",
+                       "alertRuleTemplateName":  "f845881e-2500-44dc-8ed7-b372af3e1e25",
+                       "lastModifiedUtc":  "2024-09-04T18:33:29.0929592Z"
+                   }
+}
