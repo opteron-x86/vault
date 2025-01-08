@@ -1,0 +1,118 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/289b1ccf-f7b8-46ed-958d-fc953176ebba')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/289b1ccf-f7b8-46ed-958d-fc953176ebba')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "Authentication Method Changed for Privileged Account",
+                "description": "Identifies authentication methods being changed for a privileged account. This could be an indication of an attacker adding an auth method to the account so they can have continued access.\n\nRef : https://docs.microsoft.com/azure/active-directory/fundamentals/security-operations-privileged-accounts#things-to-monitor-1\nPLATFORM:Azure AD.MITRE:TA001;T1078;T1078.004,TA0004;T1556;T1556.006,TA0005;T1556;T1556.006,TA0006;T1556;T1556.006",
+                "severity": "High",
+                "enabled": true,
+                "query": "let VIPUsers = (IdentityInfo\n| where AssignedRoles contains \"Admin\"\n| summarize by tolower(AccountUPN));\nAuditLogs\n| where TimeGenerated > ago(2h)\n| where Category =~ \"UserManagement\"\n| where ActivityDisplayName =~ \"User registered security info\"\n| where LoggedByService =~ \"Authentication Methods\"\n| extend TargetUserPrincipalName = tostring(TargetResources[0].userPrincipalName)\n| where tolower(TargetUserPrincipalName) in (VIPUsers)\n| extend TargetAadUserId = tostring(TargetResources[0].id)\n| extend InitiatingUserPrincipalName = tostring(InitiatedBy.user.userPrincipalName)\n| extend InitiatingAadUserId = tostring(InitiatedBy.user.id)\n| extend InitiatingIPAddress = tostring(InitiatedBy.user.ipAddress)\n| extend TargetAccountName = tostring(split(TargetUserPrincipalName, \"@\")[0]), TargetAccountUPNSuffix = tostring(split(TargetUserPrincipalName, \"@\")[1])\n| extend InitiatingAccountName = tostring(split(InitiatingUserPrincipalName, \"@\")[0]), InitiatingAccountUPNSuffix = tostring(split(InitiatingUserPrincipalName, \"@\")[1])\n",
+                "queryFrequency": "PT2H",
+                "queryPeriod": "P14D",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": "feb0a2fb-ae75-4343-8cbc-ed545f1da289",
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "TargetUserPrincipalName"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "TargetAccountName"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "TargetAccountUPNSuffix"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "AadUserId",
+                                "columnName": "TargetAadUserId"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "InitiatingUserPrincipalName"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "InitiatingAccountName"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "InitiatingAccountUPNSuffix"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "AadUserId",
+                                "columnName": "InitiatingAadUserId"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "InitiatingIPAddress"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": "1.0.5"
+            }
+        }
+    ]
+}
