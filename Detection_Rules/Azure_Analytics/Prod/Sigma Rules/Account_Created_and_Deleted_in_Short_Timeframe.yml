@@ -15,7 +15,7 @@ tags:
   - attack.t1531
   - attack.persistence
   - attack.t1136
-  - attack.t1136.004
+  - attack.t1136.003
 logsource:
   product: Azure AD
   service: audit
