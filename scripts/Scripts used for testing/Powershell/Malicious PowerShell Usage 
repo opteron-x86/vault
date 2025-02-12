@@ -1,0 +1,19 @@
+#Created for testing of Issue #356: Dev-0270 Malicious Powershell usage
+$admins = [System.Security.Principal.SecurityIdentifier]"S-1-5-32-544".Translate([System.Security.Principal.NTAccount]).Value
+$rdp = [System.Security.Principal.SecurityIdentifier]"S-1-5-32-555".Translate([System.Security.Principal.NTAccount]).Value
+$user = "TestUser"
+
+# Add user to Administrators group
+Start-Process -FilePath "net.exe" -ArgumentList "localgroup Administrators $user /add" -Wait -NoNewWindow
+
+# Add user to Remote Desktop Users group
+Start-Process -FilePath "net.exe" -ArgumentList "localgroup `"Remote Desktop Users`" $user /add" -Wait -NoNewWindow
+
+
+#The test should generate logs in DeviceProcessEvents with PowerShell execution that matches the analytic logic.
+#You should see logs with InitiatingProcessCommandLine containing localgroup, /add, and System.Security.Principal.SecurityIdentifier.
+
+#Clean up Command
+
+net localgroup Administrators TestUser /delete
+net localgroup "Remote Desktop Users" TestUser /delete
