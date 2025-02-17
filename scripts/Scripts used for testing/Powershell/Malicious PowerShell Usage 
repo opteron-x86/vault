@@ -9,16 +9,7 @@ try {
     Write-Host "[-] Failed to add exclusion" -ForegroundColor Yellow
 }
 
-Start-Sleep -Seconds 2  # Pause for logging
-
-# **Pattern 2: Email Enumeration via Exchange Management Shell**
-Write-Host "[+] Simulating Exchange email enumeration..."
-try {
-    Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn
-    Get-Recipient -ResultSize Unlimited | Select-Object -ExpandProperty EmailAddresses | ForEach-Object { $_.SmtpAddress }
-} catch {
-    Write-Host "[-] Exchange commands failed (likely due to missing snap-in)" -ForegroundColor Yellow
-}
+Start-Sleep -Seconds 30  # Pause for logging
 
 Start-Sleep -Seconds 2  # Pause for logging
 
