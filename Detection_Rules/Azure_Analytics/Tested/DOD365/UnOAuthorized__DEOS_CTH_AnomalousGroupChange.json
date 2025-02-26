@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/0c42281b-b245-4d13-adb4-a5578c92291c')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/0c42281b-b245-4d13-adb4-a5578c92291c')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "[UnOAuthorized] DEOS_CTH_AnomalousGroupChange",
+                "description": "Set to monitor for updates or deletions to privileged roles. May indicate attack in progress.\n\nPlatform:Windows.MITRE:TA0004;T1484.001,TA0005;T1484.001",
+                "severity": "High",
+                "enabled": true,
+                "query": "AuditLogs\n| where OperationName has_any (\"Add member to\", \"Remove member\", \"Process role\", \"Add app\")\n| extend AssignedRole = tostring(parse_json(TargetResources[0].modifiedProperties[1].newValue))\n| where AssignedRole contains \"Global\" and AssignedRole has_any (\"admin\", \"Admin\", \"administrator\", \"Administrator\")\n| summarize count() by AssignedRole\n",
+                "queryFrequency": "PT8H",
+                "queryPeriod": "PT8H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "PrivilegeEscalation"
+                ],
+                "techniques": [
+                    "T1484"
+                ],
+                "subTechniques": [
+                    "T1484.001"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {},
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
