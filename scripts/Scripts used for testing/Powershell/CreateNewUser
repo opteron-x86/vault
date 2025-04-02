@@ -1,5 +1,5 @@
 # Simulated Red Team script to test detection issue 357
-$username = "DefaultAccount1"
+$username = "DefaultAccount"
 $password = "P@ssw0rd1234"
 
 # Build the net user add command
