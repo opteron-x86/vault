@@ -28,6 +28,8 @@ locals {
     Scenario    = "ssrf-metadata-exploit"
     AutoShutdown = "4hours"
   }
+  
+  instance_type = "t2.micro"
 }
 
 resource "random_string" "suffix" {
