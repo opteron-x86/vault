@@ -21,49 +21,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Variables/locals
-variable "aws_region" {
-  description = "AWS region for lab deployment"
-  type        = string
-  default     = "us-gov-east-1"
-}
-
-variable "allowed_source_ips" {
-  description = "IP addresses allowed to access lab resources"
-  type        = list(string)
-  default     = ["18.253.45.95/32"]
-}
-
-variable "lab_prefix" {
-  description = "Prefix for all lab resources"
-  type        = string
-  default     = "lab-ssrf"
-}
-
-variable "ssh_key_name" {
-  description = "AWS SSH key pair name for EC2 access"
-  type        = string
-  default     = "cnc-all-access"
-}
-
-locals {
-  common_tags = {
-    Environment = "lab"
-    Destroyable = "true"
-    Scenario    = "ssrf-metadata-exploit"
-    AutoShutdown = "4hours"
-  }
-  
-  # Cost control - t2.micro in us-east-1 ~$0.0116/hour
-  instance_type = "t3.micro"
-}
-
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-  upper   = false
-}
-
 # Data sources
 data "aws_caller_identity" "current" {}
 
@@ -467,30 +424,4 @@ resource "aws_ssm_parameter" "data_role_hint" {
   tags = merge(local.common_tags, {
     Purpose = "Batch processing role for ETL jobs"
   })
-}
-
-# Outputs
-output "webapp_url" {
-  description = "URL of the vulnerable web application"
-  value       = "http://${aws_instance.webapp.public_ip}:8080"
-}
-
-output "ssh_connection" {
-  description = "SSH connection string"
-  value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.webapp.public_ip}"
-}
-
-output "target_bucket" {
-  description = "S3 bucket containing sensitive data"
-  value       = aws_s3_bucket.sensitive_data.id
-}
-
-output "instance_id" {
-  description = "EC2 instance ID for debugging"
-  value       = aws_instance.webapp.id
-}
-
-output "attack_chain_hint" {
-  description = "Starting point for the lab"
-  value       = "Begin by exploring the URL Inspector service on port 8080"
 }
