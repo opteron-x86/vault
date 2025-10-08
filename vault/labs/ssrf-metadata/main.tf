@@ -21,6 +21,21 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  common_tags = {
+    Environment = "lab"
+    Destroyable = "true"
+    Scenario    = "ssrf-metadata-exploit"
+    AutoShutdown = "4hours"
+  }
+}
+
+resource "random_string" "suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
 # Data sources
 data "aws_caller_identity" "current" {}
 
