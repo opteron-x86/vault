@@ -23,9 +23,9 @@ provider "aws" {
 
 locals {
   common_tags = {
-    Environment = "lab"
-    Destroyable = "true"
-    Scenario    = "ssrf-metadata-exploit"
+    Environment  = "lab"
+    Destroyable  = "true"
+    Scenario     = "ssrf-metadata-exploit"
     AutoShutdown = "4hours"
   }
   
@@ -38,7 +38,6 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
-# Data sources
 data "aws_caller_identity" "current" {}
 
 data "aws_ami" "amazon_linux_2023" {
@@ -61,6 +60,22 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
+# VPC Module
+module "vpc" {
+  source = "../../modules/lab-vpc"
+
+  name_prefix       = var.lab_prefix
+  vpc_cidr          = "10.0.0.0/16"
+  aws_region        = var.aws_region
+  allowed_ssh_cidrs = var.allowed_source_ips
+  
+  create_web_sg     = true
+  allowed_web_cidrs = var.allowed_source_ips
+  web_ports         = [8080]
+  
+  tags = local.common_tags
+}
+
 # IAM resources
 resource "aws_iam_role" "webapp_instance" {
   name = "${var.lab_prefix}-webapp-role-${random_string.suffix.result}"
@@ -79,7 +94,6 @@ resource "aws_iam_role" "webapp_instance" {
   tags = local.common_tags
 }
 
-# Application logs policy - appears legitimate
 resource "aws_iam_role_policy" "webapp_logging" {
   name = "${var.lab_prefix}-logging-policy"
   role = aws_iam_role.webapp_instance.id
@@ -104,14 +118,12 @@ resource "aws_iam_role_policy" "webapp_logging" {
           "s3:GetObject",
           "s3:PutObject"
         ]
-        # Overly permissive for "debugging purposes"
         Resource = "arn:aws-us-gov:s3:::${var.lab_prefix}-*/*"
       },
       {
-        Sid    = "S3ListBuckets"  
-        Effect = "Allow"
-        Action = "s3:ListBucket"
-        # Developer convenience - list any lab bucket
+        Sid      = "S3ListBuckets"
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
         Resource = "arn:aws-us-gov:s3:::${var.lab_prefix}-*"
       },
       {
@@ -122,21 +134,18 @@ resource "aws_iam_role_policy" "webapp_logging" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        # Config parameters for application
         Resource = "*"
       },
       {
-        Sid    = "AssumeRoleAccess"
-        Effect = "Allow"
-        Action = "sts:AssumeRole"
-        # Developer left this too permissive for debugging
+        Sid      = "AssumeRoleAccess"
+        Effect   = "Allow"
+        Action   = "sts:AssumeRole"
         Resource = "arn:aws-us-gov:iam::*:role/${var.lab_prefix}-*"
       }
     ]
   })
 }
 
-# Additional role for privilege escalation path
 resource "aws_iam_role" "data_processor" {
   name = "${var.lab_prefix}-data-processor-${random_string.suffix.result}"
 
@@ -146,7 +155,6 @@ resource "aws_iam_role" "data_processor" {
       Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
-        # Misconfigured - allows any principal in the account
         AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root"
       }
     }]
@@ -180,89 +188,14 @@ resource "aws_iam_instance_profile" "webapp" {
   role = aws_iam_role.webapp_instance.name
 }
 
-# Network resources
-resource "aws_vpc" "lab" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+# Additional security group for custom rules
+resource "aws_security_group" "webapp_custom" {
+  name        = "${var.lab_prefix}-webapp-custom"
+  description = "Additional webapp security rules"
+  vpc_id      = module.vpc.vpc_id
 
   tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-vpc"
-  })
-}
-
-resource "aws_internet_gateway" "lab" {
-  vpc_id = aws_vpc.lab.id
-
-  tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-igw"
-  })
-}
-
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.lab.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[0]
-  map_public_ip_on_launch = true
-
-  tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-public-subnet"
-  })
-}
-
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.lab.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.lab.id
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-public-rt"
-  })
-}
-
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_security_group" "webapp" {
-  name        = "${var.lab_prefix}-webapp-sg"
-  description = "Security group for vulnerable web application"
-  vpc_id      = aws_vpc.lab.id
-
-  ingress {
-    description = "HTTP from allowed IPs"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_source_ips
-  }
-
-  ingress {
-    description = "SSH for management"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_source_ips
-  }
-
-  egress {
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-webapp-sg"
+    Name = "${var.lab_prefix}-webapp-custom"
   })
 }
 
@@ -270,16 +203,18 @@ resource "aws_security_group" "webapp" {
 resource "aws_instance" "webapp" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = local.instance_type
-  subnet_id              = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.webapp.id]
-  iam_instance_profile   = aws_iam_instance_profile.webapp.name
-  key_name               = var.ssh_key_name
+  subnet_id              = module.vpc.public_subnet_ids[0]
+  vpc_security_group_ids = [
+    module.vpc.ssh_security_group_id,
+    module.vpc.web_security_group_id
+  ]
+  iam_instance_profile = aws_iam_instance_profile.webapp.name
+  key_name             = var.ssh_key_name
 
-  # Intentionally using IMDSv1 for metadata service exploitation
   metadata_options {
     http_endpoint               = "enabled"
-    http_tokens                 = "optional"  # IMDSv1 enabled
-    http_put_response_hop_limit = 2          # Allows container access
+    http_tokens                 = "optional"
+    http_put_response_hop_limit = 2
   }
 
   user_data = base64encode(<<-EOT
@@ -287,10 +222,8 @@ resource "aws_instance" "webapp" {
 dnf update -y
 dnf install -y python3 python3-pip at
 
-# Install Python packages
 pip3 install flask requests boto3
 
-# Create vulnerable web app with SSRF
 cat > /home/ec2-user/app.py << 'PYAPP'
 from flask import Flask, request, jsonify
 import requests
@@ -316,12 +249,11 @@ def check_url():
         return jsonify({'error': 'No URL provided'}), 400
     
     try:
-        # Vulnerable SSRF - no input validation
         response = requests.get(url, timeout=5)
         return jsonify({
             'url': url,
             'status_code': response.status_code,
-            'content_preview': response.text[:2000]  # Increased for full token
+            'content_preview': response.text[:2000]
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -334,7 +266,6 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
 PYAPP
 
-# Create systemd service
 cat > /etc/systemd/system/webapp.service << 'SYSD'
 [Unit]
 Description=Vulnerable Web Application
@@ -355,24 +286,19 @@ systemctl daemon-reload
 systemctl enable webapp
 systemctl start webapp
 
-# Plant hint in logs for discovery
 echo "Configuration note: Data processor role ARN: ${aws_iam_role.data_processor.arn}" >> /var/log/application-setup.log
 
-# Enable at daemon for auto-shutdown
 systemctl enable atd
 systemctl start atd
-
-# Auto-shutdown after 4 hours for cost control
 echo "sudo shutdown -h +240" | at now
 EOT
 )
 
   tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-webapp"
+    Name         = "${var.lab_prefix}-webapp"
     AutoShutdown = "4hours"
   })
   
-  # Prevent accidental long-running instances
   lifecycle {
     ignore_changes = [ami]
   }
@@ -381,10 +307,10 @@ EOT
 # Storage resources
 resource "aws_s3_bucket" "sensitive_data" {
   bucket        = "${var.lab_prefix}-sensitive-data-${random_string.suffix.result}"
-  force_destroy = true  # Ensures clean terraform destroy
+  force_destroy = true
 
   tags = merge(local.common_tags, {
-    Name = "${var.lab_prefix}-sensitive-data"
+    Name               = "${var.lab_prefix}-sensitive-data"
     DataClassification = "Internal"
   })
 }
@@ -396,7 +322,6 @@ resource "aws_s3_bucket_versioning" "sensitive_data" {
   }
 }
 
-# Block public access but allow authenticated AWS access
 resource "aws_s3_bucket_public_access_block" "sensitive_data" {
   bucket = aws_s3_bucket.sensitive_data.id
 
@@ -406,7 +331,6 @@ resource "aws_s3_bucket_public_access_block" "sensitive_data" {
   restrict_public_buckets = true
 }
 
-# Plant target data
 resource "aws_s3_object" "customer_data" {
   bucket  = aws_s3_bucket.sensitive_data.id
   key     = "customers/customer_database.csv"
@@ -425,14 +349,13 @@ resource "aws_s3_object" "api_keys" {
   key     = "config/api_keys.json"
   content = jsonencode({
     production = {
-      stripe_key = "sk_live_simulated_key_do_not_use"
+      stripe_key  = "sk_live_simulated_key_do_not_use"
       db_password = "SuperSecretPassword123!"
       api_endpoint = "https://internal-api.example.com"
     }
   })
 }
 
-# Parameter Store for additional credential discovery
 resource "aws_ssm_parameter" "data_role_hint" {
   name  = "/${var.lab_prefix}/config/data_processor_role"
   type  = "String"
