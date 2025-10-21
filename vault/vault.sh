@@ -341,8 +341,9 @@ cmd_outputs() {
     
     local lab_dir="$LABS_DIR/$lab"
     local state_path="$STATE_DIR/$lab"
+    local state_file="$state_path/terraform.tfstate"
     
-    if [ ! -f "$state_path/terraform.tfstate" ]; then
+    if [ ! -f "$state_file" ]; then
         log_error "No state file found. Lab may not be deployed."
         return 1
     fi
@@ -353,9 +354,9 @@ cmd_outputs() {
     
     if [ "$sensitive" == "true" ] || [ "$sensitive" == "--sensitive" ]; then
         log_warning "Showing sensitive values"
-        terraform output -json | jq -r 'to_entries[] | "\(.key): \(.value.value)"'
+        terraform output -state="$state_file" -json | jq -r 'to_entries[] | "\(.key): \(.value.value)"'
     else
-        terraform output
+        terraform output -state="$state_file"
         echo -e "\n${DIM}Use 'outputs --sensitive' to reveal sensitive values${NC}"
     fi
 }
