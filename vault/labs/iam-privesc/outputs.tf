@@ -25,7 +25,7 @@ output "aws_region" {
   value       = var.aws_region
 }
 
-output "setup_instructions" {
+output "lab_instructions" {
   description = "Instructions for configuring AWS CLI"
   value       = <<-EOT
 Configure your AWS CLI with these credentials:
