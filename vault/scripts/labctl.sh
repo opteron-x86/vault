@@ -6,6 +6,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 LABS_DIR="$PROJECT_ROOT/labs"
 STATE_DIR="$PROJECT_ROOT/.state"
 CONFIG_DIR="$PROJECT_ROOT/config"
+METADATA_DIR="$STATE_DIR/.metadata"
 
 COMMON_VARS="$CONFIG_DIR/common.tfvars"
 
@@ -13,32 +14,109 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
-print_header() {
-    echo -e "${BLUE}================================${NC}"
-    echo -e "${BLUE}  Cyber Threat Emulation Lab Manager${NC}"
-    echo -e "${BLUE}================================${NC}\n"
+CONTACT_EMAIL="caleb.n.cline.ctr@mail.mil"
+GITLAB_REPO="https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation"
+
+print_banner() {
+    cat << 'EOF'
+   ██████╗██████╗ ██╗   ██╗ ██████╗██╗██████╗ ██╗     ███████╗
+  ██╔════╝██╔══██╗██║   ██║██╔════╝██║██╔══██╗██║     ██╔════╝
+  ██║     ██████╔╝██║   ██║██║     ██║██████╔╝██║     █████╗  
+  ██║     ██╔══██╗██║   ██║██║     ██║██╔══██╗██║     ██╔══╝  
+  ╚██████╗██║  ██║╚██████╔╝╚██████╗██║██████╔╝███████╗███████╗
+   ╚═════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝╚═════╝ ╚══════╝╚══════╝
+EOF
+    echo -e "${DIM}  ═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${CYAN}         Cyber Threat Emulation Lab Framework${NC}"
+    echo -e "${DIM}  ───────────────────────────────────────────────────────────${NC}"
+    echo -e "${DIM}  Organization: ${NC}${BOLD}DISA Global - Cyber Threat Emulation${NC}"
+    echo -e "${DIM}  Contact:      ${NC}${CONTACT_EMAIL}"
+    echo -e "${DIM}  Repository:   ${NC}${GITLAB_REPO}"
+    echo -e "${DIM}  ═══════════════════════════════════════════════════════════${NC}\n"
+}
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+save_metadata() {
+    local lab=$1
+    local action=$2
+    local metadata_file="$METADATA_DIR/$lab.json"
+    
+    mkdir -p "$METADATA_DIR"
+    
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local user=$(whoami)
+    
+    cat > "$metadata_file" << EOF
+{
+  "lab_name": "$lab",
+  "last_action": "$action",
+  "timestamp": "$timestamp",
+  "deployed_by": "$user",
+  "aws_region": "$(grep aws_region $COMMON_VARS | cut -d'=' -f2 | tr -d ' "')"
+}
+EOF
+}
+
+load_metadata() {
+    local lab=$1
+    local metadata_file="$METADATA_DIR/$lab.json"
+    
+    if [ -f "$metadata_file" ]; then
+        cat "$metadata_file"
+    else
+        echo "{}"
+    fi
 }
 
 list_labs() {
-    echo -e "${GREEN}Available Labs:${NC}\n"
+    echo -e "${BOLD}${GREEN}Available Labs:${NC}\n"
     local index=1
     for lab in "$LABS_DIR"/*; do
         if [ -d "$lab" ]; then
             local lab_name=$(basename "$lab")
             local readme="$lab/README.md"
             local difficulty="Unknown"
+            local description=""
             
             if [ -f "$readme" ]; then
                 difficulty=$(grep -i "Difficulty:" "$readme" | head -1 | cut -d: -f2 | xargs || echo "Unknown")
+                description=$(grep -i "Description:" "$readme" | head -1 | cut -d: -f2- | xargs || echo "")
             fi
             
-            echo -e "  ${YELLOW}[$index]${NC} $lab_name ${BLUE}($difficulty)${NC}"
+            local deployed=""
+            if [ -f "$STATE_DIR/$lab_name/terraform.tfstate" ]; then
+                deployed="${GREEN}[DEPLOYED]${NC} "
+            fi
+            
+            echo -e "  ${YELLOW}[$index]${NC} ${BOLD}$lab_name${NC} ${deployed}${CYAN}($difficulty)${NC}"
+            if [ -n "$description" ]; then
+                echo -e "      ${DIM}$description${NC}"
+            fi
+            echo ""
             ((index++))
         fi
     done
-    echo ""
 }
 
 select_lab() {
@@ -50,49 +128,67 @@ select_lab() {
     done
 
     if [ ${#labs[@]} -eq 0 ]; then
-        echo -e "${RED}Error: No labs found in $LABS_DIR${NC}"
+        log_error "No labs found in $LABS_DIR"
         exit 1
     fi
 
-    read -p "Select lab number (or 'q' to quit): " selection
+    read -p "$(echo -e ${CYAN}Select lab number or name${NC} [q to quit]: )" selection
 
     if [[ "$selection" == "q" ]]; then
         echo "Exiting..."
         exit 0
     fi
 
-    if ! [[ "$selection" =~ ^[0-9]+$ ]] || [ "$selection" -lt 1 ] || [ "$selection" -gt ${#labs[@]} ]; then
-        echo -e "${RED}Invalid selection${NC}"
-        exit 1
+    if [[ "$selection" =~ ^[0-9]+$ ]]; then
+        if [ "$selection" -lt 1 ] || [ "$selection" -gt ${#labs[@]} ]; then
+            log_error "Invalid selection"
+            exit 1
+        fi
+        echo "${labs[$((selection-1))]}"
+    else
+        if [[ " ${labs[@]} " =~ " ${selection} " ]]; then
+            echo "$selection"
+        else
+            log_error "Lab not found: $selection"
+            exit 1
+        fi
     fi
-
-    echo "${labs[$((selection-1))]}"
 }
 
 check_prerequisites() {
     local lab=$1
     local lab_dir="$LABS_DIR/$lab"
 
+    if ! command -v terraform &> /dev/null; then
+        log_error "Terraform not found. Please install Terraform."
+        exit 1
+    fi
+
+    if ! command -v aws &> /dev/null; then
+        log_warning "AWS CLI not found. Some features may not work."
+    fi
+
     if [ ! -f "$COMMON_VARS" ]; then
-        echo -e "${YELLOW}Warning: Common variables file not found at $COMMON_VARS${NC}"
-        echo "Creating template..."
+        log_warning "Common variables file not found at $COMMON_VARS"
+        log_info "Creating template..."
         mkdir -p "$CONFIG_DIR"
         cat > "$COMMON_VARS" << 'EOF'
 aws_region = "us-gov-east-1"
 allowed_source_ips = ["YOUR_IP/32"]
 EOF
-        echo -e "${RED}Please edit $COMMON_VARS with your IP address before continuing${NC}"
+        log_error "Please edit $COMMON_VARS with your IP address before continuing"
         exit 1
     fi
 
     local ip_check=$(grep "YOUR_IP" "$COMMON_VARS" || true)
     if [ -n "$ip_check" ]; then
-        echo -e "${RED}Error: Please update YOUR_IP in $COMMON_VARS${NC}"
+        log_error "Please update YOUR_IP in $COMMON_VARS"
         exit 1
     fi
 
-    if [ ! -f "$lab_dir/terraform.tfvars.example" ] && [ ! -f "$lab_dir/terraform.tfvars" ]; then
-        echo -e "${YELLOW}No terraform.tfvars found. Proceeding with common variables only.${NC}"
+    if [ ! -d "$lab_dir" ]; then
+        log_error "Lab directory not found: $lab_dir"
+        exit 1
     fi
 }
 
@@ -101,17 +197,16 @@ init_lab() {
     local lab_dir="$LABS_DIR/$lab"
     local state_path="$STATE_DIR/$lab"
 
-    echo -e "\n${GREEN}Initializing lab: $lab${NC}\n"
+    log_info "Initializing lab: ${BOLD}$lab${NC}"
 
     mkdir -p "$state_path"
-
     cd "$lab_dir"
 
     terraform init \
         -backend-config="path=$state_path/terraform.tfstate" \
-        -reconfigure
+        -reconfigure > /dev/null 2>&1
 
-    echo -e "\n${GREEN}Lab initialized successfully${NC}"
+    log_success "Lab initialized"
 }
 
 plan_lab() {
@@ -125,17 +220,18 @@ plan_lab() {
     if [ -f "terraform.tfvars" ]; then
         var_files="$var_files -var-file=terraform.tfvars"
     elif [ -f "terraform.tfvars.example" ]; then
-        echo -e "${YELLOW}Note: Using terraform.tfvars.example. Consider copying to terraform.tfvars for customization.${NC}"
+        log_warning "Using terraform.tfvars.example. Consider creating terraform.tfvars"
         var_files="$var_files -var-file=terraform.tfvars.example"
     fi
 
-    echo -e "\n${GREEN}Planning deployment...${NC}\n"
+    echo -e "\n${BOLD}${CYAN}Deployment Plan:${NC}\n"
     terraform plan $var_files
 }
 
 apply_lab() {
     local lab=$1
     local lab_dir="$LABS_DIR/$lab"
+    local dry_run=${2:-false}
 
     cd "$lab_dir"
 
@@ -147,21 +243,34 @@ apply_lab() {
         var_files="$var_files -var-file=terraform.tfvars.example"
     fi
 
-    echo -e "\n${GREEN}Deploying lab: $lab${NC}\n"
+    if [ "$dry_run" = true ]; then
+        log_info "Dry run mode - showing plan only"
+        terraform plan $var_files
+        return
+    fi
+
+    log_info "Deploying lab: ${BOLD}$lab${NC}"
+    echo -e "${DIM}This may take several minutes...${NC}\n"
+    
     terraform apply $var_files -auto-approve
 
-    echo -e "\n${GREEN}Lab deployed successfully!${NC}\n"
-    echo -e "${BLUE}Lab Outputs:${NC}"
+    save_metadata "$lab" "deployed"
+    
+    log_success "Lab deployed successfully"
+    echo -e "\n${BOLD}${CYAN}Lab Access Information:${NC}"
     terraform output
+    
+    echo -e "\n${YELLOW}Note:${NC} Instance will auto-shutdown in 4 hours"
 }
 
 destroy_lab() {
     local lab=$1
     local lab_dir="$LABS_DIR/$lab"
     local state_path="$STATE_DIR/$lab"
+    local force=${2:-false}
 
     if [ ! -d "$state_path" ] || [ ! -f "$state_path/terraform.tfstate" ]; then
-        echo -e "${YELLOW}No active deployment found for lab: $lab${NC}"
+        log_warning "No active deployment found for lab: $lab"
         exit 0
     fi
 
@@ -175,76 +284,162 @@ destroy_lab() {
         var_files="$var_files -var-file=terraform.tfvars.example"
     fi
 
-    echo -e "\n${RED}Destroying lab: $lab${NC}\n"
-    read -p "Are you sure you want to destroy this lab? (yes/no): " confirm
+    if [ "$force" = false ]; then
+        echo -e "\n${RED}${BOLD}WARNING:${NC} ${RED}This will destroy all resources for lab: $lab${NC}\n"
+        read -p "$(echo -e ${YELLOW}Type lab name to confirm:${NC} )" confirm
 
-    if [ "$confirm" != "yes" ]; then
-        echo "Destruction cancelled"
-        exit 0
+        if [ "$confirm" != "$lab" ]; then
+            log_info "Destruction cancelled"
+            exit 0
+        fi
     fi
 
+    log_info "Destroying lab: ${BOLD}$lab${NC}"
     terraform destroy $var_files -auto-approve
 
-    echo -e "\n${GREEN}Lab destroyed successfully${NC}"
+    save_metadata "$lab" "destroyed"
+    log_success "Lab destroyed successfully"
 }
 
 show_outputs() {
     local lab=$1
     local lab_dir="$LABS_DIR/$lab"
     local state_path="$STATE_DIR/$lab"
+    local show_sensitive=${2:-false}
 
     if [ ! -f "$state_path/terraform.tfstate" ]; then
-        echo -e "${RED}No state file found. Lab may not be deployed.${NC}"
+        log_error "No state file found. Lab may not be deployed."
         exit 1
     fi
 
     cd "$lab_dir"
-    echo -e "\n${BLUE}Current Lab Outputs:${NC}\n"
-    terraform output
+    
+    echo -e "\n${BOLD}${CYAN}Lab Outputs: ${NC}${BOLD}$lab${NC}\n"
+    
+    if [ "$show_sensitive" = true ]; then
+        log_warning "Showing sensitive values"
+        terraform output -json | jq -r 'to_entries[] | "\(.key): \(.value.value)"'
+    else
+        terraform output
+        echo -e "\n${DIM}Use --sensitive flag to reveal sensitive outputs${NC}"
+    fi
+}
+
+show_status() {
+    local lab=$1
+    local lab_dir="$LABS_DIR/$lab"
+    local state_path="$STATE_DIR/$lab"
+
+    echo -e "\n${BOLD}${CYAN}Lab Status: ${NC}${BOLD}$lab${NC}\n"
+
+    if [ ! -f "$state_path/terraform.tfstate" ]; then
+        echo -e "${YELLOW}Status:${NC} Not deployed"
+        return
+    fi
+
+    cd "$lab_dir"
+
+    local resources=$(terraform state list 2>/dev/null | wc -l || echo "0")
+    local metadata=$(load_metadata "$lab")
+    
+    echo -e "${GREEN}Status:${NC} Deployed"
+    echo -e "${CYAN}Resources:${NC} $resources"
+    
+    if [ "$metadata" != "{}" ]; then
+        echo -e "${CYAN}Deployed by:${NC} $(echo $metadata | jq -r '.deployed_by')"
+        echo -e "${CYAN}Deployed at:${NC} $(echo $metadata | jq -r '.timestamp')"
+        echo -e "${CYAN}Region:${NC} $(echo $metadata | jq -r '.aws_region')"
+    fi
+    
+    echo -e "\n${BOLD}Key Resources:${NC}"
+    terraform state list 2>/dev/null | grep -E "(instance|bucket|role)" | sed 's/^/  • /'
 }
 
 list_active() {
-    echo -e "\n${GREEN}Active Deployments:${NC}\n"
+    echo -e "\n${BOLD}${GREEN}Active Deployments:${NC}\n"
+    
     if [ ! -d "$STATE_DIR" ]; then
-        echo "None"
+        echo -e "${DIM}None${NC}"
         return
+    fi
+
+    local found=0
+    for state in "$STATE_DIR"/*; do
+        if [ -d "$state" ] && [ -f "$state/terraform.tfstate" ]; then
+            local lab_name=$(basename "$state")
+            local metadata=$(load_metadata "$lab_name")
+            local resources=$(grep -o '"resources":' "$state/terraform.tfstate" | wc -l || echo "0")
+            local deployed_at=$(echo $metadata | jq -r '.timestamp' 2>/dev/null || echo "Unknown")
+            
+            echo -e "  ${YELLOW}•${NC} ${BOLD}$lab_name${NC}"
+            echo -e "    ${DIM}Resources: $resources | Deployed: $deployed_at${NC}"
+            found=1
+        fi
+    done
+    
+    if [ $found -eq 0 ]; then
+        echo -e "${DIM}None${NC}"
+    fi
+    echo ""
+}
+
+destroy_all() {
+    log_warning "This will destroy ALL deployed labs"
+    read -p "$(echo -e ${RED}Type 'destroy all labs' to confirm:${NC} )" confirm
+
+    if [ "$confirm" != "destroy all labs" ]; then
+        log_info "Cancelled"
+        exit 0
     fi
 
     for state in "$STATE_DIR"/*; do
         if [ -d "$state" ] && [ -f "$state/terraform.tfstate" ]; then
             local lab_name=$(basename "$state")
-            local resources=$(grep -o '"resources":' "$state/terraform.tfstate" | wc -l || echo "0")
-            echo -e "  ${YELLOW}•${NC} $lab_name ${BLUE}($resources resources)${NC}"
+            log_info "Destroying $lab_name..."
+            destroy_lab "$lab_name" true
         fi
     done
-    echo ""
+
+    log_success "All labs destroyed"
 }
 
 usage() {
     cat << EOF
-Usage: $0 <command> [lab-name]
+${BOLD}Usage:${NC} $0 <command> [options] [lab-name]
 
-Commands:
-    deploy      Deploy a lab (interactive if no lab specified)
-    destroy     Destroy a deployed lab
-    plan        Show deployment plan
-    outputs     Show outputs for deployed lab
-    list        List all available labs
-    active      List active deployments
-    help        Show this help message
+${BOLD}Commands:${NC}
+  ${GREEN}deploy${NC}      Deploy a lab (interactive if no lab specified)
+              Options: --dry-run (plan only)
+  ${RED}destroy${NC}     Destroy a deployed lab
+              Options: --all (destroy all labs)
+  ${CYAN}plan${NC}        Show deployment plan without applying
+  ${BLUE}outputs${NC}     Show outputs for deployed lab
+              Options: --sensitive (show sensitive values)
+  ${MAGENTA}status${NC}      Show detailed status of a lab
+  ${YELLOW}list${NC}        List all available labs
+  ${YELLOW}active${NC}      List active deployments
+  ${GREEN}help${NC}        Show this help message
 
-Examples:
-    $0 deploy
-    $0 deploy ssrf-metadata
-    $0 destroy iam-privesc
-    $0 outputs ssrf-metadata
-    $0 list
-    $0 active
+${BOLD}Examples:${NC}
+  $0 deploy
+  $0 deploy ssrf-metadata
+  $0 deploy --dry-run iam-privesc
+  $0 destroy iam-privesc
+  $0 destroy --all
+  $0 outputs ssrf-metadata
+  $0 outputs --sensitive ssrf-metadata
+  $0 status ssrf-metadata
+  $0 list
+  $0 active
+
+${BOLD}Global Options:${NC}
+  --help, -h    Show this help message
+  --version     Show version information
 EOF
 }
 
 main() {
-    print_header
+    print_banner
 
     if [ $# -eq 0 ]; then
         usage
@@ -252,7 +447,37 @@ main() {
     fi
 
     local command=$1
-    local lab_name=${2:-""}
+    shift
+
+    local lab_name=""
+    local sensitive=false
+    local dry_run=false
+    local force=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --sensitive)
+                sensitive=true
+                shift
+                ;;
+            --dry-run)
+                dry_run=true
+                shift
+                ;;
+            --all)
+                force=true
+                shift
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                lab_name=$1
+                shift
+                ;;
+        esac
+    done
 
     case $command in
         deploy)
@@ -263,17 +488,27 @@ main() {
             check_prerequisites "$lab_name"
             init_lab "$lab_name"
             plan_lab "$lab_name"
-            read -p "Proceed with deployment? (yes/no): " proceed
-            if [ "$proceed" == "yes" ]; then
-                apply_lab "$lab_name"
+            
+            if [ "$dry_run" = false ]; then
+                echo ""
+                read -p "$(echo -e ${GREEN}Proceed with deployment?${NC} [yes/no]: )" proceed
+                if [ "$proceed" == "yes" ]; then
+                    apply_lab "$lab_name"
+                else
+                    log_info "Deployment cancelled"
+                fi
             fi
             ;;
         destroy)
-            if [ -z "$lab_name" ]; then
-                list_active
-                read -p "Enter lab name to destroy: " lab_name
+            if [ "$force" = true ]; then
+                destroy_all
+            else
+                if [ -z "$lab_name" ]; then
+                    list_active
+                    read -p "$(echo -e ${RED}Enter lab name to destroy:${NC} )" lab_name
+                fi
+                destroy_lab "$lab_name"
             fi
-            destroy_lab "$lab_name"
             ;;
         plan)
             if [ -z "$lab_name" ]; then
@@ -287,9 +522,16 @@ main() {
         outputs)
             if [ -z "$lab_name" ]; then
                 list_active
-                read -p "Enter lab name: " lab_name
+                read -p "$(echo -e ${CYAN}Enter lab name:${NC} )" lab_name
             fi
-            show_outputs "$lab_name"
+            show_outputs "$lab_name" "$sensitive"
+            ;;
+        status)
+            if [ -z "$lab_name" ]; then
+                list_active
+                read -p "$(echo -e ${CYAN}Enter lab name:${NC} )" lab_name
+            fi
+            show_status "$lab_name"
             ;;
         list)
             list_labs
@@ -297,11 +539,15 @@ main() {
         active)
             list_active
             ;;
+        --version)
+            echo "CRUCIBLE Lab Framework v1.0.0"
+            ;;
         help|--help|-h)
             usage
             ;;
         *)
-            echo -e "${RED}Unknown command: $command${NC}\n"
+            log_error "Unknown command: $command"
+            echo ""
             usage
             exit 1
             ;;
