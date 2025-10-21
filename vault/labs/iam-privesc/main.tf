@@ -166,35 +166,6 @@ resource "aws_s3_bucket_public_access_block" "protected_data" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_policy" "protected_data" {
-  bucket = aws_s3_bucket.protected_data.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "DenyUnauthorizedAccess"
-        Effect = "Deny"
-        Principal = "*"
-        Action = "s3:*"
-        Resource = [
-          aws_s3_bucket.protected_data.arn,
-          "${aws_s3_bucket.protected_data.arn}/*"
-        ]
-        Condition = {
-          StringNotLike = {
-            "aws:PrincipalArn" = [
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:user/${var.lab_prefix}-*-admin-*",
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:role/${var.lab_prefix}-*-admin-*",
-              "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root"
-            ]
-          }
-        }
-      }
-    ]
-  })
-}
-
 resource "aws_s3_object" "financial_records" {
   bucket  = aws_s3_bucket.protected_data.id
   key     = "financial/q4-2024-revenue.csv"
