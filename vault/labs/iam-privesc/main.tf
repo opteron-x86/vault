@@ -81,7 +81,7 @@ resource "aws_iam_user_policy" "developer_base" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Resource = "arn:aws-us-gov:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.lab_prefix}/*"
+        Resource = "*"
       },
       {
         Sid    = "S3ListBuckets"
@@ -280,4 +280,18 @@ resource "aws_ssm_parameter" "security_note" {
   tags = merge(local.common_tags, {
     Purpose = "Security team notes"
   })
+}
+
+module "audit_logging" {
+  source = "../../modules/audit-logging"
+  
+  name_prefix = var.lab_prefix
+  suffix      = random_string.suffix.result
+  
+  data_resources = [{
+    type   = "AWS::S3::Object"
+    values = ["${aws_s3_bucket.protected_data.arn}/*"]
+  }]
+  
+  tags = local.common_tags
 }
