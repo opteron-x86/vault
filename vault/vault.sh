@@ -1,12 +1,11 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LABS_DIR="$PROJECT_ROOT/labs"
 STATE_DIR="$PROJECT_ROOT/.state"
 CONFIG_DIR="$PROJECT_ROOT/config"
 METADATA_DIR="$STATE_DIR/.metadata"
-HISTORY_FILE="$STATE_DIR/.crucible_history"
+HISTORY_FILE="$STATE_DIR/.vault_history"
 
 COMMON_VARS="$CONFIG_DIR/common.tfvars"
 
@@ -20,8 +19,8 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-CONTACT_EMAIL="your.email@disa.mil"
-GITLAB_REPO="https://gitlab.your-domain.mil/cte/cloud-security-labs"
+CONTACT_EMAIL="caleb.n.cline.ctr@mail.mil"
+GITLAB_REPO="https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation"
 
 CURRENT_LAB=""
 INTERACTIVE_MODE=true
@@ -29,28 +28,28 @@ INTERACTIVE_MODE=true
 print_banner() {
     clear
     cat << 'EOF'
-   ██████╗██████╗ ██╗   ██╗ ██████╗██╗██████╗ ██╗     ███████╗
-  ██╔════╝██╔══██╗██║   ██║██╔════╝██║██╔══██╗██║     ██╔════╝
-  ██║     ██████╔╝██║   ██║██║     ██║██████╔╝██║     █████╗  
-  ██║     ██╔══██╗██║   ██║██║     ██║██╔══██╗██║     ██╔══╝  
-  ╚██████╗██║  ██║╚██████╔╝╚██████╗██║██████╔╝███████╗███████╗
-   ╚═════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝╚═════╝ ╚══════╝╚══════╝
+  ██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗    ██████╗ ███████╗
+  ██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝    ╚════██╗██╔════╝
+  ██║   ██║███████║██║   ██║██║     ██║        █████╔╝███████╗
+  ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║        ╚═══██╗╚════██║
+   ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║       ██████╔╝███████║
+    ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝       ╚═════╝ ╚══════╝
 EOF
-    echo -e "${DIM}  ═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}         Cyber Threat Emulation Lab Framework${NC}"
-    echo -e "${DIM}  ───────────────────────────────────────────────────────────${NC}"
-    echo -e "${DIM}  Organization: ${NC}${BOLD}DISA Global - Cyber Threat Emulation${NC}"
+    echo -e "${DIM}  ═══════════════════════════════════════════════════════${NC}"
+    echo -e "${CYAN}    Vulnerability Analysis Universal Lab Terminal${NC}"
+    echo -e "${DIM}  ───────────────────────────────────────────────────────${NC}"
+    echo -e "${DIM}  Organization: ${NC}${BOLD}DG35 - Cyber Threat Emulation${NC}"
     echo -e "${DIM}  Contact:      ${NC}${CONTACT_EMAIL}"
     echo -e "${DIM}  Repository:   ${NC}${GITLAB_REPO}"
-    echo -e "${DIM}  ═══════════════════════════════════════════════════════════${NC}\n"
-    echo -e "${DIM}  Type ${NC}${BOLD}help${NC}${DIM} for available commands or ${NC}${BOLD}exit${NC}${DIM} to quit${NC}\n"
+    echo -e "${DIM}  ═══════════════════════════════════════════════════════${NC}\n"
+    echo -e "${DIM}  Type ${NC}${BOLD}help${NC}${DIM} for commands or ${NC}${BOLD}exit${NC}${DIM} to quit${NC}\n"
 }
 
 get_prompt() {
     if [ -n "$CURRENT_LAB" ]; then
-        echo -e "${RED}crucible${NC}${DIM}(${NC}${YELLOW}$CURRENT_LAB${NC}${DIM})${NC} ${BOLD}>${NC} "
+        echo -e "${RED}vault${NC}${DIM}(${NC}${YELLOW}$CURRENT_LAB${NC}${DIM})${NC} ${BOLD}>${NC} "
     else
-        echo -e "${RED}crucible${NC} ${BOLD}>${NC} "
+        echo -e "${RED}vault${NC} ${BOLD}>${NC} "
     fi
 }
 
@@ -425,7 +424,7 @@ Navigation
   back                 Deselect current lab
   clear                Clear the screen
   help                 Show this help message
-  exit/quit            Exit CRUCIBLE
+  exit/quit            Exit VAULT
 
 Tips
 ====
@@ -489,7 +488,7 @@ process_command() {
             cmd_help
             ;;
         exit|quit|q)
-            echo -e "\n${CYAN}Exiting CRUCIBLE...${NC}\n"
+            echo -e "\n${CYAN}Exiting VAULT...${NC}\n"
             exit 0
             ;;
         "")
