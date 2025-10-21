@@ -343,9 +343,20 @@ cmd_outputs() {
     local state_path="$STATE_DIR/$lab"
     local state_file="$state_path/terraform.tfstate"
     
+    # Debug output
     if [ ! -f "$state_file" ]; then
-        log_error "No state file found. Lab may not be deployed."
-        return 1
+        log_error "No state file found at: $state_file"
+        log_info "Checking alternate locations..."
+        
+        # Check if state exists in vault subdirectory
+        local alt_state_file="$PROJECT_ROOT/vault/.state/$lab/terraform.tfstate"
+        if [ -f "$alt_state_file" ]; then
+            log_warning "Found state in vault subdirectory, using: $alt_state_file"
+            state_file="$alt_state_file"
+        else
+            log_error "Lab may not be deployed or state file is in unexpected location."
+            return 1
+        fi
     fi
     
     cd "$lab_dir"
@@ -360,6 +371,7 @@ cmd_outputs() {
         echo -e "\n${DIM}Use 'outputs --sensitive' to reveal sensitive values${NC}"
     fi
 }
+
 
 cmd_status() {
     local lab=${1:-$CURRENT_LAB}
