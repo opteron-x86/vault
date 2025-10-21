@@ -167,11 +167,30 @@ cmd_list() {
 }
 
 cmd_use() {
-    local lab=$1
+    local input=$1
+    local lab=""
     
-    if [ -z "$lab" ]; then
-        log_error "Usage: use <lab-name>"
+    if [ -z "$input" ]; then
+        log_error "Usage: use <lab-name|lab-number>"
         return 1
+    fi
+    
+    if [[ "$input" =~ ^[0-9]+$ ]]; then
+        local labs=()
+        for lab_dir in "$LABS_DIR"/*; do
+            if [ -d "$lab_dir" ]; then
+                labs+=("$(basename "$lab_dir")")
+            fi
+        done
+        
+        if [ "$input" -lt 1 ] || [ "$input" -gt ${#labs[@]} ]; then
+            log_error "Invalid lab number: $input (valid range: 1-${#labs[@]})"
+            return 1
+        fi
+        
+        lab="${labs[$((input-1))]}"
+    else
+        lab="$input"
     fi
     
     if [ ! -d "$LABS_DIR/$lab" ]; then
