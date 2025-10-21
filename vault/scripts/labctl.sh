@@ -20,8 +20,8 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-CONTACT_EMAIL="caleb.n.cline.ctr@mail.mil"
-GITLAB_REPO="https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation"
+CONTACT_EMAIL="your.email@disa.mil"
+GITLAB_REPO="https://gitlab.your-domain.mil/cte/cloud-security-labs"
 
 print_banner() {
     cat << 'EOF'
@@ -404,38 +404,36 @@ destroy_all() {
 }
 
 usage() {
-    cat << EOF
-${BOLD}Usage:${NC} $0 <command> [options] [lab-name]
-
-${BOLD}Commands:${NC}
-  ${GREEN}deploy${NC}      Deploy a lab (interactive if no lab specified)
-              Options: --dry-run (plan only)
-  ${RED}destroy${NC}     Destroy a deployed lab
-              Options: --all (destroy all labs)
-  ${CYAN}plan${NC}        Show deployment plan without applying
-  ${BLUE}outputs${NC}     Show outputs for deployed lab
-              Options: --sensitive (show sensitive values)
-  ${MAGENTA}status${NC}      Show detailed status of a lab
-  ${YELLOW}list${NC}        List all available labs
-  ${YELLOW}active${NC}      List active deployments
-  ${GREEN}help${NC}        Show this help message
-
-${BOLD}Examples:${NC}
-  $0 deploy
-  $0 deploy ssrf-metadata
-  $0 deploy --dry-run iam-privesc
-  $0 destroy iam-privesc
-  $0 destroy --all
-  $0 outputs ssrf-metadata
-  $0 outputs --sensitive ssrf-metadata
-  $0 status ssrf-metadata
-  $0 list
-  $0 active
-
-${BOLD}Global Options:${NC}
-  --help, -h    Show this help message
-  --version     Show version information
-EOF
+    echo -e "${BOLD}Usage:${NC} $0 <command> [options] [lab-name]"
+    echo ""
+    echo -e "${BOLD}Commands:${NC}"
+    echo -e "  ${GREEN}deploy${NC}      Deploy a lab (interactive if no lab specified)"
+    echo -e "              Options: --dry-run (plan only)"
+    echo -e "  ${RED}destroy${NC}     Destroy a deployed lab"
+    echo -e "              Options: --all (destroy all labs)"
+    echo -e "  ${CYAN}plan${NC}        Show deployment plan without applying"
+    echo -e "  ${BLUE}outputs${NC}     Show outputs for deployed lab"
+    echo -e "              Options: --sensitive (show sensitive values)"
+    echo -e "  ${MAGENTA}status${NC}      Show detailed status of a lab"
+    echo -e "  ${YELLOW}list${NC}        List all available labs"
+    echo -e "  ${YELLOW}active${NC}      List active deployments"
+    echo -e "  ${GREEN}help${NC}        Show this help message"
+    echo ""
+    echo -e "${BOLD}Examples:${NC}"
+    echo "  $0 deploy"
+    echo "  $0 deploy ssrf-metadata"
+    echo "  $0 deploy --dry-run iam-privesc"
+    echo "  $0 destroy iam-privesc"
+    echo "  $0 destroy --all"
+    echo "  $0 outputs ssrf-metadata"
+    echo "  $0 outputs --sensitive ssrf-metadata"
+    echo "  $0 status ssrf-metadata"
+    echo "  $0 list"
+    echo "  $0 active"
+    echo ""
+    echo -e "${BOLD}Global Options:${NC}"
+    echo "  --help, -h    Show this help message"
+    echo "  --version     Show version information"
 }
 
 main() {
