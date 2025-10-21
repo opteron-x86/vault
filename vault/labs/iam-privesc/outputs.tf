@@ -27,6 +27,7 @@ output "aws_region" {
 
 output "lab_instructions" {
   description = "Instructions for configuring AWS CLI"
+  sensitive = true
   value       = <<-EOT
 Configure your AWS CLI with these credentials:
 
