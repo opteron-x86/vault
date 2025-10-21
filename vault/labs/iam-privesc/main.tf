@@ -2,7 +2,6 @@
 # Attack Chain: Limited IAM User → Self-Modify Discovery → Policy Attachment → S3 Access
 # Difficulty: Easy-Medium
 # Estimated Time: 30-45 minutes
-# Cost: < $1/day (S3 storage only)
 
 terraform {
   required_version = ">= 1.0"
