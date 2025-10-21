@@ -147,7 +147,7 @@ cmd_list() {
             local description=""
             
             if [ -f "$readme" ]; then
-                difficulty=$(grep -i "Difficulty:" "$readme" | head -1 | cut -d: -f2 | xargs 2>/dev/null || echo "Unknown")
+                difficulty=$(grep -i "Difficulty:" "$readme" | head -1 | cut -d: -f2 | sed 's/\*\*//g' | xargs 2>/dev/null || echo "Unknown")
                 description=$(grep -i "Description:" "$readme" | head -1 | cut -d: -f2- | xargs 2>/dev/null || echo "")
             fi
             
@@ -217,16 +217,18 @@ cmd_info() {
         return 1
     fi
     
-    echo -e "\n${BOLD}${CYAN}Lab Information: ${NC}${BOLD}$lab${NC}\n"
+    clear
+    echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${CYAN}  Lab: ${NC}${BOLD}$lab${NC}"
+    echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════${NC}\n"
     
     if command -v bat &> /dev/null; then
-        bat --style=plain --color=always "$readme"
-    elif command -v pygmentize &> /dev/null; then
-        pygmentize -l markdown "$readme"
+        bat --style=plain --color=always --paging=never "$readme" | less -R
+    elif command -v glow &> /dev/null; then
+        glow -p "$readme"
     else
-        cat "$readme"
+        less "$readme"
     fi
-    echo ""
 }
 
 cmd_deploy() {
