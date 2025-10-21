@@ -285,6 +285,7 @@ cmd_deploy() {
     echo -e "\n${YELLOW}Note:${NC} Instance will auto-shutdown in 4 hours"
 }
 
+
 cmd_destroy() {
     local lab=${1:-$CURRENT_LAB}
     
@@ -323,6 +324,13 @@ cmd_destroy() {
     terraform destroy $var_files -auto-approve
     
     save_metadata "$lab" "destroyed"
+    
+    local remaining_resources=$(jq -r '.resources | length' "$state_path/terraform.tfstate" 2>/dev/null || echo "0")
+    if [ "$remaining_resources" -eq 0 ]; then
+        log_info "Cleaning up empty state file..."
+        rm -rf "$state_path"
+    fi
+    
     log_success "Lab destroyed successfully"
     
     if [ "$CURRENT_LAB" == "$lab" ]; then
@@ -398,7 +406,13 @@ cmd_status() {
     
     cd "$lab_dir"
     
-    local resources=$(terraform state list 2>/dev/null | wc -l || echo "0")
+    local resources=$(jq -r '.resources | length' "$state_path/terraform.tfstate" 2>/dev/null || echo "0")
+    
+    if [ "$resources" -eq 0 ]; then
+        echo -e "${YELLOW}Status:${NC} Not deployed (empty state)"
+        return 0
+    fi
+    
     local metadata=$(load_metadata "$lab")
     
     echo -e "${GREEN}Status:${NC} Deployed"
@@ -411,7 +425,7 @@ cmd_status() {
     fi
     
     echo -e "\n${BOLD}Key Resources:${NC}"
-    terraform state list 2>/dev/null | grep -E "(instance|bucket|role)" | sed 's/^/  • /' || echo "  ${DIM}No resources found${NC}"
+    terraform state list 2>/dev/null | grep -E "(instance|bucket|role|user)" | sed 's/^/  • /' || echo "  ${DIM}No resources found${NC}"
     echo ""
 }
 
@@ -427,13 +441,16 @@ cmd_active() {
     for state in "$STATE_DIR"/*; do
         if [ -d "$state" ] && [ -f "$state/terraform.tfstate" ]; then
             local lab_name=$(basename "$state")
-            local metadata=$(load_metadata "$lab_name")
-            local resources=$(grep -o '"resources":' "$state/terraform.tfstate" | wc -l 2>/dev/null || echo "0")
-            local deployed_at=$(echo $metadata | jq -r '.timestamp' 2>/dev/null || echo "Unknown")
+            local resources=$(jq -r '.resources | length' "$state/terraform.tfstate" 2>/dev/null || echo "0")
             
-            echo -e "  ${YELLOW}•${NC} ${BOLD}$lab_name${NC}"
-            echo -e "    ${DIM}Resources: $resources | Deployed: $deployed_at${NC}"
-            found=1
+            if [ "$resources" -gt 0 ]; then
+                local metadata=$(load_metadata "$lab_name")
+                local deployed_at=$(echo $metadata | jq -r '.timestamp' 2>/dev/null || echo "Unknown")
+                
+                echo -e "  ${YELLOW}•${NC} ${BOLD}$lab_name${NC}"
+                echo -e "    ${DIM}Resources: $resources | Deployed: $deployed_at${NC}"
+                found=1
+            fi
         fi
     done
     
