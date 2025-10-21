@@ -330,9 +330,27 @@ cmd_destroy() {
     fi
 }
 
+
 cmd_outputs() {
-    local lab=${1:-$CURRENT_LAB}
-    local sensitive=${2:-false}
+    local lab=""
+    local sensitive=false
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --sensitive)
+                sensitive=true
+                shift
+                ;;
+            *)
+                lab=$1
+                shift
+                ;;
+        esac
+    done
+    
+    if [ -z "$lab" ]; then
+        lab=$CURRENT_LAB
+    fi
     
     if [ -z "$lab" ]; then
         log_error "No lab selected. Use: outputs <lab-name> or use <lab-name> first"
@@ -341,37 +359,24 @@ cmd_outputs() {
     
     local lab_dir="$LABS_DIR/$lab"
     local state_path="$STATE_DIR/$lab"
-    local state_file="$state_path/terraform.tfstate"
     
-    # Debug output
-    if [ ! -f "$state_file" ]; then
-        log_error "No state file found at: $state_file"
-        log_info "Checking alternate locations..."
-        
-        # Check if state exists in vault subdirectory
-        local alt_state_file="$PROJECT_ROOT/vault/.state/$lab/terraform.tfstate"
-        if [ -f "$alt_state_file" ]; then
-            log_warning "Found state in vault subdirectory, using: $alt_state_file"
-            state_file="$alt_state_file"
-        else
-            log_error "Lab may not be deployed or state file is in unexpected location."
-            return 1
-        fi
+    if [ ! -f "$state_path/terraform.tfstate" ]; then
+        log_error "No state file found. Lab may not be deployed."
+        return 1
     fi
     
     cd "$lab_dir"
     
     echo -e "\n${BOLD}${CYAN}Lab Outputs: ${NC}${BOLD}$lab${NC}\n"
     
-    if [ "$sensitive" == "true" ] || [ "$sensitive" == "--sensitive" ]; then
+    if [ "$sensitive" = true ]; then
         log_warning "Showing sensitive values"
-        terraform output -state="$state_file" -json | jq -r 'to_entries[] | "\(.key): \(.value.value)"'
+        terraform output -json | jq -r 'to_entries[] | "\(.key): \(.value.value)"'
     else
-        terraform output -state="$state_file"
+        terraform output
         echo -e "\n${DIM}Use 'outputs --sensitive' to reveal sensitive values${NC}"
     fi
 }
-
 
 cmd_status() {
     local lab=${1:-$CURRENT_LAB}
