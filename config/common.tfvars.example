@@ -1,0 +1,15 @@
+# Common variables for all labs
+# Copy this file and update with your actual values
+
+aws_region = "us-gov-east-1"
+
+# Your public IP address(es) - get via: curl ifconfig.me
+allowed_source_ips = [
+  "1.2.3.4/32"  # Replace with your IP
+]
+
+# Optional: SSH key name if needed for EC2 labs
+# ssh_key_name = "your-key-name"
+
+# Lab resource prefix - useful if multiple people share an account
+# lab_prefix = "yourname-lab"
