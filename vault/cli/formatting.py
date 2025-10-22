@@ -23,7 +23,7 @@ def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
     
     console.print(banner, style="cyan bold")
     console.print(
-        "    Vulnerability Analysis Universal Lab Terminal",
+        "    Virtual Attack Utility Lab Terminal",
         style="cyan",
         justify="center"
     )

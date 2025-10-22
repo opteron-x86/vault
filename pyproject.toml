@@ -9,7 +9,7 @@ exclude = ["labs*", "config*", "modules*"]
 [project]
 name = "vault"
 version = "2.0.0"
-description = "Vulnerability Analysis Universal Lab Terminal"
+description = "Virtual Attack Utility Lab Terminal"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.1.7",

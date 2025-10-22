@@ -283,7 +283,7 @@ resource "aws_ssm_parameter" "security_note" {
 }
 
 module "audit_logging" {
-  source = "../../modules/audit-logging"
+  source = "../modules/audit-logging"
   
   name_prefix = var.lab_prefix
   suffix      = random_string.suffix.result
