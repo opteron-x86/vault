@@ -7,7 +7,11 @@ CONFIG_DIR="$PROJECT_ROOT/config"
 METADATA_DIR="$STATE_DIR/.metadata"
 HISTORY_FILE="$STATE_DIR/.vault_history"
 
-COMMON_VARS="$CONFIG_DIR/common.tfvars"
+declare -A CSP_CONFIGS=(
+    ["aws"]="$CONFIG_DIR/common-aws.tfvars"
+    ["azure"]="$CONFIG_DIR/common-azure.tfvars"
+    ["gcp"]="$CONFIG_DIR/common-gcp.tfvars"
+)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -69,30 +73,87 @@ log_error() {
     echo -e "${RED}[-]${NC} $1"
 }
 
+detect_csp() {
+    local lab_path=$1
+    if [[ "$lab_path" =~ /aws/ ]]; then
+        echo "aws"
+    elif [[ "$lab_path" =~ /azure/ ]]; then
+        echo "azure"
+    elif [[ "$lab_path" =~ /gcp/ ]]; then
+        echo "gcp"
+    else
+        echo "unknown"
+    fi
+}
+
+get_csp_config() {
+    local csp=$1
+    echo "${CSP_CONFIGS[$csp]}"
+}
+
+check_csp_tools() {
+    local csp=$1
+    case $csp in
+        aws)
+            if ! command -v aws &> /dev/null; then
+                log_warning "AWS CLI not found. Some features may not work."
+            fi
+            ;;
+        azure)
+            if ! command -v az &> /dev/null; then
+                log_warning "Azure CLI not found. Some features may not work."
+            fi
+            ;;
+        gcp)
+            if ! command -v gcloud &> /dev/null; then
+                log_warning "gcloud CLI not found. Some features may not work."
+            fi
+            ;;
+    esac
+}
+
 save_metadata() {
     local lab=$1
     local action=$2
-    local metadata_file="$METADATA_DIR/$lab.json"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local metadata_file="$METADATA_DIR/$state_key.json"
     
     mkdir -p "$METADATA_DIR"
     
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     local user=$(whoami)
+    local csp=$(detect_csp "$LABS_DIR/$lab")
+    local csp_config=$(get_csp_config "$csp")
+    
+    local region="unknown"
+    case $csp in
+        aws)
+            region=$(grep aws_region "$csp_config" 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo 'unknown')
+            ;;
+        azure)
+            region=$(grep azure_region "$csp_config" 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo 'unknown')
+            ;;
+        gcp)
+            region=$(grep gcp_region "$csp_config" 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo 'unknown')
+            ;;
+    esac
     
     cat > "$metadata_file" << EOF
 {
   "lab_name": "$lab",
+  "csp": "$csp",
   "last_action": "$action",
   "timestamp": "$timestamp",
   "deployed_by": "$user",
-  "aws_region": "$(grep aws_region $COMMON_VARS 2>/dev/null | cut -d'=' -f2 | tr -d ' "' || echo 'unknown')"
+  "region": "$region"
 }
 EOF
 }
 
 load_metadata() {
     local lab=$1
-    local metadata_file="$METADATA_DIR/$lab.json"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local metadata_file="$METADATA_DIR/$state_key.json"
     
     if [ -f "$metadata_file" ]; then
         cat "$metadata_file"
@@ -110,21 +171,60 @@ check_prerequisites() {
         return 1
     fi
 
-    if [ ! -f "$COMMON_VARS" ]; then
-        log_warning "Common variables file not found at $COMMON_VARS"
-        log_info "Creating template..."
-        mkdir -p "$CONFIG_DIR"
-        cat > "$COMMON_VARS" << 'VAREOF'
-aws_region = "us-gov-east-1"
-allowed_source_ips = ["YOUR_IP/32"]
-VAREOF
-        log_error "Please edit $COMMON_VARS with your IP address before continuing"
+    local csp=$(detect_csp "$lab_dir")
+    check_csp_tools "$csp"
+    
+    local csp_config=$(get_csp_config "$csp")
+    
+    if [ -z "$csp_config" ]; then
+        log_error "Unknown CSP for lab: $lab"
         return 1
     fi
-
-    local ip_check=$(grep "YOUR_IP" "$COMMON_VARS" || true)
-    if [ -n "$ip_check" ]; then
-        log_error "Please update YOUR_IP in $COMMON_VARS"
+    
+    if [ ! -f "$csp_config" ]; then
+        log_warning "Config file not found: $csp_config"
+        log_info "Creating template..."
+        mkdir -p "$CONFIG_DIR"
+        
+        case $csp in
+            aws)
+                cat > "$csp_config" << 'EOF'
+aws_region = "us-gov-east-1"
+allowed_source_ips = ["YOUR_IP/32"]
+EOF
+                ;;
+            azure)
+                cat > "$csp_config" << 'EOF'
+azure_region = "usgovvirginia"
+EOF
+                ;;
+            gcp)
+                cat > "$csp_config" << 'EOF'
+gcp_project = "YOUR_PROJECT_ID"
+gcp_region = "us-east4"
+EOF
+                ;;
+        esac
+        
+        log_error "Please edit $csp_config with required values"
+        return 1
+    fi
+    
+    local required_check=""
+    case $csp in
+        aws)
+            required_check=$(grep "YOUR_IP" "$csp_config" || true)
+            ;;
+        azure)
+            required_check=""
+            ;;
+        gcp)
+            required_check=$(grep "YOUR_PROJECT_ID" "$csp_config" || true)
+            ;;
+    esac
+    
+    if [ -n "$required_check" ]; then
+        log_error "Please update placeholder values in $csp_config"
         return 1
     fi
 
@@ -139,29 +239,42 @@ VAREOF
 cmd_list() {
     echo -e "\n${BOLD}${GREEN}Available Labs:${NC}\n"
     local index=1
-    for lab in "$LABS_DIR"/*; do
-        if [ -d "$lab" ]; then
-            local lab_name=$(basename "$lab")
-            local readme="$lab/README.md"
-            local difficulty="Unknown"
-            local description=""
+    
+    for csp_dir in "$LABS_DIR"/*; do
+        if [ -d "$csp_dir" ]; then
+            local csp=$(basename "$csp_dir")
+            echo -e "${BOLD}${MAGENTA}$csp${NC}"
             
-            if [ -f "$readme" ]; then
-                difficulty=$(grep -i "Difficulty:" "$readme" | head -1 | cut -d: -f2 | sed 's/\*\*//g' | xargs 2>/dev/null || echo "Unknown")
-                description=$(grep -i "Description:" "$readme" | head -1 | cut -d: -f2- | xargs 2>/dev/null || echo "")
-            fi
-            
-            local deployed=""
-            if [ -f "$STATE_DIR/$lab_name/terraform.tfstate" ]; then
-                deployed="${GREEN}[DEPLOYED]${NC} "
-            fi
-            
-            echo -e "  ${YELLOW}[$index]${NC} ${BOLD}$lab_name${NC} ${deployed}${CYAN}($difficulty)${NC}"
-            if [ -n "$description" ]; then
-                echo -e "      ${DIM}$description${NC}"
-            fi
-            echo ""
-            ((index++))
+            for lab in "$csp_dir"/*; do
+                if [ -d "$lab" ]; then
+                    local lab_name=$(basename "$lab")
+                    local full_lab_path="$csp/$lab_name"
+                    local readme="$lab/README.md"
+                    local difficulty="Unknown"
+                    local description=""
+                    
+                    if [ -f "$readme" ]; then
+                        difficulty=$(grep -i "Difficulty:" "$readme" | head -1 | cut -d: -f2 | sed 's/\*\*//g' | xargs 2>/dev/null || echo "Unknown")
+                        description=$(grep -i "Description:" "$readme" | head -1 | cut -d: -f2- | xargs 2>/dev/null || echo "")
+                    fi
+                    
+                    local deployed=""
+                    local state_key="${csp}_${lab_name}"
+                    if [ -f "$STATE_DIR/$state_key/terraform.tfstate" ]; then
+                        local resources=$(jq -r '.resources | length' "$STATE_DIR/$state_key/terraform.tfstate" 2>/dev/null || echo "0")
+                        if [ "$resources" -gt 0 ]; then
+                            deployed="${GREEN}[DEPLOYED]${NC} "
+                        fi
+                    fi
+                    
+                    echo -e "  ${YELLOW}[$index]${NC} ${BOLD}$lab_name${NC} ${deployed}${CYAN}($difficulty)${NC}"
+                    if [ -n "$description" ]; then
+                        echo -e "      ${DIM}$description${NC}"
+                    fi
+                    echo ""
+                    ((index++))
+                fi
+            done
         fi
     done
 }
@@ -171,15 +284,20 @@ cmd_use() {
     local lab=""
     
     if [ -z "$input" ]; then
-        log_error "Usage: use <lab-name|lab-number>"
+        log_error "Usage: use <csp/lab-name|lab-number>"
         return 1
     fi
     
     if [[ "$input" =~ ^[0-9]+$ ]]; then
         local labs=()
-        for lab_dir in "$LABS_DIR"/*; do
-            if [ -d "$lab_dir" ]; then
-                labs+=("$(basename "$lab_dir")")
+        for csp_dir in "$LABS_DIR"/*; do
+            if [ -d "$csp_dir" ]; then
+                local csp=$(basename "$csp_dir")
+                for lab_dir in "$csp_dir"/*; do
+                    if [ -d "$lab_dir" ]; then
+                        labs+=("$csp/$(basename "$lab_dir")")
+                    fi
+                done
             fi
         done
         
@@ -206,7 +324,7 @@ cmd_info() {
     local lab=${1:-$CURRENT_LAB}
     
     if [ -z "$lab" ]; then
-        log_error "No lab selected. Use: info <lab-name> or use <lab-name> first"
+        log_error "No lab selected. Use: info <csp/lab-name> or use <csp/lab-name> first"
         return 1
     fi
     
@@ -235,16 +353,19 @@ cmd_deploy() {
     local lab=${1:-$CURRENT_LAB}
     
     if [ -z "$lab" ]; then
-        log_error "No lab selected. Use: deploy <lab-name> or use <lab-name> first"
+        log_error "No lab selected. Use: deploy <csp/lab-name> or use <csp/lab-name> first"
         return 1
     fi
     
     check_prerequisites "$lab" || return 1
     
     local lab_dir="$LABS_DIR/$lab"
-    local state_path="$STATE_DIR/$lab"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local state_path="$STATE_DIR/$state_key"
+    local csp=$(detect_csp "$lab_dir")
+    local csp_config=$(get_csp_config "$csp")
     
-    log_info "Initializing lab: ${BOLD}$lab${NC}"
+    log_info "Initializing ${MAGENTA}$csp${NC} lab: ${BOLD}$lab${NC}"
     
     mkdir -p "$state_path"
     cd "$lab_dir"
@@ -253,7 +374,7 @@ cmd_deploy() {
     
     log_success "Lab initialized"
     
-    local var_files="-var-file=$COMMON_VARS"
+    local var_files="-var-file=$csp_config"
     
     if [ -f "terraform.tfvars" ]; then
         var_files="$var_files -var-file=terraform.tfvars"
@@ -281,21 +402,21 @@ cmd_deploy() {
     log_success "Lab deployed successfully"
     echo -e "\n${BOLD}${CYAN}Lab Access Information:${NC}"
     terraform output
-    
-    echo -e "\n${YELLOW}Note:${NC} Instance will auto-shutdown in 4 hours"
 }
-
 
 cmd_destroy() {
     local lab=${1:-$CURRENT_LAB}
     
     if [ -z "$lab" ]; then
-        log_error "No lab selected. Use: destroy <lab-name> or use <lab-name> first"
+        log_error "No lab selected. Use: destroy <csp/lab-name> or use <csp/lab-name> first"
         return 1
     fi
     
     local lab_dir="$LABS_DIR/$lab"
-    local state_path="$STATE_DIR/$lab"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local state_path="$STATE_DIR/$state_key"
+    local csp=$(detect_csp "$lab_dir")
+    local csp_config=$(get_csp_config "$csp")
     
     if [ ! -f "$state_path/terraform.tfstate" ]; then
         log_warning "No active deployment found for lab: $lab"
@@ -304,7 +425,7 @@ cmd_destroy() {
     
     cd "$lab_dir"
     
-    local var_files="-var-file=$COMMON_VARS"
+    local var_files="-var-file=$csp_config"
     
     if [ -f "terraform.tfvars" ]; then
         var_files="$var_files -var-file=terraform.tfvars"
@@ -315,7 +436,8 @@ cmd_destroy() {
     echo -e "\n${RED}${BOLD}WARNING:${NC} ${RED}This will destroy all resources for lab: $lab${NC}\n"
     read -p "$(echo -e ${YELLOW}Type lab name to confirm:${NC} )" confirm
     
-    if [ "$confirm" != "$lab" ]; then
+    local lab_name=$(basename "$lab")
+    if [ "$confirm" != "$lab_name" ]; then
         log_info "Destruction cancelled"
         return 0
     fi
@@ -337,7 +459,6 @@ cmd_destroy() {
         CURRENT_LAB=""
     fi
 }
-
 
 cmd_outputs() {
     local lab=""
@@ -361,12 +482,13 @@ cmd_outputs() {
     fi
     
     if [ -z "$lab" ]; then
-        log_error "No lab selected. Use: outputs <lab-name> or use <lab-name> first"
+        log_error "No lab selected. Use: outputs <csp/lab-name> or use <csp/lab-name> first"
         return 1
     fi
     
     local lab_dir="$LABS_DIR/$lab"
-    local state_path="$STATE_DIR/$lab"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local state_path="$STATE_DIR/$state_key"
     
     if [ ! -f "$state_path/terraform.tfstate" ]; then
         log_error "No state file found. Lab may not be deployed."
@@ -390,14 +512,17 @@ cmd_status() {
     local lab=${1:-$CURRENT_LAB}
     
     if [ -z "$lab" ]; then
-        log_error "No lab selected. Use: status <lab-name> or use <lab-name> first"
+        log_error "No lab selected. Use: status <csp/lab-name> or use <csp/lab-name> first"
         return 1
     fi
     
     local lab_dir="$LABS_DIR/$lab"
-    local state_path="$STATE_DIR/$lab"
+    local state_key=$(echo "$lab" | tr '/' '_')
+    local state_path="$STATE_DIR/$state_key"
+    local csp=$(detect_csp "$lab_dir")
     
-    echo -e "\n${BOLD}${CYAN}Lab Status: ${NC}${BOLD}$lab${NC}\n"
+    echo -e "\n${BOLD}${CYAN}Lab Status: ${NC}${BOLD}$lab${NC}"
+    echo -e "${MAGENTA}CSP: ${NC}$csp\n"
     
     if [ ! -f "$state_path/terraform.tfstate" ]; then
         echo -e "${YELLOW}Status:${NC} Not deployed"
@@ -421,11 +546,11 @@ cmd_status() {
     if [ "$metadata" != "{}" ]; then
         echo -e "${CYAN}Deployed by:${NC} $(echo $metadata | jq -r '.deployed_by' 2>/dev/null || echo 'unknown')"
         echo -e "${CYAN}Deployed at:${NC} $(echo $metadata | jq -r '.timestamp' 2>/dev/null || echo 'unknown')"
-        echo -e "${CYAN}Region:${NC} $(echo $metadata | jq -r '.aws_region' 2>/dev/null || echo 'unknown')"
+        echo -e "${CYAN}Region:${NC} $(echo $metadata | jq -r '.region' 2>/dev/null || echo 'unknown')"
     fi
     
     echo -e "\n${BOLD}Key Resources:${NC}"
-    terraform state list 2>/dev/null | grep -E "(instance|bucket|role|user)" | sed 's/^/  • /' || echo "  ${DIM}No resources found${NC}"
+    terraform state list 2>/dev/null | grep -E "(instance|bucket|role|user|storage|vault|application|principal)" | sed 's/^/  • /' || echo "  ${DIM}No resources found${NC}"
     echo ""
 }
 
@@ -440,14 +565,16 @@ cmd_active() {
     local found=0
     for state in "$STATE_DIR"/*; do
         if [ -d "$state" ] && [ -f "$state/terraform.tfstate" ]; then
-            local lab_name=$(basename "$state")
+            local state_key=$(basename "$state")
+            local lab_name=$(echo "$state_key" | tr '_' '/')
             local resources=$(jq -r '.resources | length' "$state/terraform.tfstate" 2>/dev/null || echo "0")
             
             if [ "$resources" -gt 0 ]; then
                 local metadata=$(load_metadata "$lab_name")
                 local deployed_at=$(echo $metadata | jq -r '.timestamp' 2>/dev/null || echo "Unknown")
+                local csp=$(echo $metadata | jq -r '.csp' 2>/dev/null || echo "Unknown")
                 
-                echo -e "  ${YELLOW}•${NC} ${BOLD}$lab_name${NC}"
+                echo -e "  ${YELLOW}•${NC} ${BOLD}$lab_name${NC} ${MAGENTA}($csp)${NC}"
                 echo -e "    ${DIM}Resources: $resources | Deployed: $deployed_at${NC}"
                 found=1
             fi
@@ -466,7 +593,7 @@ cmd_help() {
 Core Commands
 =============
   list                 List all available labs
-  use <lab>            Select a lab to work with
+  use <lab>            Select a lab to work with (csp/lab-name or number)
   info [lab]           Show detailed lab information
   deploy [lab]         Deploy the selected or specified lab
   destroy [lab]        Destroy the selected or specified lab
@@ -482,10 +609,19 @@ Navigation
   help                 Show this help message
   exit/quit            Exit VAULT
 
+Examples
+========
+  use aws/iam-privesc      Select lab by path
+  use 1                    Select lab by number
+  deploy                   Deploy currently selected lab
+  destroy azure/rbac-privesc   Destroy specific lab
+  outputs --sensitive      Show outputs including sensitive values
+
 Tips
 ====
+  • Labs are organized by CSP (aws, azure, gcp)
+  • Each CSP has its own config file in config/
   • Use 'use <lab>' to select a lab, then run commands without specifying the lab name
-  • Tab completion available for commands (if readline is enabled)
   • Command history is saved between sessions
 
 HELPEOF
