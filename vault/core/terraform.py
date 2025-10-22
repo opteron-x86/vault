@@ -69,6 +69,12 @@ class TerraformWrapper:
         state_path = self._get_state_path(lab)
         tfstate_path = (state_path / "terraform.tfstate").resolve()
         
+        # Remove cached terraform state to force reconfiguration
+        terraform_dir = lab.terraform_dir / ".terraform"
+        if terraform_dir.exists():
+            import shutil
+            shutil.rmtree(terraform_dir)
+        
         args = [
             "init",
             f"-backend-config=path={tfstate_path}",
