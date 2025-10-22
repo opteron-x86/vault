@@ -67,7 +67,7 @@ class TerraformWrapper:
     
     def init(self, lab: Lab, var_files: list[Path]) -> None:
         state_path = self._get_state_path(lab)
-        tfstate_path = state_path / "terraform.tfstate"
+        tfstate_path = (state_path / "terraform.tfstate").resolve()
         
         args = [
             "init",
@@ -137,6 +137,12 @@ class TerraformWrapper:
         var_files: list[Path],
         auto_approve: bool = False
     ) -> bool:
+        # Reinitialize to ensure correct backend config
+        try:
+            self.init(lab, var_files)
+        except TerraformError as e:
+            raise TerraformError(f"Failed to initialize before destroy: {e}")
+        
         args = ["destroy", "-no-color", "-compact-warnings"]
         
         for var_file in var_files:
