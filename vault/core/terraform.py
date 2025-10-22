@@ -67,7 +67,7 @@ class TerraformWrapper:
     
     def init(self, lab: Lab, var_files: list[Path]) -> None:
         state_path = self._get_state_path(lab)
-        tfstate_path = state_path / "terraform.tfstate"
+        tfstate_path = (state_path / "terraform.tfstate").resolve()
         
         args = [
             "init",
