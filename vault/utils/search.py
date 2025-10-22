@@ -57,7 +57,7 @@ class LabDiscovery:
             content = lab.readme_path.read_text()
             
             difficulty_match = re.search(
-                r'Difficulty:\s*\*\*(.+?)\*\*',
+                r'Difficulty:\s*(?:\*\*)?(.+?)(?:\*\*)?(?:\n|$)',
                 content,
                 re.IGNORECASE
             )
