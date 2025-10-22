@@ -83,6 +83,8 @@ class TerraformWrapper:
         var_files: list[Path],
         destroy: bool = False
     ) -> str:
+        self.init(lab, var_files)
+        
         args = ["plan", "-no-color", "-compact-warnings"]
         
         if destroy:
@@ -104,6 +106,8 @@ class TerraformWrapper:
         var_files: list[Path],
         auto_approve: bool = False
     ) -> DeploymentResult:
+        self.init(lab, var_files)
+        
         args = ["apply", "-no-color", "-compact-warnings"]
         
         for var_file in var_files:
@@ -137,11 +141,7 @@ class TerraformWrapper:
         var_files: list[Path],
         auto_approve: bool = False
     ) -> bool:
-        # Reinitialize to ensure correct backend config
-        try:
-            self.init(lab, var_files)
-        except TerraformError as e:
-            raise TerraformError(f"Failed to initialize before destroy: {e}")
+        self.init(lab, var_files)
         
         args = ["destroy", "-no-color", "-compact-warnings"]
         
