@@ -83,7 +83,8 @@ class InteractiveShell:
     
     def get_prompt_text(self) -> str:
         parts = ["vault"]
-        
+
+        '''
         if self.git.is_repo():
             branch = self.git.get_current_branch()
             if branch:
@@ -92,6 +93,7 @@ class InteractiveShell:
                     parts.append(f"[git:*{branch}]")
                 else:
                     parts.append(f"[git:{branch}]")
+        '''
         
         if self.command_handler.current_lab:
             lab_name = self.command_handler.current_lab.name
