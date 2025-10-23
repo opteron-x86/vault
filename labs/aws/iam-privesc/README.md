@@ -1,6 +1,6 @@
 # IAM Privilege Escalation
 
-**Difficulty:** easy-medium  
+**Difficulty:** 2 
 **Description:** Exploit IAM policy misconfiguration to escalate privileges and access protected S3 data  
 **Estimated Time:** 30-45 minutes
 

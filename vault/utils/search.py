@@ -57,19 +57,16 @@ class LabDiscovery:
             content = lab.readme_path.read_text()
             
             difficulty_match = re.search(
-                r'Difficulty:\s*(?:\*\*)?(.+?)(?:\*\*)?(?:\n|$)',
+                r'\*\*Difficulty:\*\*\s*(\d+)',
                 content,
                 re.IGNORECASE
             )
             if difficulty_match:
-                diff_str = difficulty_match.group(1).strip().lower().replace(" ", "-")
-                try:
-                    lab.difficulty = Difficulty(diff_str)
-                except ValueError:
-                    lab.difficulty = Difficulty.UNKNOWN
+                rating = int(difficulty_match.group(1))
+                lab.difficulty = Difficulty.from_rating(rating)
             
             desc_match = re.search(
-                r'(?:Description|Overview):\*\*\s*(.+?)(?:\n\n|\n\*\*)',
+                r'\*\*Description:\*\*\s*(.+?)(?:\n\n|\n\*\*)',
                 content,
                 re.IGNORECASE | re.DOTALL
             )
@@ -77,7 +74,7 @@ class LabDiscovery:
                 lab.description = desc_match.group(1).strip()
             
             time_match = re.search(
-                r'(?:Estimated Time|Duration):\*\*\s*(.+?)(?:\n|$)',
+                r'\*\*Estimated Time:\*\*\s*(.+?)(?:\n|$)',
                 content,
                 re.IGNORECASE
             )

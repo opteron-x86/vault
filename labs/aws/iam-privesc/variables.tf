@@ -17,12 +17,12 @@ variable "lab_prefix" {
 }
 
 variable "lab_difficulty" {
-  description = "Difficulty level of the lab"
-  type        = string
-  default     = "easy-medium"
+  description = "Difficulty rating (1-10)"
+  type        = number
+  default     = 2
   validation {
-    condition     = contains(["easy", "easy-medium", "medium", "medium-hard", "hard"], var.lab_difficulty)
-    error_message = "Difficulty must be one of: easy, easy-medium, medium, medium-hard, hard."
+    condition     = var.lab_difficulty >= 1 && var.lab_difficulty <= 10
+    error_message = "Difficulty must be between 1 and 10."
   }
 }
 

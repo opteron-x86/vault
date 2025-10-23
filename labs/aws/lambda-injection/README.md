@@ -1,6 +1,6 @@
 # Lambda Code Injection
 
-**Difficulty:** medium  
+**Difficulty:** 4  
 **Description:** Exploit command injection in Lambda to steal credentials and exfiltrate S3 data  
 **Estimated Time:** 60-90 minutes
 

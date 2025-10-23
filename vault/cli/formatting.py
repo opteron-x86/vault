@@ -72,10 +72,13 @@ def print_labs_table(
         if show_status and lab.relative_path in deployed_labs:
             status_indicator = " [green][DEPLOYED][/green]"
         
+        difficulty_bar = lab.difficulty.bar(width=10)
+        difficulty_text = f"[{lab.difficulty.color}]{difficulty_bar}[/{lab.difficulty.color}] {lab.difficulty.label}"
+        
         lab_text = (
             f"[yellow]\\[{idx}][/yellow] "
             f"[bold]{lab.name}[/bold]{status_indicator} "
-            f"[cyan]({lab.difficulty.value})[/cyan]"
+            f"{difficulty_text}"
         )
         
         if lab.description:
@@ -103,7 +106,10 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None, status: Opt
     info_table.add_column(style="white")
     
     info_table.add_row("Provider:", lab.provider.value.upper())
-    info_table.add_row("Difficulty:", lab.difficulty.value)
+    
+    if lab.difficulty.rating > 0:
+        difficulty_display = f"[{lab.difficulty.color}]{lab.difficulty.bar()} {lab.difficulty}[/{lab.difficulty.color}]"
+        info_table.add_row("Difficulty:", difficulty_display)
     
     if lab.estimated_time:
         info_table.add_row("Est. Time:", lab.estimated_time)

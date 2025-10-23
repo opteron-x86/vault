@@ -1,6 +1,6 @@
 # URL Inspector Service
 
-**Difficulty:** easy-medium  
+**Difficulty:** 2
 **Description:** Exploit SSRF vulnerability to access EC2 metadata and exfiltrate S3 data  
 **Estimated Time:** 45-60 minutes
 
