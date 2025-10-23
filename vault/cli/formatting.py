@@ -21,13 +21,14 @@ def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝       ╚═════╝ ╚══════╝
     """
     
+    banner_width = 68
+    
     console.print(banner, style="cyan bold")
     console.print(
-        "    Virtual Attack Utility Lab Terminal",
-        style="cyan",
-        justify="center"
+        "Virtual Attack Utility Lab Terminal".rjust(banner_width),
+        style="cyan"
     )
-    console.print("─" * 70, style="dim")
+    console.print("─" * banner_width, style="dim")
     console.print("  Organization: [bold]DG35 - Cyber Threat Emulation[/bold]", style="dim")
     console.print("  Contact:      caleb.n.cline.ctr@mail.mil", style="dim")
     
@@ -37,7 +38,7 @@ def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
             branch_display += " [yellow]*[/yellow]"
         console.print(f"  Git Branch:   {branch_display}", style="dim")
     
-    console.print("─" * 70, style="dim")
+    console.print("─" * banner_width, style="dim")
     console.print("\n  Type [bold]help[/bold] for commands or [bold]exit[/bold] to quit\n", style="dim")
 
 
