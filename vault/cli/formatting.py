@@ -71,21 +71,22 @@ def print_labs_table(
         status_indicator = ""
         if show_status and lab.relative_path in deployed_labs:
             status_indicator = " [green][DEPLOYED][/green]"
-        
+        '''
         difficulty_bar = lab.difficulty.bar(width=10)
         difficulty_text = f"[{lab.difficulty.color}]{difficulty_bar}[/{lab.difficulty.color}] {lab.difficulty.label}"
-        
+        '''
         lab_text = (
             f"[yellow]\\[{idx}][/yellow] "
             f"[bold]{lab.name}[/bold]{status_indicator} "
-            f"{difficulty_text}"
+        #   f"{difficulty_text}"
         )
-        
+        '''
         if lab.description:
             lab_node = provider_node.add(lab_text)
             lab_node.add(f"[dim]{lab.description[:80]}...[/dim]" if len(lab.description) > 80 else f"[dim]{lab.description}[/dim]")
         else:
-            provider_node.add(lab_text)
+        '''
+        provider_node.add(lab_text)
     
     console.print(tree)
 
