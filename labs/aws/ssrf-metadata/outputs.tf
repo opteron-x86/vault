@@ -1,22 +1,37 @@
 # Outputs
-output "webapp_url" {
-  description = "URL of the vulnerable web application"
+output "service_url" {
+  description = "URL Inspector Service endpoint"
   value       = "http://${aws_instance.webapp.public_ip}:8080"
 }
 
 output "ssh_connection" {
-  description = "SSH connection string"
+  description = "SSH connection string for maintenance"
   value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.webapp.public_ip}"
 }
 
-output "target_bucket" {
-  description = "S3 bucket containing sensitive data"
+output "data_bucket" {
+  description = "S3 bucket for customer data storage"
   value       = aws_s3_bucket.sensitive_data.id
 }
 
 output "instance_id" {
-  description = "EC2 instance ID for debugging"
+  description = "EC2 instance ID"
   value       = aws_instance.webapp.id
+}
+
+output "instance_role" {
+  description = "IAM role attached to the instance"
+  value       = aws_iam_role.webapp_instance.name
+}
+
+output "cloudtrail_bucket" {
+  description = "S3 bucket containing audit logs"
+  value       = module.audit_logging.s3_bucket_name
+}
+
+output "cloudtrail_name" {
+  description = "CloudTrail trail name"
+  value       = module.audit_logging.trail_name
 }
 
 output "attack_chain_hint" {

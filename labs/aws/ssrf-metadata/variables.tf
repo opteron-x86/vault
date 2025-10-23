@@ -1,13 +1,16 @@
-# variables.tf for ssrf-metadata lab
-
 variable "aws_region" {
   description = "AWS region for lab deployment"
   type        = string
   default     = "us-gov-east-1"
 }
+variable "aws_region" {
+  description = "AWS region for deployment"
+  type        = string
+  default     = "us-gov-east-1"
+}
 
 variable "allowed_source_ips" {
-  description = "IP addresses allowed to access lab resources"
+  description = "IP addresses allowed to access resources"
   type        = list(string)
   validation {
     condition     = length(var.allowed_source_ips) > 0
@@ -22,17 +25,17 @@ variable "ssh_key_name" {
 }
 
 variable "lab_prefix" {
-  description = "Prefix for all lab resources"
+  description = "Prefix for resource naming"
   type        = string
-  default     = "lab-ssrf"
+  default     = "url-inspector"
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.lab_prefix))
-    error_message = "Lab prefix must contain only lowercase letters, numbers, and hyphens."
+    error_message = "Prefix must contain only lowercase letters, numbers, and hyphens."
   }
 }
 
 variable "instance_type" {
-  description = "EC2 instance type for lab VMs"
+  description = "EC2 instance type"
   type        = string
   default     = "t2.micro"
 }

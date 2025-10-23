@@ -8,7 +8,7 @@ exclude = ["labs*", "config*", "modules*"]
 
 [project]
 name = "vault"
-version = "2.0.0"
+version = "1.0.0"
 description = "Virtual Attack Utility Lab Terminal"
 requires-python = ">=3.12"
 dependencies = [

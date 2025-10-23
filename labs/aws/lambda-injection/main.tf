@@ -296,3 +296,17 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
+
+module "audit_logging" {
+  source = "../modules/audit-logging"
+  
+  name_prefix = var.lab_prefix
+  suffix      = random_string.suffix.result
+  
+  data_resources = [{
+    type   = "AWS::S3::Object"
+    values = ["${aws_s3_bucket.protected_data.arn}/*"]
+  }]
+  
+  tags = local.common_tags
+}
