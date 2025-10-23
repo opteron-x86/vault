@@ -53,7 +53,7 @@ class VaultCompleter(Completer):
                                 lab.relative_path,
                                 start_position=-len(partial),
                                 display=lab.relative_path,
-                                display_meta=f"{lab.provider.value} - {lab.difficulty.value}"
+                                display_meta=f"{lab.provider.value} - {lab.difficulty.label}"
                             )
 
 
@@ -94,7 +94,7 @@ class InteractiveShell:
                 else:
                     parts.append(f"[git:{branch}]")
         '''
-        
+
         if self.command_handler.current_lab:
             lab_name = self.command_handler.current_lab.name
             parts.append(f"({lab_name})")
