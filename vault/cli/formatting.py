@@ -87,7 +87,7 @@ def print_labs_table(
     console.print(tree)
 
 
-def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
+def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None, status: Optional[DeploymentStatus] = None) -> None:
     console.print()
     
     header_text = f"Lab: {lab.relative_path}"
@@ -108,12 +108,22 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
     if lab.estimated_time:
         info_table.add_row("Est. Time:", lab.estimated_time)
     
-    if metadata:
-        info_table.add_row("Status:", "[green]DEPLOYED[/green]")
-        info_table.add_row("Resources:", str(metadata.resources_count))
-        info_table.add_row("Deployed by:", metadata.deployed_by)
-        info_table.add_row("Deployed at:", metadata.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"))
-        info_table.add_row("Region:", metadata.region)
+    if status and metadata:
+        status_color = {
+            DeploymentStatus.NOT_DEPLOYED: "yellow",
+            DeploymentStatus.DEPLOYED: "green",
+            DeploymentStatus.PARTIAL: "yellow",
+            DeploymentStatus.ERROR: "red"
+        }
+        
+        status_text = status.value.replace("_", " ").title()
+        info_table.add_row("Status:", f"[{status_color[status]}]{status_text}[/{status_color[status]}]")
+        
+        if status == DeploymentStatus.DEPLOYED:
+            info_table.add_row("Resources:", str(metadata.resources_count))
+            info_table.add_row("Deployed by:", metadata.deployed_by)
+            info_table.add_row("Deployed at:", metadata.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"))
+            info_table.add_row("Region:", metadata.region)
     
     console.print(info_table)
     
@@ -126,7 +136,6 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
             console.print(f"  • {obj}")
     
     console.print()
-
 
 def print_deployment_result(result, lab_name: str) -> None:
     if result.success:

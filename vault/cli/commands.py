@@ -85,8 +85,9 @@ class CommandHandler:
         if not lab:
             return
         
+        status, _ = self.state_manager.get_deployment_status(lab)
         metadata = self.state_manager.load_metadata(lab)
-        print_lab_info(lab, metadata)
+        print_lab_info(lab, metadata, status)
         
         if lab.has_readme:
             if Confirm.ask("View full README?", default=False):
