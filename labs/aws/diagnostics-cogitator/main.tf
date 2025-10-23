@@ -262,26 +262,15 @@ resource "aws_dynamodb_table" "data_repository" {
   })
 }
 
-# EBS Volume for forensics
+# EBS Volume (attached/detached via userdata, not Terraform)
 resource "aws_ebs_volume" "target_volume" {
   availability_zone = data.aws_availability_zones.available.names[0]
   size              = 8
   type              = "gp3"
   
   tags = merge(local.common_tags, {
-    Name   = "${var.lab_prefix}-evidence-volume"
-    Status = "detached"
+    Name = "${var.lab_prefix}-evidence-volume"
   })
-}
-
-# Temporary attachment during setup only
-resource "aws_volume_attachment" "setup_attachment" {
-  device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.target_volume.id
-  instance_id = aws_instance.cogitator_vm.id
-
-  # Force detachment after setup
-  stop_instance_before_detaching = false
 }
 
 # EC2 Instance
@@ -312,7 +301,7 @@ resource "aws_instance" "cogitator_vm" {
   })
 
   tags = merge(local.common_tags, {
-    Name         = "${var.lab_prefix}-lab"
+    Name         = "${var.lab_prefix}-cogitator"
     AutoShutdown = "4hours"
   })
   

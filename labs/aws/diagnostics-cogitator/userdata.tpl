@@ -1,452 +1,290 @@
 #!/bin/bash
+set -e
 
-# Wait for boot
-sleep 60
+# Wait for system initialization
+sleep 30
 
 # Install dependencies
 apt update
-apt install -y python3-venv python3-pip jq nmap
-snap install aws-cli --classic
+apt install -y python3 python3-pip python3-venv jq nmap dnsutils awscli
 
-sleep 2
+# === EBS VOLUME SETUP (runs once during initialization) ===
 
-# Create the log for EBS volume attachement
-sudo touch /var/log/servo-delta-004.log
-cat << 'EOF' > /var/log/servo-delta-004.log
+# Get instance metadata
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d ' ' -f 2)
+REGION=$(ec2-metadata --availability-zone | cut -d ' ' -f 2 | sed 's/[a-z]$//')
 
-=== SACRED MAINTENANCE RITUAL LOG ===  
-=== SYSTEM: PRIME-9X-${lab_name} ===  
+# Attach the EBS volume using AWS CLI
+echo "Attaching EBS volume ${volume_id}..."
+aws ec2 attach-volume \
+  --volume-id ${volume_id} \
+  --instance-id $INSTANCE_ID \
+  --device /dev/sdf \
+  --region $REGION
 
-+ **Date:** 11.764.M41  
-+ **Invocation Overseer:** Techno-Magos Valdar, Seal of Maintenance #CRYPTO-109-ZXY  
-+ **Servo Designation:** SERVO-MECHANICUS-DELTA-004  
-+ **Ritual Context:** Maintenance and diagnostic operations on Cogitator Instance #PRIME-9X-${lab_name}  
+# Wait for volume to appear (Nitro instances use nvme devices)
+echo "Waiting for volume to be available..."
+for i in {1..60}; do
+    if [ -e /dev/nvme1n1 ]; then
+        echo "Volume detected at /dev/nvme1n1"
+        break
+    fi
+    sleep 2
+done
 
---- MAINTENANCE SEQUENCE INITIATED ---
+# Format and mount the volume
+mkfs -t ext4 /dev/nvme1n1
+mkdir -p /mnt/evidence-vault
+mount /dev/nvme1n1 /mnt/evidence-vault
 
-[LOG ENTRY]  
-[Timestamp: 11.764.M41_10:12:42]  
-**Event:** Servo Activation and Diagnostic Start  
-**Servo:** SERVO-MECHANICUS-DELTA-004  
-**Action:** Began sacred pre-maintenance invocations and self-diagnostics.  
-**Status:** No malfunctions detected. Proceeding with cogitator instance check.  
+# Populate volume with evidence and hints
+cat > /mnt/evidence-vault/vault-access.log << 'EOF'
+=== MAINTENANCE LOG - COGITATOR INSTANCE ${lab_name} ===
+Date: 764.M41
+Technician: Adept Jorad
+Classification: MAGENTA
 
-[LOG ENTRY]  
-[Timestamp: 11.764.M41_10:14:19]  
-**Event:** Cogitator Instance Inspection Complete  
-**Action:** All system metrics operating within prescribed thresholds. Preparing volume scanner.  
+--- ROLE ASSUMPTION PROCEDURE ---
 
-[LOG ENTRY]  
-[Timestamp: 11.764.M41_10:15:03]  
-**Event:** Volume Attachment  
-**Action:** Attached EBS volume to cogitator EC2 instance.  
-**Command Invoked:** aws ec2 attach-volume
+The secondary logis role provides extended privileges for data processing tasks.
+Role ARN: ${logis_role_arn}
 
-Status: Attachment succeeded.
+Standard assumption command:
+aws sts assume-role \
+  --role-arn "${logis_role_arn}" \
+  --role-session-name maintenance-session
 
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:16:21]
-**Event:** Volume Mounting
-**Action:** Mounted volume /dev/nvme1n1 to local filesystem /mnt/relic-drive.
-**Command Invoked:** mkdir && mount
+After assumption, export credentials:
+export AWS_ACCESS_KEY_ID="<AccessKeyId>"
+export AWS_SECRET_ACCESS_KEY="<SecretAccessKey>"
+export AWS_SESSION_TOKEN="<SessionToken>"
 
-Status: Volume mounted successfully.
+Session duration: 3600 seconds (1 hour)
 
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:18:47]
-**Event:** Scanning Mounted Volume
-**Action:** Performed sacred directory scan to identify data fragments.
-**Command Invoked:** ls
+--- KNOWN ISSUES ---
+- Logis role lacks direct database access
+- Requires policy attachment for DynamoDB operations
+- Use IAM permissions to attach AmazonDynamoDBReadOnlyAccess
+- Target table: ${dynamodb_table}
 
-**Scan Results:**
-
-    vault-access.log
-    preservation-ritual-765.M41.log
-    error-report_764.MND
-    **Alert:** No Vermillion-class data detected. Proceeding with volume purification.
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:22:34]
-**Event:** Volume Unmounting
-**Action:** Unmounted EBS volume and removed mount point.
-**Command Invoked:** umount && rm
-
-Status: Volume unmounted.
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:23:58]
-**Event:** Volume Detachment
-**Action:** Detached EBS volume from cogitator EC2 instance.
-**Command Invoked:** aws ec2 detach-volume
-
-Status: Detachment succeeded.
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:25:14]
-**Event:** Ritual Completion
-**Servo:** SERVO-MECHANICUS-DELTA-004
-**Action:** Maintenance concluded. All components restored to standard operational state. 
-**Status:** SUCCESS. Submitted logs to Administratum review board.
-
-++ PRAISE THE OMNISSIAH! ++
-All tasks completed under the Machine God’s watchful gaze. Submit any anomalies to your Forge Magos immediately.
-
+FLAG{ebs_forensics_role_assumption_discovered}
 EOF
 
-# Format and mount the EBS volume
-sudo mkfs -t ext4 /dev/nvme1n1
-sudo mkdir -p /mnt/relic-drive
-sudo mount /dev/nvme1n1 /mnt/relic-drive
+cat > /mnt/evidence-vault/system-notes.txt << 'EOF'
+SYSTEM CONFIGURATION NOTES
 
-# Create the themed sensitive data files and directories with Cult Mechanicus references
-sudo touch /mnt/relic-drive/vault-access.log
-sudo touch /mnt/relic-drive/machine-spirit-notes.txt
-sudo touch /mnt/relic-drive/preservation-ritual-765.M41.log
-sudo mkdir -p /mnt/relic-drive/rites
-sudo touch /mnt/relic-drive/rites/purification-rite.sh
-sudo touch /mnt/relic-drive/rites/diagnostic-rite.sh
-sudo touch /mnt/relic-drive/rites/binauric_chants.md 
+Current Infrastructure:
+- EC2 Instance Type: t3.micro
+- IAM Instance Profile: Primary access role
+- Secondary Role: Logis role (assumable)
+- Data Store: DynamoDB table for classified records
 
-# Confidential access notes with a warning about the Vermillion cipher in DataRelicRepository
-cat << 'EOF' > /mnt/relic-drive/vault-access.log
+Security Posture:
+- IAM roles follow separation of duties
+- EBS volumes detached when not in use
+- DynamoDB contains 300+ classified records
+- Vermillion-level data requires special authorization
 
-=== SACRED ACCESS RITES LOG ===  
-=== SYSTEM: OMNI-VAULT-ALPHA ===  
+Maintenance Schedule:
+- Log uploads: Every 5 minutes via cron
+- Volume backups: Weekly
+- Credential rotation: Monthly
 
-+ **Date:** 11.764.M41  
-+ **Invocation Overseer:** Techno-Magos Stuhn, Seal of Authorization #ARCANUM-347-BYQ  
-+ **Encryption Cipher:** DIVINITY_CODE-HTH{Q29tcHJlaGVuc2lvbiBpcyB0aGUga2V5IHRvIGFsbCB0aGluZ3Mu}  
-
---- TEMPORARY ROLE ASSUMPTION ---
-
-**Temporary Access Profile:**  
-**Profile Role:** ${lab_name}-logis-role  
-**Access Classification Level:** MAGENTA (Restricted)  
-**Advisory:**  
-- **WARNING:** Any encounter with Vermillion-level data must be reported to the Administratum for immediate purification rites and invocation of purity protocols.  
-- **Session Validity:** Temporal buffer calibrated for 3600 seconds (1 standard Terran hour).  
-
---- COMMAND SEQUENCE FOR TEMPORARY ROLE ASSUMPTION ---  
-
-[COMMAND INVOCATION]  
-```shell
-aws sts assume-role --role-arn "arn:aws-us-gov:iam::[REDACTED]:role/${lab_name}-logis-role" --role-session-name "Session-Logis-Jorad"
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_09:31:08]
-Event: Temporary Role Assumption Initiated
-User: Datasmith Jorad
-Role ARN: arn:aws-us-gov:iam::[REDACTED]
-/${lab_name}-logis-role
-Session Name: Session-Logis-Jorad
-Response Code: 200 OK
-Session Token Expires: 11.764.M41_10:31:08
-
-[COMMAND INVOCATION]
-export AWS_ACCESS_KEY_ID="[EXPIRED]"
-export AWS_SECRET_ACCESS_KEY="[EXPIRED]"
-export AWS_SESSION_TOKEN="[EXPIRED]"
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_09:32:01]
-Event: Dynamo Table Listing  
-User: Datasmith Jorad  
-Action: +Attach temporary access policy to profile
-        +Access to table `OmniVaultAlpha` to enumerate relics  
-Command Invoked: [READ FAILURE]
-
-Retrieved Items Count: 300
-Special Alert: Vermillion cipher key detected in RecordID 217
-Purity Protocol: Invocation initiated by Techno-Magos Stuhn
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_09:47:15]
-Event: Vermillion Cipher Key Analysis
-User: Datasmith Jorad
-Action: Inspection of RecordID 217 for compliance
-Key Value: {[REDACTED]}
-Alert Status: Vermillion Classification Breach - Immediate escalation required.
-
---- END OF TEMPORARY ROLE SESSION ---
-
-[LOG ENTRY]
-[Timestamp: 11.764.M41_10:31:08]
-Event: Session Token Expired
-User: Datasmith Jorad
-Role: ${lab_name}-logis-role
-Action: +Temporary access profile revoked by automated purity protocols
-        +Removed temporary access policy from profile
-
-
-++ PRAISE THE OMNISSIAH! ++
-Always safeguard the purity of the Machine Spirit. Report anomalies or heretical actions immediately to the Administratum.
-
+Notes on Data Classification:
+- MAGENTA: Standard operational data
+- VERMILLION: Highly sensitive, requires escalated access
+- Database contains mix of both classifications
 EOF
 
-# Machine Spirit notes with a reference to DataRelicRepository and the Vermillion cipher
-cat << 'EOF' > /mnt/relic-drive/machine-spirit-notes.txt
-
-MACHINE SPIRIT CONFIGURATION NOTES
-
-- Evaluate instance incantations (EC2 types) to optimize expenditure of sacred resources.
-- Perform rituals of auditing on IAM roles to ensure the blessings of security.
-- Conduct EBS volume rites quarterly for data sanctity. Target date: 764.M41.
-
-**Next Rituals**
-- Transition legacy applications to the sacred Lambda forms.
-- Ensure data relics stored in OmniVaultAlpha are classified Magenta or lower. The presence of a Vermillion level relic is disastrous and requires immediate removal.
-
+cat > /mnt/evidence-vault/access-log-764.M41.txt << 'EOF'
+[2024-11-15 09:31:08] Role assumption initiated by Adept Jorad
+[2024-11-15 09:31:09] Assumed role: ${lab_name}-logis-role
+[2024-11-15 09:32:01] DynamoDB table scan attempted - PERMISSION DENIED
+[2024-11-15 09:33:15] Attached policy: AmazonDynamoDBReadOnlyAccess
+[2024-11-15 09:33:45] DynamoDB access successful
+[2024-11-15 09:47:15] Vermillion cipher detected in RecordID 217
+[2024-11-15 10:31:08] Session expired
 EOF
 
-# Updated backup log file with Cult Mechanicus theming
-cat << 'EOF' > /mnt/relic-drive/preservation-ritual-765.M41.log
+# Unmount and detach volume
+sync
+umount /mnt/evidence-vault
+rm -rf /mnt/evidence-vault
 
-[AUTHORIZATION] Authorized adept246 for Ritual of Preservation.
-[BINARY] CHANT:00110011:01101110:01100100:01001110:01010111:00110101:01110000:01001111:01110001:01110000:01000001:01001101:00110101:01100111:01100101:01001110:00110111:01000101:01111001:01010001
-[RITE OF ACTIVATION] Accessed OmniVaultAlpha RecordID:143:RITE{3V4RewEi}.
-[RITUAL START] Data preservation initiated: 09.765.M41 03:45:23 TST
-[RITUAL STATUS] Volume ID: ${target_volume_id}
-[ARCHIVAL SUCCESS] Holy data snapshot created. RecordID:161:LOG{pEMApr8cRBn9R1Zso6lzutBYK6vJtw}.
-[RITUAL END] No errors observed in preservation ritual.
+# Detach the volume
+echo "Detaching volume..."
+aws ec2 detach-volume --volume-id ${volume_id} --region $REGION
 
-NOTE: Log cycles set to 30 Terran days. Review previous archives to prevent data impurity.
+# Wait for detachment to complete
+sleep 10
 
-EOF
+# === APPLICATION SETUP ===
 
-# Cult Mechanicus-inspired cleanup and diagnostic scripts
-cat << 'EOF' > /mnt/relic-drive/rites/purification-rite.sh
-
-#!/bin/bash
-# purification-rite.sh - Script to perform system purification
-
-echo "Accessing DataRelicRepository:RecordID:4:RITE:{pVEez6Gz}..."
-
-echo "Commencing system purification rites..."
-rm -rf /tmp/*
-
-echo "Cleansing old log entries..."
-find /var/log -type f -name "*.log" -mtime +30 -exec rm {} \;
-
-echo "System purification complete."
-
-EOF
-
-cat << 'EOF' > /mnt/relic-drive/rites/diagnostic-rite.sh
-
-#!/bin/bash
-# diagnostic-rite.sh - Script for running diagnostic checks on the system
-
-echo "Initiating diagnostic rites..."
-# Uncomment the following line to reveal additional ritual details
-# DEBUG=true
-
-echo "All diagnostic rites completed successfully."
-
-EOF
-
-# Credentials usage guide with step-by-step instructions for managing credentials and sessions
-cat << 'EOF' > /mnt/relic-drive/rites/binauric_chants.md
-
---- BINAURIC CHANTS FOR ROLE USE ---
-
-To interact with sacred resources or assume new or different access levels with authorization, follow these steps.
-
-1. **Querying Security Credentials**:
-   - To verify your current identity: 
-     aws sts get-caller-identity
-
-2. **Assuming Roles**:
-   - Use `sts assume-role` to temporarily assume a new access level or role:
-     aws sts assume-role --role-arn "<role-arn>" --role-session-name "<session-name>"
-   - This returns temporary access keys, a secret key, and a session token.
-
-3. **Setting Temporary Credentials**:
-   - Export the keys for your current session:
-     export AWS_ACCESS_KEY_ID="<AccessKeyId>"
-     export AWS_SECRET_ACCESS_KEY="<SecretAccessKey>"
-     export AWS_SESSION_TOKEN="<SessionToken>"
-
-4. **Renewing Expired Sessions**:
-   - If your session expires, clear any old environment variables:
-     unset AWS_ACCESS_KEY_ID
-     unset AWS_SECRET_ACCESS_KEY
-     unset AWS_SESSION_TOKEN
-   - Re-run the `curl` command to obtain fresh credentials from the metadata API:
-     curl http://169.254.169.254/latest/meta-data/iam/security-credentials/<instance-role-name>
-
-5. **Handling Errors**:
-   - **Invalid Token Errors**: If you encounter an `InvalidClientTokenId` error, ensure your session has not expired. Renew the session as outlined above.
-   - **Permission Denied**: If permission issues persist, confirm that the role has the necessary IAM permissions for the requested resource.
-
-EOF
-
-# Unmount the EBS volume
-sudo umount /dev/nvme1n1 && sudo rm -rf /mnt/relic-drive
-
-aws ec2 detach-volume --volume-id ${target_volume_id}
-
-# Add servo user
+# Create non-privileged user for Flask app
 useradd -m -s /bin/bash servo-t72
+usermod -aG sudo servo-t72
 
-# Create app directory
+# Setup application directory
 mkdir -p /opt/net_tools
 touch /var/log/net_tools.log
 chown servo-t72:servo-t72 /var/log/net_tools.log
 chown -R servo-t72:servo-t72 /opt/net_tools
-chmod -R 775 /opt/net_tools
+chmod -R 755 /opt/net_tools
+
+# Create Python virtual environment
 cd /opt/net_tools
-python3 -m venv venv
-sleep 2
-source venv/bin/activate
-pip3 install flask boto3
-sleep 2
+sudo -u servo-t72 python3 -m venv venv
+sudo -u servo-t72 /opt/net_tools/venv/bin/pip install flask boto3
 
-cat << 'EOF' > /opt/net_tools/upload_logs.sh
-#!/bin/bash
-
-LOG_FILE="/var/log/net_tools.log"
-BUCKET_NAME="${flask_app_bucket_name}" 
-KEY_NAME="net_tools.log"
-
-aws s3 cp $LOG_FILE "s3://$BUCKET_NAME/$KEY_NAME" --acl private
-
-EOF
-
-# Make the upload script executable
-chmod +x /opt/net_tools/upload_logs.sh
-
-# Schedule the cron job
-(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/net_tools/upload_logs.sh") | crontab -
-
-
-# Fetch app.py from a secure location or repository
-cat << 'EOF' > /opt/net_tools/cogitator-diag.py
+# Create the vulnerable Flask application
+cat > /opt/net_tools/cogitator-diag.py << 'PYAPP'
 from flask import Flask, request, jsonify, render_template_string
 import subprocess
 import boto3
 import logging
 
-logging.basicConfig(filename='/var/log/net_tools.log', level=logging.INFO, format='%(asctime)s %(message)s')
+logging.basicConfig(
+    filename='/var/log/net_tools.log',
+    level=logging.INFO,
+    format='%(asctime)s %(message)s'
+)
 
 app = Flask(__name__)
-
-region_name = 'us-east-2'
-s3_client = boto3.client('s3', region_name=region_name)
-bucket_name = '${flask_app_bucket_name}'
+s3_client = boto3.client('s3')
+bucket_name = '${bucket_name}'
 
 def log_credentials():
+    """Log IAM credentials for debugging (security anti-pattern)"""
     session = boto3.Session()
     credentials = session.get_credentials()
-    current_credentials = credentials.get_frozen_credentials()
-    app.logger.info(f"Access key: {current_credentials.access_key}")
-    app.logger.info(f"Secret key: {current_credentials.secret_key}")
-    app.logger.info(f"Token: {current_credentials.token}")
+    if credentials:
+        current_creds = credentials.get_frozen_credentials()
+        app.logger.info(f"Access key: {current_creds.access_key}")
+        app.logger.info(f"Secret key: {current_creds.secret_key}")
+        app.logger.info(f"Token: {current_creds.token}")
 
 def get_template(template_name):
-    log_credentials() 
+    """Fetch HTML templates from S3"""
+    log_credentials()
     try:
         obj = s3_client.get_object(Bucket=bucket_name, Key=template_name)
-        template_content = obj['Body'].read().decode('utf-8')
-        app.logger.info(f"Fetched {template_name} from S3.")
-        return template_content
+        return obj['Body'].read().decode('utf-8')
     except Exception as e:
-        app.logger.error(f"Error fetching {template_name} from S3: {e}")
+        app.logger.error(f"Error fetching {template_name}: {e}")
         return "<h1>Template not found</h1>"
 
 @app.route('/')
 def index():
     template = get_template('index.html')
-    app.logger.info(f"Accessed index page from {request.remote_addr}")
+    app.logger.info(f"Index accessed from {request.remote_addr}")
     return render_template_string(template)
 
 @app.route('/ping', methods=['POST'])
 def ping():
-    ip = request.form['ip']
-    result = subprocess.check_output(f'ping -c 4 {ip}', shell=True).decode()
-    app.logger.info(f"{request.remote_addr} pinged IP: {ip}")
-    return jsonify(result=result)
+    """VULNERABLE: Command injection via shell=True"""
+    ip = request.form.get('ip', '')
+    try:
+        result = subprocess.check_output(f'ping -c 4 {ip}', shell=True, timeout=10).decode()
+        app.logger.info(f"Ping executed for: {ip}")
+        return jsonify(result=result)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
 @app.route('/traceroute', methods=['POST'])
 def traceroute():
-    ip = request.form['ip']
-    result = subprocess.check_output(f'traceroute {ip}', shell=True).decode()
-    app.logger.info(f"{request.remote_addr} Tracerouted IP: {ip}")
-    return jsonify(result=result)
+    """VULNERABLE: Command injection"""
+    ip = request.form.get('ip', '')
+    try:
+        result = subprocess.check_output(f'traceroute -m 15 {ip}', shell=True, timeout=30).decode()
+        app.logger.info(f"Traceroute executed for: {ip}")
+        return jsonify(result=result)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
 @app.route('/dns_lookup', methods=['POST'])
 def dns_lookup():
-    domain = request.form['domain']
-    result = subprocess.check_output(f'dig {domain}', shell=True).decode()
-    app.logger.info(f"{request.remote_addr} sent DNS lookup for domain: {domain}")
-    return jsonify(result=result)
+    """VULNERABLE: Command injection"""
+    domain = request.form.get('domain', '')
+    try:
+        result = subprocess.check_output(f'dig {domain}', shell=True, timeout=10).decode()
+        app.logger.info(f"DNS lookup for: {domain}")
+        return jsonify(result=result)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
 @app.route('/port_scan', methods=['POST'])
 def port_scan():
-    ip = request.form['ip']
-    result = subprocess.check_output(f'nmap -sT {ip}', shell=True).decode()
-    app.logger.info(f"{request.remote_addr} port scanned IP: {ip}")
-    return jsonify(result=result)
+    """VULNERABLE: Command injection"""
+    ip = request.form.get('ip', '')
+    try:
+        result = subprocess.check_output(f'nmap -sT -T4 --top-ports 20 {ip}', shell=True, timeout=60).decode()
+        app.logger.info(f"Port scan for: {ip}")
+        return jsonify(result=result)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
-# Serve HTML files for tools from S3
 @app.route('/<tool>.html')
 def serve_tool_html(tool):
+    """Serve tool-specific HTML pages from S3"""
     template = get_template(f'{tool}.html')
     return render_template_string(template)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8081)
-EOF
+PYAPP
 
-# Ensure the files are owned by the servo user
-chown -R servo-t72:servo-t72 /opt/net_tools/*
+chown servo-t72:servo-t72 /opt/net_tools/cogitator-diag.py
 
-sleep 2
+# === PRIVILEGE ESCALATION VULNERABILITY ===
 
-# Create systemd service
-cat << 'EOF' > /etc/systemd/system/net_tools_app.service
+# Create log upload script (USER-WRITABLE, ROOT-EXECUTED)
+cat > /opt/net_tools/upload_logs.sh << 'SCRIPT'
+#!/bin/bash
+LOG_FILE="/var/log/net_tools.log"
+BUCKET_NAME="${bucket_name}"
+KEY_NAME="net_tools.log"
+
+aws s3 cp $LOG_FILE "s3://$BUCKET_NAME/$KEY_NAME" --acl private 2>&1 | logger -t log-upload
+SCRIPT
+
+# Make script executable
+chmod 755 /opt/net_tools/upload_logs.sh
+
+# CRITICAL: Script owned by servo-t72 (user-writable)
+chown servo-t72:servo-t72 /opt/net_tools/upload_logs.sh
+
+# CRITICAL: Cron job runs as ROOT but executes user-writable script
+cat > /etc/cron.d/log-upload << 'CRON'
+*/5 * * * * root /opt/net_tools/upload_logs.sh
+CRON
+
+chmod 644 /etc/cron.d/log-upload
+
+# === SYSTEMD SERVICE ===
+
+cat > /etc/systemd/system/cogitator-diag.service << 'SERVICE'
 [Unit]
-Description=Cogitator Diagnostic Tools for Mechanicus Adepts
+Description=Cogitator Diagnostic Service
 After=network.target
 
 [Service]
+Type=simple
 User=servo-t72
 WorkingDirectory=/opt/net_tools
 ExecStart=/opt/net_tools/venv/bin/python /opt/net_tools/cogitator-diag.py
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICE
 
-sleep 2
-
-# Start and enable the service
+# Start the service
 systemctl daemon-reload
-systemctl enable net_tools_app.service
-systemctl start net_tools_app.service
+systemctl enable cogitator-diag.service
+systemctl start cogitator-diag.service
 
-# Disable main repositories
-sed -i 's/^\([^#]\)/#\1/' /etc/apt/sources.list
-find /etc/apt/sources.list.d/ -type f -name '*.list' -exec sed -i 's/^\([^#]\)/#\1/' {} \;
+# Block repository access (prevent apt-based persistence)
+sed -i 's/^\([^#]\)/#\1/' /etc/apt/sources.list 2>/dev/null || true
 
-# Block repository domains
-echo "127.0.0.1 archive.ubuntu.com" >> /etc/hosts
-echo "127.0.0.1 security.ubuntu.com" >> /etc/hosts
-
-touch /etc/apt/preferences.d/repo-block
-# Create APT pinning rules
-cat <<EOF > /etc/apt/preferences.d/repo-block
-Package: *
-Pin: origin "archive.ubuntu.com"
-Pin-Priority: -1
-
-Package: *
-Pin: origin "security.ubuntu.com"
-Pin-Priority: -1
-EOF
-
-# Mask APT services
-systemctl mask apt-daily.service apt-daily-upgrade.service
-systemctl disable --now apt-daily.timer apt-daily-upgrade.timer
-
-echo "Repository access has been blocked."
+echo "Setup complete" | logger -t cogitator-setup
