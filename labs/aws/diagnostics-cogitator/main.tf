@@ -61,7 +61,7 @@ data "aws_ami" "ubuntu_22" {
 
 # VPC Module
 module "vpc" {
-  source = "../../modules/lab-vpc"
+  source = "../modules/lab-vpc"
 
   name_prefix       = var.lab_prefix
   vpc_cidr          = "10.0.0.0/16"
