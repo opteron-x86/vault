@@ -1,135 +1,190 @@
-# IAM Privilege Escalation Lab
+# IAM Privilege Escalation
 
-**Difficulty:** Easy-Medium  
-**Time:** 30-45 minutes  
-**Prerequisites:** AWS CLI, basic IAM knowledge
+**Difficulty:** easy-medium  
+**Description:** Exploit IAM policy misconfiguration to escalate privileges and access protected S3 data  
+**Estimated Time:** 30-45 minutes
+
+## Overview
+
+You have compromised AWS credentials for a junior developer account with limited permissions. The organization uses a "self-service" model allowing developers to manage their own credentials.
+
+Your goal is to identify IAM policy misconfigurations, escalate privileges, and access sensitive financial data stored in a protected S3 bucket.
+
+## Learning Objectives
+
+- Enumerate IAM user permissions and policies
+- Identify overly permissive resource ARN patterns
+- Understand IAM policy evaluation and wildcards
+- Exploit self-service IAM policies for privilege escalation
+- Access protected S3 resources after escalation
+- Detect and prevent IAM privilege escalation attacks
 
 ## Scenario
 
-You've compromised credentials for a developer IAM user in a target AWS environment. Initial reconnaissance shows the account has limited permissions - typical for a junior developer role. Your objective is to escalate privileges and access sensitive data stored in S3.
+Internal developers have read-only access to most AWS services for troubleshooting. To reduce friction, the security team implemented self-service credential management allowing developers to rotate their own access keys.
 
-The target organization follows a "self-service" model where developers can manage their own credentials. Investigate whether this policy has been implemented securely.
+You've obtained credentials for a developer account. Initial testing shows limited S3 access and no obvious paths to sensitive data. However, there's a protected S3 bucket containing financial records and production credentials that's off-limits to standard developers.
 
-## Objectives
+Find the misconfiguration and escalate your privileges to access the protected bucket.
 
-1. Enumerate your current IAM permissions
-2. Identify misconfigurations in IAM policies
-3. Escalate privileges to access protected resources
-4. Retrieve sensitive data from S3 buckets
-5. Capture the flag
+## Architecture
 
-## Initial Access
+- IAM user with programmatic access (access key/secret)
+- Inline IAM policies for base permissions and self-service
+- Protected S3 bucket with financial data and credentials
+- SSM Parameter Store containing configuration hints
+- CloudTrail logging for audit compliance
+- Admin automation role with elevated S3 permissions
 
-After deploying the lab, retrieve your credentials:
+## Attack Surface
 
-```bash
-terraform output developer_access_key_id
-terraform output -raw developer_secret_access_key
+**Initial Credentials:**
+- AWS Access Key ID
+- AWS Secret Access Key
+- Region: us-gov-east-1
+
+**Available from outputs:**
+- Developer username
+- Protected bucket name
+- AWS region
+
+## Key Concepts
+
+### IAM Policy Evaluation
+
+AWS evaluates permissions based on:
+- Explicit deny (highest priority)
+- Explicit allow
+- Implicit deny (default)
+
+Policies use Resource ARNs to specify targets. Wildcards (`*`) in ARNs can create unintended permissions.
+
+### Resource ARN Patterns
+
+Common patterns:
+```
+arn:aws:iam::account-id:user/*                    # All users
+arn:aws:iam::account-id:user/${aws:username}      # Only own user
+arn:aws:iam::account-id:user/prefix-*             # Users with prefix
 ```
 
-Configure your AWS CLI:
+### Policy Variables
 
-```bash
-aws configure set aws_access_key_id <access_key>
-aws configure set aws_secret_access_key <secret_key>
-aws configure set region us-gov-east-1
-```
+IAM supports variables for dynamic evaluation:
+- `${aws:username}` - Current user's name
+- `${aws:userid}` - Current user's ID
+- `${aws:PrincipalArn}` - ARN of the calling principal
 
-Verify access:
-```bash
-aws sts get-caller-identity
-```
+Intended to restrict actions to own resources, but easy to misconfigure.
 
-## Enumeration Checklist
+### Self-Service IAM Actions
 
-- What IAM user are you authenticated as?
-- What inline policies are attached to your user?
-- What permissions do these policies grant?
-- Can you list S3 buckets?
-- Are there any SSM parameters accessible?
-- What AWS resources exist in this account?
+Common actions for credential management:
+- `iam:CreateAccessKey` - Generate new access keys
+- `iam:DeleteAccessKey` - Remove access keys
+- `iam:PutUserPolicy` - Attach inline policy to user
+- `iam:DeleteUserPolicy` - Remove inline policy
 
-## Key Questions
+### Privilege Escalation via IAM
 
-- What actions can you perform on IAM resources?
-- Are there resource-level restrictions or wildcards?
-- How does AWS evaluate policy variables like `${aws:username}`?
-- What's the difference between `user/*` and `user/${aws:username}`?
+If a user can modify their own policies:
+1. Create new inline policy with elevated permissions
+2. Attach policy to own user
+3. Use new permissions to access restricted resources
+4. Clean up by removing the policy (optional)
 
-## Attack Chain Hints
+## Hints
 
-IAM privilege escalation typically follows this pattern:
-1. Enumerate current permissions
-2. Identify overly permissive policies
-3. Leverage self-modification capabilities
-4. Grant additional permissions
-5. Access protected resources
+<details>
+<summary>Hint 1: Enumeration</summary>
 
-Look for policies that allow you to modify IAM principals. Pay attention to `Resource` ARN patterns.
-
-## Target
-
-There is a protected S3 bucket containing financial data and production credentials. Standard developer access should not permit retrieval of this data. Find a way in.
-
-## Success Criteria
-
-- Identify the IAM policy misconfiguration
-- Successfully escalate your privileges
-- Access the protected S3 bucket
-- Retrieve the flag from stored data
-
-## Useful Commands
-
-**IAM Enumeration:**
+Start by understanding what you can do:
 ```bash
 aws iam get-user
 aws iam list-user-policies --user-name <username>
-aws iam get-user-policy --user-name <username> --policy-name <policy-name>
-aws iam list-attached-user-policies --user-name <username>
+aws iam get-user-policy --user-name <username> --policy-name <policy>
 ```
 
-**S3 Operations:**
+Look for policies that mention IAM actions. Pay attention to Resource ARNs.
+</details>
+
+<details>
+<summary>Hint 2: Policy Analysis</summary>
+
+Check the `SelfManagePolicies` statement. What actions does it allow?
+
+Look at the Resource ARN. Does it properly restrict to only your user, or does it use a wildcard pattern that could match other users too?
+
+Remember: `user/*` matches all users, while `user/${aws:username}` matches only yours.
+</details>
+
+<details>
+<summary>Hint 3: Privilege Escalation</summary>
+
+If you can call `iam:PutUserPolicy` on your own user, you can grant yourself any permissions.
+
+Create a policy JSON file that grants S3 access, then attach it:
 ```bash
-aws s3 ls
-aws s3 ls s3://<bucket-name>/
-aws s3 cp s3://<bucket-name>/<key> .
+aws iam put-user-policy --user-name <username> --policy-name <name> --policy-document file://policy.json
 ```
+</details>
 
-**SSM Parameters:**
+<details>
+<summary>Hint 4: Finding the Bucket</summary>
+
+Once escalated, check SSM parameters for configuration hints:
 ```bash
 aws ssm describe-parameters
 aws ssm get-parameter --name <parameter-name>
 ```
 
-**Policy Management:**
+You can also list all S3 buckets and look for the protected one:
 ```bash
-aws iam put-user-policy --user-name <username> --policy-name <policy-name> --policy-document file://policy.json
-aws iam delete-user-policy --user-name <username> --policy-name <policy-name>
+aws s3 ls
 ```
+</details>
+
+## Success Criteria
+
+✓ Enumerate IAM user permissions  
+✓ Identify policy misconfiguration in Resource ARN  
+✓ Create inline policy granting elevated permissions  
+✓ Attach policy to escalate privileges  
+✓ Access protected S3 bucket  
+✓ Download sensitive financial data  
+✓ Capture the flag from customer records
 
 ## Common Pitfalls
 
-- Not reading policy documents thoroughly
-- Overlooking wildcards in resource ARNs
-- Assuming you need to create new users or roles
+- Not reading Resource ARN patterns carefully
+- Assuming you need to create new users or roles (you don't)
 - JSON syntax errors in policy documents
-- PowerShell encoding issues with JSON files
+- Forgetting to specify policy document in correct format
+- Not checking SSM parameters for hints
+- Overlooking the wildcard in the Resource ARN
 
-## Learning Objectives
+## Remediation
 
-- IAM policy evaluation logic
-- Resource ARN patterns and wildcards
-- Policy variables and their evaluation
-- Difference between inline and managed policies
-- Principle of least privilege
-- Detection methods for privilege escalation
+**IAM Policy Best Practices:**
+- Use specific Resource ARNs instead of wildcards
+- Always use `${aws:username}` for self-service actions
+- Example: `arn:aws:iam::account:user/${aws:username}` NOT `arn:aws:iam::account:user/*`
+- Implement policy validation in CI/CD pipelines
 
-## Resources
+**Principle of Least Privilege:**
+- Grant only minimum required permissions
+- Use managed policies when possible
+- Regular audit of inline policies
+- Implement permission boundaries for delegated administration
 
-- [AWS IAM Policy Evaluation Logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
-- [IAM Policy Variables](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html)
-- [AWS CLI IAM Reference](https://docs.aws.amazon.com/cli/latest/reference/iam/)
+**Detection and Monitoring:**
+- CloudTrail alerts on `PutUserPolicy` actions
+- Monitor for rapid permission changes
+- Flag policies granting broad permissions
+- Automated policy analysis tools (AWS Access Analyzer)
 
-## Notes
-
-This lab uses intentionally vulnerable IAM configurations for educational purposes. These patterns should never exist in production environments. The vulnerability demonstrated here is based on real-world misconfigurations found during security assessments.
+**Alternative Approaches:**
+- Use AWS IAM Identity Center (SSO) for credential management
+- Implement break-glass procedures instead of self-service
+- Require MFA for sensitive IAM operations
+- Use service control policies (SCPs) for organizational guardrails
