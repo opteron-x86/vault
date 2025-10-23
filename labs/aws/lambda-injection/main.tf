@@ -19,6 +19,7 @@ terraform {
       version = "~> 2.4"
     }
   }
+  backend "local" {}
 }
 
 provider "aws" {
@@ -228,6 +229,7 @@ resource "aws_lambda_function" "vulnerable_api" {
   handler          = "lambda_function.lambda_handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   runtime          = "python3.13"
+
   timeout          = 10
 
   environment {
