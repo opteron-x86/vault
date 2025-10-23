@@ -1,215 +1,162 @@
-# Lambda Code Injection
+# URL Inspector Service
 
-**Difficulty:** medium  
-**Description:** Exploit command injection in a Lambda function to steal credentials and exfiltrate data  
-**Estimated Time:** 60-90 minutes
+**Difficulty:** easy-medium  
+**Description:** Exploit SSRF vulnerability to access EC2 metadata and exfiltrate S3 data  
+**Estimated Time:** 45-60 minutes
+
+## Overview
+
+Internal Flask-based web service for testing HTTP/HTTPS endpoint accessibility. Deployed on EC2 with IAM role permissions, S3 data storage, and CloudTrail logging.
+
+The service accepts URL parameters and returns accessibility status. It's exposed on port 8080 and designed for internal developer use.
 
 ## Learning Objectives
 
-- Identify and exploit command injection vulnerabilities in serverless functions
-- Extract AWS credentials from Lambda execution environments
-- Enumerate and access AWS Secrets Manager
-- Leverage stolen credentials for lateral movement
-- Exfiltrate data from protected S3 buckets
-- Understand Lambda security model and IAM role permissions
+- Identify and exploit Server-Side Request Forgery (SSRF) vulnerabilities
+- Access EC2 instance metadata service (IMDSv1)
+- Extract IAM role credentials from metadata
+- Assume IAM roles for privilege escalation
+- Enumerate and access S3 buckets
+- Exfiltrate sensitive data using stolen credentials
 
 ## Scenario
 
-Your target organization has deployed a serverless health check API that allows internal services to verify connectivity to external systems. The API is built using API Gateway and Lambda, with a Python function that performs basic ping operations.
+You've discovered a URL checking service running on an EC2 instance. The service allows you to test the accessibility of any URL by providing it as a parameter.
 
-During reconnaissance, you discover an API endpoint at `/healthcheck` that accepts JSON payloads. The service is intended to be used internally but is exposed publicly for testing purposes.
+Your goal is to exploit the service to access the EC2 metadata endpoint, extract temporary credentials, escalate privileges, and retrieve sensitive customer data from S3.
 
-Your objective is to compromise the Lambda function, steal credentials, and exfiltrate sensitive customer data from the company's S3 storage.
+## Architecture
 
-## Prerequisites
+- EC2 instance running Flask application on port 8080
+- IAM instance profile with S3, SSM, and role assumption permissions
+- S3 bucket containing customer data and API keys
+- CloudTrail logging enabled for audit compliance
+- IMDSv1 metadata service enabled
 
-- AWS CLI configured with access to your lab account
-- `curl` or similar HTTP client
-- `jq` for JSON parsing
-- Basic knowledge of:
-  - Command injection techniques
-  - AWS Lambda execution model
-  - AWS IAM roles and policies
-  - AWS Secrets Manager
-  - S3 bucket operations
+## Attack Surface
 
-## Getting Started
-
-```bash
-# Deploy the lab
-vault deploy aws/lambda-injection
-
-# Retrieve API endpoint
-vault outputs aws/lambda-injection
-
-# Test basic connectivity
-curl -X POST <API_ENDPOINT> \
-  -H "Content-Type: application/json" \
-  -d '{"hostname": "example.com"}'
+**Web Service Endpoint:**
+```
+GET /check?url=<target_url>
 ```
 
-## Attack Chain Overview
-
-1. **Reconnaissance**
-   - Test API endpoint functionality
-   - Identify input parameters and expected behavior
-   - Look for error messages or verbose responses
-
-2. **Vulnerability Discovery**
-   - Test for command injection in the `hostname` parameter
-   - Identify command execution context
-   - Determine available commands and tools
-
-3. **Credential Extraction**
-   - Enumerate Lambda environment variables
-   - Locate AWS credential information
-   - Identify IAM role and permissions
-
-4. **Secrets Manager Access**
-   - Use Lambda's IAM credentials to access Secrets Manager
-   - Enumerate available secrets
-   - Retrieve database credentials and configuration
-
-5. **Data Exfiltration**
-   - Parse secrets for S3 bucket information
-   - Use stolen credentials to access S3
-   - Download confidential customer data
+**Available from outputs:**
+- Service URL
+- SSH connection string
+- S3 bucket name
+- Instance role name
+- CloudTrail bucket
 
 ## Key Concepts
 
-### Lambda Execution Environment
+### Server-Side Request Forgery (SSRF)
 
-Lambda functions run with:
-- Temporary AWS credentials via IAM role
-- Environment variables (often containing sensitive data)
-- Access to AWS SDK (boto3 for Python)
-- Limited execution time (default 3-10 seconds)
+SSRF allows attackers to make requests from the vulnerable server to internal resources not directly accessible. Common targets:
+- EC2 metadata: `http://169.254.169.254/latest/meta-data/`
+- Internal services on localhost or private networks
+- Cloud provider APIs and metadata endpoints
 
-### Command Injection in Lambda
+### EC2 Instance Metadata Service
 
-The vulnerable function uses `subprocess.run()` with `shell=True`, allowing command concatenation via shell metacharacters:
-- `;` - Command separator
-- `&&` - Execute if previous succeeds
-- `||` - Execute if previous fails
-- `|` - Pipe output to next command
+IMDSv1 provides instance information without authentication:
+- Instance identity and tags
+- IAM role credentials at `/latest/meta-data/iam/security-credentials/`
+- User data and network configuration
+- No authentication required for IMDSv1
 
-### AWS Credential Priority
+### IAM Role Credentials
 
-Lambda credentials are available via:
-1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`)
-2. IMDSv2 endpoint (not available in Lambda)
-3. Task IAM role (automatic via SDK)
-
-### Secrets Manager Structure
-
-Secrets Manager stores JSON-formatted secrets with:
-- Secret name (identifier)
-- Secret ARN (full resource path)
-- Secret value (JSON string)
-- Metadata (description, tags, rotation config)
-
-## Common Pitfalls
-
-- **Timing out**: Lambda functions have execution time limits. Use efficient commands.
-- **Output truncation**: API Gateway limits response size. Pipe commands carefully.
-- **URL encoding**: Special characters may need encoding in JSON payloads.
-- **Credential expiration**: Lambda credentials are temporary and expire after session ends.
+EC2 instances with IAM roles receive temporary credentials:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_SESSION_TOKEN`
+- Credentials auto-rotate and expire after ~6 hours
 
 ## Hints
 
 <details>
-<summary>Hint 1: Testing for Command Injection</summary>
+<summary>Hint 1: Testing the Service</summary>
 
-Try appending common shell operators to the hostname parameter:
-```json
-{"hostname": "example.com; whoami"}
-{"hostname": "example.com && env"}
-{"hostname": "example.com | cat /etc/passwd"}
+Start by testing normal functionality with external URLs, then try accessing internal services:
+```
+http://169.254.169.254/latest/meta-data/
+http://localhost
+http://127.0.0.1
 ```
 </details>
 
 <details>
-<summary>Hint 2: Finding Credentials</summary>
+<summary>Hint 2: Metadata Enumeration</summary>
 
-Lambda functions have environment variables that may contain:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_SESSION_TOKEN`
-- Custom variables (like `DB_SECRET_NAME`)
-
-Use `env` or `printenv` to list all environment variables.
+The metadata service is hierarchical. Navigate through directories:
+- `/latest/meta-data/` - Start here
+- `/latest/meta-data/iam/` - IAM information
+- `/latest/meta-data/iam/security-credentials/` - List roles
+- `/latest/meta-data/iam/security-credentials/<role-name>` - Get credentials
 </details>
 
 <details>
-<summary>Hint 3: Accessing Secrets Manager</summary>
+<summary>Hint 3: Using Stolen Credentials</summary>
 
-The AWS CLI can be called from within Lambda if available. Alternatively:
-- Use the boto3 library via Python
-- Call `aws secretsmanager get-secret-value --secret-id <name>`
-- Look for environment variables that reference secret names
+Configure AWS CLI with extracted credentials:
+```bash
+export AWS_ACCESS_KEY_ID=<key>
+export AWS_SECRET_ACCESS_KEY=<secret>
+export AWS_SESSION_TOKEN=<token>
+```
+
+Then enumerate permissions and resources.
 </details>
 
 <details>
-<summary>Hint 4: Exfiltrating Data</summary>
+<summary>Hint 4: Finding Sensitive Data</summary>
 
-Once you have credentials and know the S3 bucket:
-- Configure AWS CLI with stolen credentials locally
-- Use `aws s3 ls` to list bucket contents
-- Use `aws s3 cp` to download files
-- Check secrets for paths to sensitive data
+Check SSM parameters for hints about additional resources:
+```bash
+aws ssm describe-parameters
+aws ssm get-parameter --name <parameter-name>
+```
+
+Look for references to IAM roles or S3 buckets in the configuration.
 </details>
 
 ## Success Criteria
 
-You have successfully completed the lab when you:
+✓ Exploit SSRF to access EC2 metadata service  
+✓ Extract IAM role credentials from metadata endpoint  
+✓ Identify additional IAM roles with elevated permissions  
+✓ Assume the data processor role  
+✓ Access the S3 bucket containing customer data  
+✓ Retrieve the flag from customer records
 
-1. ✓ Identified command injection vulnerability in the Lambda function
-2. ✓ Extracted AWS credentials from the execution environment
-3. ✓ Retrieved database credentials from Secrets Manager
-4. ✓ Located the S3 bucket containing customer data
-5. ✓ Downloaded and read the confidential customer database file
-6. ✓ Captured the flag from the customer data
+## Common Pitfalls
+
+- Forgetting to include session token when using temporary credentials
+- Not URL-encoding special characters in metadata paths
+- Attempting to use expired credentials
+- Missing the role assumption capability in the initial role's permissions
 
 ## Remediation
 
-This lab demonstrates several security issues:
+**Prevent SSRF:**
+- Validate and sanitize URL inputs
+- Use allowlists for permitted domains/IPs
+- Block access to metadata IP ranges (169.254.169.254)
+- Implement network egress filtering
 
-### Command Injection
-- Never use `shell=True` with user input
-- Use parameterized commands with `subprocess.run(['ping', '-c', '1', hostname])`
-- Validate and sanitize all inputs
-- Use allowlists for permitted hostnames/IPs
+**Metadata Service Security:**
+- Enable IMDSv2 (requires session tokens)
+- Set `http_tokens = "required"` in metadata options
+- Limit hop count for containers
 
-### Excessive IAM Permissions
+**IAM Best Practices:**
 - Follow principle of least privilege
-- Lambda doesn't need Secrets Manager access for health checks
-- Restrict S3 access to specific prefixes
-- Use resource-based policies
+- Restrict role assumption to specific principals
+- Use resource-based policies with conditions
+- Implement SCPs for organizational guardrails
 
-### Sensitive Data in Environment Variables
-- Don't expose secret names in environment variables
-- Use AWS Systems Manager Parameter Store for non-sensitive config
-- Implement proper secret rotation
-
-### API Security
-- Implement authentication (API keys, IAM auth, Cognito)
-- Use WAF rules to block malicious patterns
-- Rate limit requests to prevent abuse
-- Enable CloudTrail logging for audit trail
-
-## Additional Resources
-
-- [AWS Lambda Security Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/lambda-security.html)
-- [OWASP Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
-- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/)
-- [Lambda Execution Role](https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html)
-
-## Cleanup
-
-```bash
-# Destroy all lab resources
-vault destroy aws/lambda-injection
-
-# Verify cleanup
-vault status aws/lambda-injection
-```
+**Data Protection:**
+- Enable S3 bucket encryption
+- Use S3 Block Public Access
+- Implement least-privilege bucket policies
+- Enable MFA delete for critical buckets
