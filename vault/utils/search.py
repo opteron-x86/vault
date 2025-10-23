@@ -69,7 +69,7 @@ class LabDiscovery:
                     lab.difficulty = Difficulty.UNKNOWN
             
             desc_match = re.search(
-                r'(?:Description|Overview):\s*(.+?)(?:\n\n|\n#)',
+                r'(?:Description|Overview):\*\*\s*(.+?)(?:\n\n|\n\*\*)',
                 content,
                 re.IGNORECASE | re.DOTALL
             )
@@ -77,7 +77,7 @@ class LabDiscovery:
                 lab.description = desc_match.group(1).strip()
             
             time_match = re.search(
-                r'(?:Estimated Time|Duration):\s*(.+)',
+                r'(?:Estimated Time|Duration):\*\*\s*(.+?)(?:\n|$)',
                 content,
                 re.IGNORECASE
             )
