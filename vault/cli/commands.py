@@ -493,24 +493,16 @@ class CommandHandler:
             log_warning("No README found")
             return
         
+        from rich.markdown import Markdown
+        
         try:
-            if self._has_bat():
-                subprocess.run(
-                    ["bat", "--style=plain", "--color=always", str(lab.readme_path)],
-                    check=False
-                )
-            elif self._has_glow():
-                subprocess.run(
-                    ["glow", str(lab.readme_path)],
-                    check=False
-                )
-            else:
-                subprocess.run(
-                    ["less", str(lab.readme_path)],
-                    check=False
-                )
-        except Exception:
-            console.print(lab.readme_path.read_text())
+            content = lab.readme_path.read_text()
+            md = Markdown(content)
+            
+            with console.pager():
+                console.print(md)
+        except Exception as e:
+            log_error(f"Failed to display README: {e}")
     
     @staticmethod
     def _has_bat() -> bool:
