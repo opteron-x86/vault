@@ -85,7 +85,7 @@ class CommandHandler:
         if not lab:
             return
         
-        status, _ = self.state_manager.get_deployment_status(lab)
+        status = self.state_manager.get_deployment_status(lab)
         metadata = self.state_manager.load_metadata(lab)
         print_lab_info(lab, metadata, status)
         
