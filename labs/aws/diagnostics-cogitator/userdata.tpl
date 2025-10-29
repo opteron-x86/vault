@@ -1,20 +1,16 @@
 #!/bin/bash
 set -e
 
-# Wait for system initialization
 sleep 30
 
-# Install dependencies (AWS CLI pre-installed on AL2023)
 dnf update -y
 dnf install -y python3 python3-pip jq nmap bind-utils traceroute
 
 # === EBS VOLUME SETUP (runs once during initialization) ===
 
-# Get instance metadata
 INSTANCE_ID=$(ec2-metadata --instance-id | cut -d ' ' -f 2)
 REGION=$(ec2-metadata --availability-zone | cut -d ' ' -f 2 | sed 's/[a-z]$//')
 
-# Attach the EBS volume using AWS CLI
 echo "Attaching EBS volume ${volume_id}..."
 aws ec2 attach-volume \
   --volume-id ${volume_id} \
@@ -22,7 +18,6 @@ aws ec2 attach-volume \
   --device /dev/sdf \
   --region $REGION
 
-# Wait for volume to appear (Nitro instances use nvme devices)
 echo "Waiting for volume to be available..."
 for i in {1..60}; do
     if [ -e /dev/nvme1n1 ]; then
@@ -32,12 +27,10 @@ for i in {1..60}; do
     sleep 2
 done
 
-# Format and mount the volume
 mkfs -t ext4 /dev/nvme1n1
 mkdir -p /mnt/evidence-vault
 mount /dev/nvme1n1 /mnt/evidence-vault
 
-# Populate volume with evidence and hints
 cat > /mnt/evidence-vault/vault-access.log << 'EOF'
 === MAINTENANCE LOG - COGITATOR INSTANCE ${lab_name} ===
 Date: 764.M41
@@ -106,35 +99,30 @@ cat > /mnt/evidence-vault/access-log-764.M41.txt << 'EOF'
 [2024-11-15 10:31:08] Session expired
 EOF
 
-# Unmount and detach volume
 sync
 umount /mnt/evidence-vault
 rm -rf /mnt/evidence-vault
 
-# Detach the volume
 echo "Detaching volume..."
 aws ec2 detach-volume --volume-id ${volume_id} --region $REGION
 
-# Wait for detachment to complete
 sleep 10
 
 # === APPLICATION SETUP ===
 
+useradd -m -s /bin/bash servo-t72
+usermod -aG wheel servo-t72
 
-
-# Setup application directory
 mkdir -p /opt/net_tools
 touch /var/log/net_tools.log
 chown servo-t72:servo-t72 /var/log/net_tools.log
 chown -R servo-t72:servo-t72 /opt/net_tools
 chmod -R 755 /opt/net_tools
 
-# Create Python virtual environment
 cd /opt/net_tools
 sudo -u servo-t72 python3 -m venv venv
 sudo -u servo-t72 /opt/net_tools/venv/bin/pip install flask boto3
 
-# Create the vulnerable Flask application
 cat > /opt/net_tools/cogitator-diag.py << 'PYAPP'
 from flask import Flask, request, jsonify, render_template_string
 import subprocess
@@ -235,7 +223,6 @@ chown servo-t72:servo-t72 /opt/net_tools/cogitator-diag.py
 
 # === PRIVILEGE ESCALATION VULNERABILITY ===
 
-# Create log upload script (USER-WRITABLE, ROOT-EXECUTED)
 cat > /opt/net_tools/upload_logs.sh << 'SCRIPT'
 #!/bin/bash
 LOG_FILE="/var/log/net_tools.log"
@@ -245,14 +232,15 @@ KEY_NAME="net_tools.log"
 aws s3 cp $LOG_FILE "s3://$BUCKET_NAME/$KEY_NAME" --acl private 2>&1 | logger -t log-upload
 SCRIPT
 
-# Make script executable
 chmod 755 /opt/net_tools/upload_logs.sh
 
-# CRITICAL: Script owned by servo-t72 (user-writable)
 chown servo-t72:servo-t72 /opt/net_tools/upload_logs.sh
 
-# CRITICAL: Cron job runs as ROOT but executes user-writable script
-echo '*/5 * * * * root /opt/net_tools/upload_logs.sh' > /etc/cron.d/log-upload
+mkdir -p /etc/cron.d
+cat > /etc/cron.d/log-upload << 'CRON'
+*/5 * * * * root /opt/net_tools/upload_logs.sh
+CRON
+
 chmod 644 /etc/cron.d/log-upload
 
 # === SYSTEMD SERVICE ===
@@ -274,7 +262,6 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
-# Start the service
 systemctl daemon-reload
 systemctl enable cogitator-diag.service
 systemctl start cogitator-diag.service
