@@ -120,9 +120,7 @@ sleep 10
 
 # === APPLICATION SETUP ===
 
-# Create non-privileged user for Flask app
-useradd -m -s /bin/bash servo-t72
-usermod -aG wheel servo-t72
+
 
 # Setup application directory
 mkdir -p /opt/net_tools
@@ -254,10 +252,7 @@ chmod 755 /opt/net_tools/upload_logs.sh
 chown servo-t72:servo-t72 /opt/net_tools/upload_logs.sh
 
 # CRITICAL: Cron job runs as ROOT but executes user-writable script
-cat > /etc/cron.d/log-upload << 'CRON'
-*/5 * * * * root /opt/net_tools/upload_logs.sh
-CRON
-
+echo '*/5 * * * * root /opt/net_tools/upload_logs.sh' > /etc/cron.d/log-upload
 chmod 644 /etc/cron.d/log-upload
 
 # === SYSTEMD SERVICE ===
