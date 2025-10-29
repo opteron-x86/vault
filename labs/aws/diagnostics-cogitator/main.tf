@@ -253,6 +253,19 @@ resource "aws_dynamodb_table" "data_repository" {
   })
 }
 
+# Populate DynamoDB table - requires Python3 and boto3 on the terraform machine
+resource "null_resource" "populate_dynamodb" {
+  depends_on = [aws_dynamodb_table.data_repository]
+
+  provisioner "local-exec" {
+    command = "python3 ${path.module}/scripts/populate-dynamodb.py ${aws_dynamodb_table.data_repository.name} ${var.aws_region}"
+  }
+
+  triggers = {
+    table_name = aws_dynamodb_table.data_repository.name
+  }
+}
+
 # EBS Volume (attached/detached via userdata, not Terraform)
 resource "aws_ebs_volume" "target_volume" {
   availability_zone = data.aws_availability_zones.available.names[0]

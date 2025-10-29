@@ -1,6 +1,6 @@
 # Cogitator Exploit Lab
 
-**Difficulty:** 7  
+**Difficulty:** 6  
 **Time:** 90-120 minutes  
 **Prerequisites:** Linux command line, AWS CLI, Python reverse shells, IAM concepts
 
@@ -21,28 +21,6 @@ The target organization uses a tiered IAM architecture with separate roles for d
 7. Exfiltrate data from DynamoDB
 8. Capture all three flags
 
-## Deployment
-
-```bash
-# Initialize Terraform
-terraform init
-
-# Plan deployment (verify resources)
-terraform plan -var="ssh_key_name=your-key" -var='allowed_source_ips=["YOUR_IP/32"]'
-
-# Deploy lab
-terraform apply -var="ssh_key_name=your-key" -var='allowed_source_ips=["YOUR_IP/32"]'
-
-# Get outputs
-terraform output
-```
-
-## Initial Access
-
-After deployment, retrieve the webapp URL:
-```bash
-terraform output webapp_url
-```
 
 Access the web application at `http://[instance-ip]:8081`
 
