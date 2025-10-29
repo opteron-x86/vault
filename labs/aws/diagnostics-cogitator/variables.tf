@@ -15,8 +15,9 @@ variable "lab_prefix" {
 }
 
 variable "ssh_key_name" {
-  description = "SSH key pair name for EC2 access"
+  description = "AWS SSH key pair name for EC2 access"
   type        = string
+  default     = ""
 }
 
 variable "allowed_source_ips" {

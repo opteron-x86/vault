@@ -3,11 +3,6 @@ variable "aws_region" {
   type        = string
   default     = "us-gov-east-1"
 }
-variable "aws_region" {
-  description = "AWS region for deployment"
-  type        = string
-  default     = "us-gov-east-1"
-}
 
 variable "allowed_source_ips" {
   description = "IP addresses allowed to access resources"
