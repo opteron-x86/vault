@@ -4,9 +4,9 @@ set -e
 # Wait for system initialization
 sleep 30
 
-# Install dependencies
-apt update
-apt install -y python3 python3-pip python3-venv jq nmap dnsutils awscli
+# Install dependencies (AWS CLI pre-installed on AL2023)
+dnf update -y
+dnf install -y python3 python3-pip jq nmap bind-utils traceroute
 
 # === EBS VOLUME SETUP (runs once during initialization) ===
 

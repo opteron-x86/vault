@@ -5,7 +5,7 @@ output "webapp_url" {
 
 output "ssh_connection" {
   description = "SSH connection command"
-  value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ubuntu@${aws_instance.cogitator_vm.public_ip}"
+  value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.cogitator_vm.public_ip}"
 }
 
 output "instance_id" {

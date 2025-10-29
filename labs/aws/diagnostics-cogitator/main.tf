@@ -45,9 +45,9 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Ubuntu 24.04 AMI for GovCloud
+# Amazon Linux 2023 - GovCloud
 locals {
-  ubuntu_ami = "ami-0a300eb29e1e99010"
+  target_ami = "ami-0320614f158c301d8"
 }
 
 # VPC Module
@@ -266,7 +266,7 @@ resource "aws_ebs_volume" "target_volume" {
 
 # EC2 Instance
 resource "aws_instance" "cogitator_vm" {
-  ami                    = local.ubuntu_ami
+  ami                    = local.target_ami
   instance_type          = local.instance_type
   subnet_id              = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [
@@ -292,7 +292,7 @@ resource "aws_instance" "cogitator_vm" {
   })
 
   tags = merge(local.common_tags, {
-    Name         = "${var.lab_prefix}-cogitator"
+    Name         = "${var.lab_prefix}-vm"
     AutoShutdown = "4hours"
   })
   
