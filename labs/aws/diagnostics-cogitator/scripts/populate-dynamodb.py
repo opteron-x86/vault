@@ -56,7 +56,7 @@ def generate_record(record_id):
     
     return random.choice(data_types)
 
-def populate_table(table_name, region='us-east-1'):
+def populate_table(table_name, region='us-gov-east-1'):
     """Populate DynamoDB table with records"""
     dynamodb = boto3.resource('dynamodb', region_name=region)
     table = dynamodb.Table(table_name)
@@ -78,7 +78,7 @@ def populate_table(table_name, region='us-east-1'):
         
         # Insert final flag at random position
         if i == flag_position:
-            item['Type'] = 'HTB'
+            item['Type'] = 'CTE'
             item['Description'] = 'Vermillion level cipher key - RESTRICTED'
             item['Value'] = 'FLAG{iam_privilege_escalation_dynamodb_exfiltration_complete}'
         
@@ -94,11 +94,11 @@ def populate_table(table_name, region='us-east-1'):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python3 populate-dynamodb.py <table-name> [region]")
-        print("Example: python3 populate-dynamodb.py cogitator-DataRelicRepository-abc123 us-east-1")
+        print("Example: python3 populate-dynamodb.py cogitator-DataRelicRepository-abc123 us-gov-east-1")
         sys.exit(1)
     
     table_name = sys.argv[1]
-    region = sys.argv[2] if len(sys.argv) > 2 else 'us-east-1'
+    region = sys.argv[2] if len(sys.argv) > 2 else 'us-gov-east-1'
     
     try:
         populate_table(table_name, region)
