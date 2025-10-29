@@ -289,6 +289,7 @@ resource "aws_instance" "cogitator_vm" {
     volume_id            = aws_ebs_volume.target_volume.id
     logis_role_arn       = aws_iam_role.logis_role.arn
     dynamodb_table       = aws_dynamodb_table.data_repository.name
+    aws_region           = var.aws_region
   })
 
   tags = merge(local.common_tags, {

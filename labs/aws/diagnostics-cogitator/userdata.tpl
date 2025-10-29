@@ -136,7 +136,8 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-s3_client = boto3.client('s3')
+
+s3_client = boto3.client('s3', region_name='${aws_region}')
 bucket_name = '${bucket_name}'
 
 def log_credentials():
