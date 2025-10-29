@@ -122,7 +122,7 @@ sleep 10
 
 # Create non-privileged user for Flask app
 useradd -m -s /bin/bash servo-t72
-usermod -aG sudo servo-t72
+usermod -aG wheel servo-t72
 
 # Setup application directory
 mkdir -p /opt/net_tools
