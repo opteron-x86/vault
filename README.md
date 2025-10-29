@@ -1,6 +1,6 @@
-# VAULT - Vulnerability Analysis Universal Lab Terminal
+# VAULT 35- Virtual Attack Utility Lab Terminal
 
-Python CLI tool for deploying and managing cloud security lab infrastructure across AWS, Azure, and GCP.
+VAULT 35 is a Python CLI tool for deploying and managing Terraform IaC resources across AWS, Azure, and GCP. Threat Emulation and Detection templates are packaged alongside VAULT 35, for launching vulnerable target resources to use in adversary emulation scenarios.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ git clone <repository-url>
 cd cyber-threat-emulation
 
 # Create virtual environment
-python3.13 -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install vault
@@ -54,6 +54,7 @@ Create `config/common-aws.tfvars`:
 ```hcl
 aws_region = "us-gov-east-1"
 allowed_source_ips = ["YOUR_IP/32"]
+ssh_key_name = "YOUR_SSH_KEY"
 ```
 
 Configure AWS credentials:
@@ -242,7 +243,7 @@ Labs are auto-discovered when they contain `main.tf`. Metadata is parsed from RE
 ```markdown
 # Lab Name
 
-**Difficulty:** easy-medium
+**Difficulty:** 5
 **Description:** Brief description of the lab scenario
 **Estimated Time:** 45-60 minutes
 
@@ -341,43 +342,6 @@ ls labs/aws/my-lab/main.tf
 vault
 > list
 ```
-
-## Advanced Features
-
-### Tab Completion
-
-Interactive mode supports context-aware tab completion:
-- Command names
-- Lab paths
-- CSP-specific suggestions
-
-### Command History
-
-Command history persists between sessions in `.state/.vault_history`
-
-### Fuzzy Search
-
-Search uses fuzzy matching across:
-- Lab names
-- Descriptions
-- Learning objectives
-- File paths
-
-### Output Filtering
-
-Filter terraform plan/apply output:
-- ANSI color codes stripped
-- Compact warnings enabled
-- JSON output for programmatic access
-
-## Security Considerations
-
-- Never commit `.state/` to version control (already in `.gitignore`)
-- Store sensitive outputs securely
-- Review terraform plans before deployment
-- Use `allowed_source_ips` to restrict lab access
-- Enable auto-shutdown on lab resources
-- Monitor cloud costs with budget alerts
 
 ## Development
 
