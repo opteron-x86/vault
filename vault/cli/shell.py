@@ -11,6 +11,7 @@ from rich.console import Console
 from vault.cli.commands import CommandHandler
 from vault.cli.formatting import log_error, log_warning, print_banner
 from vault.utils.git import GitRepo
+from vault.cli.banners import print_vault_banner
 
 console = Console()
 
@@ -105,7 +106,17 @@ class InteractiveShell:
         status = self.git.get_status()
         branch = status.branch if status else None
         is_dirty = status.is_dirty if status else False
-        print_banner(branch, is_dirty)
+        
+        labs = self.command_handler.discovery.discover_labs()
+        deployed = self.command_handler.state_manager.get_active_deployments()
+        
+        from vault.cli.banners import print_vault_banner
+        print_vault_banner(
+            branch=branch,
+            is_dirty=is_dirty,
+            total_labs=len(labs),
+            deployed_labs=len(deployed)
+        )
         
         while True:
             try:

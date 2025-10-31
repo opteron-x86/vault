@@ -7,39 +7,12 @@ from rich.text import Text
 from rich.tree import Tree
 
 from vault.core.lab import CloudProvider, DeploymentStatus, Lab, LabMetadata
+from vault.cli.banners import print_vault_banner
 
 console = Console()
 
 
-def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
-    banner = """
-  ██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗    ██████╗ ███████╗
-  ██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝    ╚════██╗██╔════╝
-  ██║   ██║███████║██║   ██║██║     ██║        █████╔╝███████╗
-  ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║        ╚═══██╗╚════██║
-   ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║       ██████╔╝███████║
-    ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝       ╚═════╝ ╚══════╝
-    """
-    
-    banner_width = 68
-    
-    console.print(banner, style="cyan bold")
-    console.print(
-        "Virtual Attack Utility Lab Terminal".rjust(banner_width),
-        style="cyan"
-    )
-    console.print("─" * banner_width, style="dim")
-    console.print("  Organization: [bold]DG35 - Cyber Threat Emulation[/bold]", style="dim")
-    console.print("  Contact:      caleb.n.cline.ctr@mail.mil", style="dim")
-    
-    if branch:
-        branch_display = f"[blue]{branch}[/blue]"
-        if is_dirty:
-            branch_display += " [yellow]*[/yellow]"
-        console.print(f"  Git Branch:   {branch_display}", style="dim")
-    
-    console.print("─" * banner_width, style="dim")
-    console.print("\n  Type [bold]help[/bold] for commands or [bold]exit[/bold] to quit\n", style="dim")
+print_banner = print_vault_banner
 
 
 def print_labs_table(
