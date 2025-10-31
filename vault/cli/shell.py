@@ -53,7 +53,7 @@ class VaultCompleter(Completer):
                                 lab.relative_path,
                                 start_position=-len(partial),
                                 display=lab.relative_path,
-                                display_meta=f"{lab.provider.value} - {lab.difficulty.value}"
+                                display_meta=f"{lab.provider.value} - {lab.difficulty.label}"
                             )
 
 
@@ -83,7 +83,8 @@ class InteractiveShell:
     
     def get_prompt_text(self) -> str:
         parts = ["vault"]
-        
+
+        '''
         if self.git.is_repo():
             branch = self.git.get_current_branch()
             if branch:
@@ -92,7 +93,8 @@ class InteractiveShell:
                     parts.append(f"[git:*{branch}]")
                 else:
                     parts.append(f"[git:{branch}]")
-        
+        '''
+
         if self.command_handler.current_lab:
             lab_name = self.command_handler.current_lab.name
             parts.append(f"({lab_name})")

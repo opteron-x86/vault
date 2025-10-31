@@ -85,8 +85,9 @@ class CommandHandler:
         if not lab:
             return
         
+        status = self.state_manager.get_deployment_status(lab)
         metadata = self.state_manager.load_metadata(lab)
-        print_lab_info(lab, metadata)
+        print_lab_info(lab, metadata, status)
         
         if lab.has_readme:
             if Confirm.ask("View full README?", default=False):
@@ -492,24 +493,16 @@ class CommandHandler:
             log_warning("No README found")
             return
         
+        from rich.markdown import Markdown
+        
         try:
-            if self._has_bat():
-                subprocess.run(
-                    ["bat", "--style=plain", "--color=always", str(lab.readme_path)],
-                    check=False
-                )
-            elif self._has_glow():
-                subprocess.run(
-                    ["glow", str(lab.readme_path)],
-                    check=False
-                )
-            else:
-                subprocess.run(
-                    ["less", str(lab.readme_path)],
-                    check=False
-                )
-        except Exception:
-            console.print(lab.readme_path.read_text())
+            content = lab.readme_path.read_text()
+            md = Markdown(content)
+            
+            with console.pager():
+                console.print(md)
+        except Exception as e:
+            log_error(f"Failed to display README: {e}")
     
     @staticmethod
     def _has_bat() -> bool:

@@ -1,8 +1,3 @@
-# SSRF to Data Exfiltration Lab
-# Attack Chain: Web App SSRF → IMDSv1 → Role Credentials → S3 Access
-# Difficulty: Easy-Medium
-# Estimated Time: 45-60 minutes
-
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -23,9 +18,9 @@ provider "aws" {
 
 locals {
   common_tags = {
-    Environment  = "lab"
+    Environment  = "development"
     Destroyable  = "true"
-    Scenario     = "ssrf-metadata-exploit"
+    Application  = "url-inspector"
     AutoShutdown = "4hours"
   }
   
@@ -60,9 +55,8 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# VPC Module
 module "vpc" {
-  source = "../../modules/lab-vpc"
+  source = "../modules/lab-vpc"
 
   name_prefix       = var.lab_prefix
   vpc_cidr          = "10.0.0.0/16"
@@ -76,7 +70,6 @@ module "vpc" {
   tags = local.common_tags
 }
 
-# IAM resources
 resource "aws_iam_role" "webapp_instance" {
   name = "${var.lab_prefix}-webapp-role-${random_string.suffix.result}"
 
@@ -109,7 +102,7 @@ resource "aws_iam_role_policy" "webapp_logging" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws-us-gov:logs:${var.aws_region}:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:*"
       },
       {
         Sid    = "S3LogAccess"
@@ -118,13 +111,13 @@ resource "aws_iam_role_policy" "webapp_logging" {
           "s3:GetObject",
           "s3:PutObject"
         ]
-        Resource = "arn:aws-us-gov:s3:::${var.lab_prefix}-*/*"
+        Resource = "arn:aws:s3:::${var.lab_prefix}-*/*"
       },
       {
         Sid      = "S3ListBuckets"
         Effect   = "Allow"
         Action   = "s3:ListBucket"
-        Resource = "arn:aws-us-gov:s3:::${var.lab_prefix}-*"
+        Resource = "arn:aws:s3:::${var.lab_prefix}-*"
       },
       {
         Sid    = "SSMConfigAccess"
@@ -140,7 +133,7 @@ resource "aws_iam_role_policy" "webapp_logging" {
         Sid      = "AssumeRoleAccess"
         Effect   = "Allow"
         Action   = "sts:AssumeRole"
-        Resource = "arn:aws-us-gov:iam::*:role/${var.lab_prefix}-*"
+        Resource = "arn:aws:iam::*:role/${var.lab_prefix}-*"
       }
     ]
   })
@@ -155,7 +148,7 @@ resource "aws_iam_role" "data_processor" {
       Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
-        AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root"
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
       }
     }]
   })
@@ -188,7 +181,6 @@ resource "aws_iam_instance_profile" "webapp" {
   role = aws_iam_role.webapp_instance.name
 }
 
-# Additional security group for custom rules
 resource "aws_security_group" "webapp_custom" {
   name        = "${var.lab_prefix}-webapp-custom"
   description = "Additional webapp security rules"
@@ -199,7 +191,6 @@ resource "aws_security_group" "webapp_custom" {
   })
 }
 
-# Compute resources
 resource "aws_instance" "webapp" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = local.instance_type
@@ -268,7 +259,7 @@ PYAPP
 
 cat > /etc/systemd/system/webapp.service << 'SYSD'
 [Unit]
-Description=Vulnerable Web Application
+Description=URL Inspector Service
 After=network.target
 
 [Service]
@@ -304,13 +295,12 @@ EOT
   }
 }
 
-# Storage resources
 resource "aws_s3_bucket" "sensitive_data" {
-  bucket        = "${var.lab_prefix}-sensitive-data-${random_string.suffix.result}"
+  bucket        = "${var.lab_prefix}-customer-data-${random_string.suffix.result}"
   force_destroy = true
 
   tags = merge(local.common_tags, {
-    Name               = "${var.lab_prefix}-sensitive-data"
+    Name               = "${var.lab_prefix}-customer-data"
     DataClassification = "Internal"
   })
 }
@@ -364,4 +354,18 @@ resource "aws_ssm_parameter" "data_role_hint" {
   tags = merge(local.common_tags, {
     Purpose = "Batch processing role for ETL jobs"
   })
+}
+
+module "audit_logging" {
+  source = "../modules/audit-logging"
+  
+  name_prefix = var.lab_prefix
+  suffix      = random_string.suffix.result
+  
+  data_resources = [{
+    type   = "AWS::S3::Object"
+    values = ["${aws_s3_bucket.sensitive_data.arn}/*"]
+  }]
+  
+  tags = local.common_tags
 }

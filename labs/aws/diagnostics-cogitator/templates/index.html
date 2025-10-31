@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Cogitator Diagnostic Tools</title>
+    <style>
+        /* Cult Mechanicus Cogitator Theme */
+        
+        body {
+            background-color: #1b1b1b;
+            color: #c0c0c0;
+            font-family: "Courier New", Courier, monospace;
+            padding-top: 20px;
+        }
+
+        .container-fluid {
+            padding: 0;
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            background-color: #2e2e2e;
+            min-height: 100vh;
+            padding: 20px;
+            border-right: 2px solid #ff0000;
+        }
+
+        .right-panel {
+            padding: 20px;
+            background-color: #1f1f1f;
+            color: #00ff00;
+        }
+
+        h2 {
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        h3 {
+            color: #ff0000;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        p, .tool-description {
+            font-style: italic;
+            color: #a8a8a8;
+        }
+
+        .list-group-item {
+            background-color: #2e2e2e;
+            color: #c0c0c0;
+            border: 1px solid #444444;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .list-group-item:hover,
+        .list-group-item.active {
+            background-color: #ff0000;
+            color: #fff;
+        }
+
+        .result {
+            white-space: pre;
+            background-color: #111111;
+            font-family: "Courier New", Courier, monospace;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border: 1px solid #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 left-panel">
+                <h2 class="text-center">Cogitator Diagnostics</h2>
+                <p class="text-center">Praise the Omnissiah; access blessed diagnostic tools below:</p>
+                <ul class="list-group" id="tool-list">
+                    <li class="list-group-item" data-tool="ping">
+                        Vox Pulse
+                        <p class="tool-description">Establishes blessed communication with remote spirits.</p>
+                    </li>
+                    <li class="list-group-item" data-tool="traceroute">
+                        Cogitation Pathway
+                        <p class="tool-description">Reveals the sacred pathway of machine spirits across the network.</p>
+                    </li>
+                    <li class="list-group-item" data-tool="dns_lookup">
+                        Cogitation Cipher
+                        <p class="tool-description">Deciphers the sacred names of remote machine spirits.</p>
+                    </li>
+                    <li class="list-group-item" data-tool="port_scan">
+                        Sanctified Portus Array
+                        <p class="tool-description">Interrogates the gates of remote systems to reveal accessible sanctuaries.</p>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-9 right-panel" id="tool-content">
+                <h3>Welcome, Adept</h3>
+                <p>Engage with the sacred tools of the Omnissiah to initiate diagnostic routines upon the blessed cogitator network.</p>
+                <p>May the Omnissiah guide your hand as you conduct these rites, uncovering any faults or dissonance within the machine spirits.</p>
+            </div>
+            <div class=col-md-9 right-panel" id="tool-content">
+                <h3>Walkthrough Docs</h3>
+                <p><a href="https://docs.google.com/document/d/1732LdM9Ku4btp2Z8F_Wr5mxXFRjMpN73QNbj5sMzApE/edit?usp=sharing" target="_blank">Guided Walkthrough</a>
+                <p><a href="https://docs.google.com/document/d/1sKJSP0yy15DI7WfPI4-IugD5aLAOc6NWLDM3NA5ScmE/edit?usp=sharing" target="_blank">Full Walkthrough</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            function loadTool(tool) {
+                $.get(`/${tool}.html`, function(formHtml) {
+                    $('#tool-content').html(formHtml);
+
+                    // Handle form submission
+                    $(`#${tool}-form`).submit(function(e){
+                        e.preventDefault();
+                        $.post(`/${tool}`, $(this).serialize(), function(data){
+                            $(`#${tool}-result`).html(data.result);
+                        });
+                    });
+                });
+            }
+
+            // Tool selection event handler
+            $('#tool-list li').click(function() {
+                $('#tool-list li').removeClass('active');
+                $(this).addClass('active');
+                var tool = $(this).data('tool');
+                loadTool(tool);
+            });
+        });
+    </script>
+</body>
+</html>

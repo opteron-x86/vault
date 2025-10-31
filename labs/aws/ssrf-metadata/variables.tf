@@ -1,13 +1,11 @@
-# variables.tf for ssrf-metadata lab
-
 variable "aws_region" {
   description = "AWS region for lab deployment"
   type        = string
-  default     = "us-gov-east-1"
+  default     = "us-east-1"
 }
 
 variable "allowed_source_ips" {
-  description = "IP addresses allowed to access lab resources"
+  description = "IP addresses allowed to access resources"
   type        = list(string)
   validation {
     condition     = length(var.allowed_source_ips) > 0
@@ -22,17 +20,17 @@ variable "ssh_key_name" {
 }
 
 variable "lab_prefix" {
-  description = "Prefix for all lab resources"
+  description = "Prefix for resource naming"
   type        = string
-  default     = "lab-ssrf"
+  default     = "url-inspector"
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.lab_prefix))
-    error_message = "Lab prefix must contain only lowercase letters, numbers, and hyphens."
+    error_message = "Prefix must contain only lowercase letters, numbers, and hyphens."
   }
 }
 
 variable "instance_type" {
-  description = "EC2 instance type for lab VMs"
+  description = "EC2 instance type"
   type        = string
   default     = "t2.micro"
 }
@@ -54,11 +52,11 @@ variable "enable_cost_controls" {
 }
 
 variable "lab_difficulty" {
-  description = "Difficulty level of the lab"
-  type        = string
-  default     = "easy-medium"
+  description = "Difficulty rating (1-10)"
+  type        = number
+  default     = 2
   validation {
-    condition     = contains(["easy", "easy-medium", "medium", "medium-hard", "hard"], var.lab_difficulty)
-    error_message = "Difficulty must be one of: easy, easy-medium, medium, medium-hard, hard."
+    condition     = var.lab_difficulty >= 1 && var.lab_difficulty <= 10
+    error_message = "Difficulty must be between 1 and 10."
   }
 }

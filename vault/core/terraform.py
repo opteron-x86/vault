@@ -67,7 +67,13 @@ class TerraformWrapper:
     
     def init(self, lab: Lab, var_files: list[Path]) -> None:
         state_path = self._get_state_path(lab)
-        tfstate_path = state_path / "terraform.tfstate"
+        tfstate_path = (state_path / "terraform.tfstate").resolve()
+        
+        # Remove cached terraform state to force reconfiguration
+        terraform_dir = lab.terraform_dir / ".terraform"
+        if terraform_dir.exists():
+            import shutil
+            shutil.rmtree(terraform_dir)
         
         args = [
             "init",
@@ -83,6 +89,8 @@ class TerraformWrapper:
         var_files: list[Path],
         destroy: bool = False
     ) -> str:
+        self.init(lab, var_files)
+        
         args = ["plan", "-no-color", "-compact-warnings"]
         
         if destroy:
@@ -104,6 +112,8 @@ class TerraformWrapper:
         var_files: list[Path],
         auto_approve: bool = False
     ) -> DeploymentResult:
+        self.init(lab, var_files)
+        
         args = ["apply", "-no-color", "-compact-warnings"]
         
         for var_file in var_files:
@@ -137,6 +147,8 @@ class TerraformWrapper:
         var_files: list[Path],
         auto_approve: bool = False
     ) -> bool:
+        self.init(lab, var_files)
+        
         args = ["destroy", "-no-color", "-compact-warnings"]
         
         for var_file in var_files:

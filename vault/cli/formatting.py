@@ -21,13 +21,14 @@ def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝       ╚═════╝ ╚══════╝
     """
     
+    banner_width = 68
+    
     console.print(banner, style="cyan bold")
     console.print(
-        "    Vulnerability Analysis Universal Lab Terminal",
-        style="cyan",
-        justify="center"
+        "Virtual Attack Utility Lab Terminal".rjust(banner_width),
+        style="cyan"
     )
-    console.print("─" * 70, style="dim")
+    console.print("─" * banner_width, style="dim")
     console.print("  Organization: [bold]DG35 - Cyber Threat Emulation[/bold]", style="dim")
     console.print("  Contact:      caleb.n.cline.ctr@mail.mil", style="dim")
     
@@ -37,7 +38,7 @@ def print_banner(branch: Optional[str] = None, is_dirty: bool = False) -> None:
             branch_display += " [yellow]*[/yellow]"
         console.print(f"  Git Branch:   {branch_display}", style="dim")
     
-    console.print("─" * 70, style="dim")
+    console.print("─" * banner_width, style="dim")
     console.print("\n  Type [bold]help[/bold] for commands or [bold]exit[/bold] to quit\n", style="dim")
 
 
@@ -70,23 +71,27 @@ def print_labs_table(
         status_indicator = ""
         if show_status and lab.relative_path in deployed_labs:
             status_indicator = " [green][DEPLOYED][/green]"
-        
+        '''
+        difficulty_bar = lab.difficulty.bar(width=10)
+        difficulty_text = f"[{lab.difficulty.color}]{difficulty_bar}[/{lab.difficulty.color}] {lab.difficulty.label}"
+        '''
         lab_text = (
             f"[yellow]\\[{idx}][/yellow] "
             f"[bold]{lab.name}[/bold]{status_indicator} "
-            f"[cyan]({lab.difficulty.value})[/cyan]"
+        #   f"{difficulty_text}"
         )
-        
+        '''
         if lab.description:
             lab_node = provider_node.add(lab_text)
             lab_node.add(f"[dim]{lab.description[:80]}...[/dim]" if len(lab.description) > 80 else f"[dim]{lab.description}[/dim]")
         else:
-            provider_node.add(lab_text)
+        '''
+        provider_node.add(lab_text)
     
     console.print(tree)
 
 
-def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
+def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None, status: Optional[DeploymentStatus] = None) -> None:
     console.print()
     
     header_text = f"Lab: {lab.relative_path}"
@@ -102,17 +107,30 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
     info_table.add_column(style="white")
     
     info_table.add_row("Provider:", lab.provider.value.upper())
-    info_table.add_row("Difficulty:", lab.difficulty.value)
+    
+    if lab.difficulty.rating > 0:
+        difficulty_display = f"[{lab.difficulty.color}]{lab.difficulty.bar()} {lab.difficulty}[/{lab.difficulty.color}]"
+        info_table.add_row("Difficulty:", difficulty_display)
     
     if lab.estimated_time:
         info_table.add_row("Est. Time:", lab.estimated_time)
     
-    if metadata:
-        info_table.add_row("Status:", "[green]DEPLOYED[/green]")
-        info_table.add_row("Resources:", str(metadata.resources_count))
-        info_table.add_row("Deployed by:", metadata.deployed_by)
-        info_table.add_row("Deployed at:", metadata.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"))
-        info_table.add_row("Region:", metadata.region)
+    if status and metadata:
+        status_color = {
+            DeploymentStatus.NOT_DEPLOYED: "yellow",
+            DeploymentStatus.DEPLOYED: "green",
+            DeploymentStatus.PARTIAL: "yellow",
+            DeploymentStatus.ERROR: "red"
+        }
+        
+        status_text = status.value.replace("_", " ").title()
+        info_table.add_row("Status:", f"[{status_color[status]}]{status_text}[/{status_color[status]}]")
+        
+        if status == DeploymentStatus.DEPLOYED:
+            info_table.add_row("Resources:", str(metadata.resources_count))
+            info_table.add_row("Deployed by:", metadata.deployed_by)
+            info_table.add_row("Deployed at:", metadata.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"))
+            info_table.add_row("Region:", metadata.region)
     
     console.print(info_table)
     
@@ -125,7 +143,6 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None) -> None:
             console.print(f"  • {obj}")
     
     console.print()
-
 
 def print_deployment_result(result, lab_name: str) -> None:
     if result.success:
