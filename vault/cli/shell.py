@@ -21,7 +21,7 @@ class VaultCompleter(Completer):
         self.commands = [
             "list", "use", "info", "init", "plan", "deploy", "destroy",
             "outputs", "status", "active", "back", "check", "install",
-            "search", "validate", "git", "clear", "help",  "version", "exit", "quit"
+            "search", "validate", "git", "clear", "help", "attack", "version", "exit", "quit"
         ]
     
     def get_completions(self, document, complete_event):
@@ -141,6 +141,12 @@ class InteractiveShell:
             "plan": lambda: self.command_handler.cmd_plan(args[0] if args else None, destroy="--destroy" in args),
             "deploy": lambda: self.command_handler.cmd_deploy(args[0] if args else None),
             "run": lambda: self.command_handler.cmd_deploy(args[0] if args else None),
+            "attack": lambda: self.command_handler.cmd_attack(
+                args[0] if args else None, 
+                auto_destroy="--auto-destroy" in args,
+                verbose="--verbose" in args or "-v" in args,
+                save_log="--log" in args
+            ),
             "destroy": lambda: self.command_handler.cmd_destroy(args[0] if args else None),
             "kill": lambda: self.command_handler.cmd_destroy(args[0] if args else None),
             "outputs": lambda: self._handle_outputs(args),
