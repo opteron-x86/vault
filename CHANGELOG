@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+## [1.1.0] - 2025-10-31
+
+### Added
+- Version command to display VAULT version in both CLI and interactive modes
+- Tab completion support for version command
+
 ## [1.0.0] - 2025-10-23
 
 ### Added
@@ -34,5 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - State isolation per lab deployment
 - Auto-shutdown tags for cost management
 
-[Unreleased]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/compare/v1.0.0...HEAD
+[Unreleased]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/compare/v1.1.0...HEAD
+[1.1.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.1.0
 [1.0.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.0.0

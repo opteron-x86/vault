@@ -177,6 +177,11 @@ def git():
     handler = CommandHandler(labs_dir, state_dir, config_dir)
     handler.cmd_git()
 
+@cli.command()
+def version():
+    """Display VAULT version"""
+    from vault.utils.version import get_version
+    console.print(f"VAULT version {get_version()}")
 
 def main():
     try:

@@ -21,7 +21,7 @@ class VaultCompleter(Completer):
         self.commands = [
             "list", "use", "info", "init", "plan", "deploy", "destroy",
             "outputs", "status", "active", "back", "check", "install",
-            "search", "validate", "git", "clear", "help", "exit", "quit"
+            "search", "validate", "git", "clear", "help",  "version", "exit", "quit"
         ]
     
     def get_completions(self, document, complete_event):
@@ -156,6 +156,8 @@ class InteractiveShell:
             "git": lambda: self.command_handler.cmd_git(),
             "search": lambda: self.command_handler.cmd_search(" ".join(args)) if args else log_error("Usage: search <query>"),
             "validate": lambda: self.command_handler.cmd_validate(args[0] if args else None),
+            "version": lambda: self._show_version(),
+            "ver": lambda: self._show_version(), 
             "clear": lambda: self._clear_screen(),
             "cls": lambda: self._clear_screen(),
             "help": lambda: self._show_help(),
@@ -192,6 +194,7 @@ class InteractiveShell:
   status [lab]         Show deployment status
   outputs [lab]        Show lab outputs (use --sensitive for sensitive values)
   active               List all active deployments
+  version              Display VAULT version
 
 [bold cyan]Prerequisites[/bold cyan]
   check                Check which CSP CLI tools are installed
@@ -217,16 +220,13 @@ class InteractiveShell:
   plan --destroy           Show destroy plan
   search ssrf              Search for labs containing "ssrf"
   outputs --sensitive      Show outputs including sensitive values
-
-[bold cyan]Tips[/bold cyan]
-  • Each CSP has its own config file in config/
-  • Use 'check' to verify required CLI tools are installed
-  • Use 'init' before 'plan' to download providers
-  • Use TAB for command completion
-  • Command history is saved between sessions
 """
         console.print(help_text)
-    
+
+    def _show_version(self) -> None:
+        from vault.utils.version import get_version
+        console.print(f"[cyan]VAULT version {get_version()}[/cyan]")  
+
     def _clear_screen(self) -> None:
         console.clear()
         status = self.git.get_status()
