@@ -1,7 +1,7 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from rich.prompt import Confirm
 
@@ -334,6 +334,135 @@ class CommandHandler:
         
         return False
 
+    def cmd_attack(self, lab_id: str | None = None, auto_destroy: bool = False, 
+                verbose: bool = False, save_log: bool = False) -> bool:
+        """Run automated attack chain against deployed lab"""
+        lab = self._resolve_lab(lab_id)
+        if not lab:
+            return False
+        
+        metadata = self.state_manager.load_metadata(lab)
+        if not metadata:
+            log_error("Lab not deployed. Deploy first with: deploy")
+            return False
+        
+        state_dir = self.state_manager.get_state_path(lab)
+        outputs = self._get_terraform_outputs(state_dir)
+        
+        if not outputs:
+            log_warning("No outputs available from lab")
+        
+        from vault.attacks import AttackChainLoader
+        attack_class = AttackChainLoader.load(lab.provider.value, lab.name)
+        
+        if not attack_class:
+            log_error(f"No attack chain available for {lab.provider.value}/{lab.name}")
+            available = AttackChainLoader.list_available()
+            if available:
+                log_info(f"Available attack chains: {', '.join(available)}")
+            return False
+        
+        console.print(f"\n[bold cyan]Starting automated attack chain for {lab.name}...[/bold cyan]")
+        if verbose:
+            console.print("[dim]Verbose mode enabled[/dim]")
+        console.print()
+        
+        try:
+            log_file = None
+            if save_log:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                log_file = f"attack_{lab.name}_{timestamp}.json"
+            
+            attack = attack_class(outputs, verbose=verbose, log_file=log_file)
+            results = attack.run()
+            
+            self._display_attack_results(results, verbose=verbose)
+            
+            if auto_destroy and any(r.success for r in results):
+                console.print("\n[yellow]Auto-destroying lab...[/yellow]")
+                return self.cmd_destroy()
+            
+            return True
+                
+        except Exception as e:
+            log_error(f"Attack failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _display_attack_results(self, results: list, verbose: bool = False) -> None:
+        """Display attack chain results"""
+        from rich.table import Table
+        import re
+        
+        table = Table(title="Attack Chain Results", show_header=True)
+        table.add_column("Phase", style="cyan", no_wrap=True)
+        table.add_column("Status", style="bold", width=8)
+        table.add_column("Message", overflow="fold")
+        
+        for result in results:
+            status = "[green]✓[/green]" if result.success else "[red]✗[/red]"
+            table.add_row(result.phase, status, result.message)
+        
+        console.print(table)
+        
+        # Show exfiltrated data with flags
+        for result in results:
+            if result.phase == "Data Exfiltration" and result.success and result.data:
+                console.print("\n[bold cyan]Exfiltrated Data:[/bold cyan]")
+                files = result.data.get('files', [])
+                for file_info in files:
+                    console.print(f"\n[yellow]File:[/yellow] {file_info['key']}")
+                    console.print(f"[dim]Size: {file_info['size']} bytes[/dim]")
+                    if file_info.get('has_flag'):
+                        console.print(f"[bold green]FLAG: {file_info['flag']}[/bold green]")
+        
+        # Show verbose logs if enabled
+        if verbose:
+            console.print("\n[bold cyan]Detailed Execution Log:[/bold cyan]")
+            for result in results:
+                if result.verbose_log:
+                    console.print(f"\n[bold]{result.phase}:[/bold]")
+                    for log_entry in result.verbose_log:
+                        console.print(f"[dim]{log_entry}[/dim]")
+        
+        success_count = sum(1 for r in results if r.success)
+        total = len(results)
+        
+        if success_count == total:
+            console.print(f"\n[bold green]✓ Attack chain complete: {success_count}/{total} phases successful[/bold green]")
+        else:
+            console.print(f"\n[bold yellow]⚠ Attack chain incomplete: {success_count}/{total} phases successful[/bold yellow]")
+
+    def _get_terraform_outputs(self, state_dir) -> dict[str, Any]:
+        """Extract outputs from terraform state"""
+        import json
+        import subprocess
+        from typing import Any
+        
+        try:
+            result = subprocess.run(
+                ['terraform', 'output', '-json'],
+                cwd=state_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            outputs_raw = json.loads(result.stdout)
+            return {k: v['value'] for k, v in outputs_raw.items()}
+        except subprocess.CalledProcessError:
+            log_warning("Failed to retrieve terraform outputs")
+            return {}
+        except Exception as e:
+            log_warning(f"Error parsing outputs: {e}")
+            return {}
+        
+    def complete_attack(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
+        """Tab completion for attack command"""
+        from vault.attacks import AttackChainLoader
+        available = AttackChainLoader.list_available()
+        return [lab for lab in available if lab.startswith(text)]
     
     def cmd_git(self) -> None:
         """Show git repository status"""

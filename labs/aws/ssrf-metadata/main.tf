@@ -10,6 +10,7 @@ terraform {
       version = "~> 3.5"
     }
   }
+  backend "local" {}
 }
 
 provider "aws" {
@@ -23,8 +24,8 @@ locals {
     Application  = "url-inspector"
     AutoShutdown = "4hours"
   }
-  
-  instance_type = "t2.micro"
+  target_ami = "ami-0320614f158c301d8" # AWS GovCloud Amazon Linux 2023
+  instance_type = var.instance_type
 }
 
 resource "random_string" "suffix" {
@@ -34,26 +35,6 @@ resource "random_string" "suffix" {
 }
 
 data "aws_caller_identity" "current" {}
-
-data "aws_ami" "amazon_linux_2023" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023*-kernel-6.1-x86_64"]
-  }
-  
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-  
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
 
 module "vpc" {
   source = "../modules/lab-vpc"
@@ -192,7 +173,7 @@ resource "aws_security_group" "webapp_custom" {
 }
 
 resource "aws_instance" "webapp" {
-  ami                    = data.aws_ami.amazon_linux_2023.id
+  ami                    = local.target_ami
   instance_type          = local.instance_type
   subnet_id              = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [
