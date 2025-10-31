@@ -82,7 +82,7 @@ def print_lab_info(lab: Lab, metadata: Optional[LabMetadata] = None, status: Opt
     info_table.add_row("Provider:", lab.provider.value.upper())
     
     if lab.difficulty.rating > 0:
-        difficulty_display = f"[{lab.difficulty.color}]{lab.difficulty.bar()} {lab.difficulty}[/{lab.difficulty.color}]"
+        difficulty_display = f"[{lab.difficulty.color}]{lab.difficulty.bar()} {lab.difficulty.label}[/{lab.difficulty.color}]"
         info_table.add_row("Difficulty:", difficulty_display)
     
     if lab.estimated_time:
