@@ -222,7 +222,7 @@ resource "aws_db_instance" "target_db" {
   storage_type         = "gp2"
   db_name              = "production"
   username             = "pgadmin"
-  password             = "Pr0d-DB-P4ssw0rd${random_string.suffix.result}"
+  password             = "Pr0d-DB-P4ssw0rd-${random_string.suffix.result}"
   skip_final_snapshot  = true
   publicly_accessible  = true
   db_subnet_group_name = aws_db_subnet_group.main.name
@@ -241,7 +241,7 @@ resource "null_resource" "init_database" {
   provisioner "local-exec" {
     command = <<-EOT
       sleep 60
-      PGPASSWORD='Pr0d_DB_P@ssw0rd_${random_string.suffix.result}' psql -h ${aws_db_instance.target_db.address} -U pgadmin -d production -c "
+      PGPASSWORD='Pr0d-DB-P4ssw0rd-${random_string.suffix.result}' psql -h ${aws_db_instance.target_db.address} -U pgadmin -d production -c "
         CREATE TABLE IF NOT EXISTS customer_records (
           id SERIAL PRIMARY KEY,
           customer_name VARCHAR(255),
