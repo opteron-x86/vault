@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+## [1.4.0] - 2025-11-04
+
+### Added
+- Setup command (`vault setup`) for interactive configuration file generation
+- Auto-detection of public IP address for AWS security groups
+- Auto-detection of GCP project ID from gcloud configuration
+- Auto-detection of git user email for resource tagging
+- Common configuration workflow for resource prefix and owner email across all CSPs
+- SSH key name support for AWS, Azure, and GCP configurations
+- Automatic generation of default tags/labels for all providers
+- Tab completion support for setup command with provider arguments
+
+### Changed
+- Configuration files now include lab_prefix variable for multi-user account namespacing
+- Configuration files now include default_tags/default_labels for resource organization
+
 ## [1.3.0] - 2025-10-31
 
 ### Added
