@@ -1,0 +1,64 @@
+# Changelog
+
+All notable changes to VAULT will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [1.3.0] - 2025-10-31
+
+### Added
+- Cool randomized banners!
+
+## [1.2.0] - 2025-10-31
+
+### Added
+- Attack command to automate the attack chain against target lab
+- Attack logging, verbosity, and local saves
+- ssrf-metadata lab attack script to attacks/
+
+### Changed
+- ssrf-metadata lab to use local backend state
+- ssrf-metadata lab to use t3.micro
+- Changed to GovCloud Amazon Linux 2023 AMI ID
+
+## [1.1.0] - 2025-10-31
+
+### Added
+- Version command to display VAULT version in both CLI and interactive modes
+- Tab completion support for version command
+
+## [1.0.0] - 2025-10-23
+
+### Added
+- Initial release of VAULT (Virtual Attack Utilty Lab Terminal)
+- Interactive CLI shell with command history and tab completion
+- Multi-cloud support for AWS, Azure, and GCP
+- Lab deployment and lifecycle management (init, plan, deploy, destroy)
+- Lab discovery and fuzzy search capabilities
+- Terraform state management and metadata tracking
+- CSP tool installation guidance (aws-cli, azure-cli, gcloud, terraform)
+- Active deployment tracking and status monitoring
+- Lab output management with sensitive value protection
+- Configuration templates for AWS, Azure, and GCP
+
+### Infrastructure
+- Modular Terraform configurations
+- Shared VPC and VM modules
+- State isolation per lab deployment
+- Auto-shutdown tags for cost management
+
+[Unreleased]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/compare/v1.1.0...HEAD
+[1.3.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.3.0
+[1.2.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.2.0
+[1.1.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.1.0
+[1.0.0]: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/releases/tag/v1.0.0

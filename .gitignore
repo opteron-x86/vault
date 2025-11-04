@@ -1,0 +1,120 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.auto.tfvars
+.state/
+
+# Sensitive files
+*.pem
+*.key
+*.pub
+*.pfx
+*.p12
+*.crt
+*.cer
+*.der
+*.p7b
+secrets/
+credentials/
+INSTRUCTOR.md
+solutions/
+*.decrypted
+
+# AWS credentials
+.aws/
+aws_credentials
+aws_config
+
+# Cloud provider CLI configs
+.azure/
+.gcp/
+.kube/
+kubeconfig
+
+# Environment files
+.env
+.env.*
+!.env.example
+.envrc
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.history/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.Python
+
+# Test outputs
+test-results/
+*.log
+logs/
+output/
+reports/
+
+# Terraform plan outputs
+planfile
+plan.out
+plan.json
+
+# Module archives
+*.tar.gz
+*.zip
+
+# Ignore all .tfvars except examples
+*.tfvars
+!*.tfvars.example
+!terraform.tfvars.example
+
+# Lab-specific
+exploit_outputs/
+captured_credentials/
+.lab_state/
+.destruction_logs/
+student_work/
+grading/
