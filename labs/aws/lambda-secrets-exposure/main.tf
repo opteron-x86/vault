@@ -222,7 +222,7 @@ resource "aws_db_instance" "target_db" {
   storage_type         = "gp2"
   db_name              = "production"
   username             = "pgadmin"
-  password             = "Pr0d_DB_P@ssw0rd_${random_string.suffix.result}"
+  password             = "Pr0dDBP@ssw0rd${random_string.suffix.result}"
   skip_final_snapshot  = true
   publicly_accessible  = true
   db_subnet_group_name = aws_db_subnet_group.main.name
