@@ -241,7 +241,7 @@ resource "null_resource" "init_database" {
   provisioner "local-exec" {
     command = <<-EOT
       sleep 60
-      PGPASSWORD='Pr0d_DB_P@ssw0rd_${random_string.suffix.result}' psql -h ${aws_db_instance.target_db.address} -U admin -d production -c "
+      PGPASSWORD='Pr0d_DB_P@ssw0rd_${random_string.suffix.result}' psql -h ${aws_db_instance.target_db.address} -U pgadmin -d production -c "
         CREATE TABLE IF NOT EXISTS customer_records (
           id SERIAL PRIMARY KEY,
           customer_name VARCHAR(255),
