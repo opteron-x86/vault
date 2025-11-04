@@ -21,8 +21,8 @@ BANNERS = [
       | |  / / __ |/ / / / / /_  __/
       | | / / /_/ / / / / /   / /   
       | |/ / __  / /_/ / /___/ /    
-      |___/_/ /_/|____/_____/_/   _____ ______
-                                 |__  // ____/
+      |___/_/ /_/|____/_____/_/   ____  ______
+                                 |__  \/ ____/
                                   /_ </___ |  
                                 ___/ /___/ /  
                                /____/_____/   
@@ -82,6 +82,23 @@ TAGLINES = [
     "Success arrives on port 443, but happiness listens on localhost.",
     "Your threat model does not account for your cat walking across the keyboard.",
     "The payload you deliver today will execute perfectly tomorrow.",
+    "Your next phishing attempt will catch feelings instead of credentials.",
+    "The packet you lost will find its way back to you... eventually.",
+    "rm -rf is not the solution to your problems. Usually.",
+    "You will soon achieve privilege escalation in your personal life.",
+    "The honeypot you set up will attract more bears than hackers.",
+    "Your lucky algorithm: bubble sort (said no one ever).",
+    "A watched build never compiles. A forgotten build always fails.",
+    "You will soon find what you're looking for in the last place you grep.",
+    "The race condition in your heart can only be fixed with a mutex of communication.",
+    "Your next container will not be stateless, no matter what you promise.",
+    "Beware of programmers carrying screwdrivers. They have achieved hardware access.",
+    "The MITM attack on your lunch plans will succeed.",
+    "Your session will expire in 30 days, but your technical debt is forever.",
+    "A distributed system of friends is more fault-tolerant than a single point of contact.",
+    "The XSS vulnerability in your jokes allows others to inject their own punchlines.",
+    "Your next API call will return 418: I'm a teapot.",
+    "The backdoor to happiness was open source all along.",
 ]
 
 TIPS = [

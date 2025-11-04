@@ -72,6 +72,7 @@ def lambda_handler(event, context):
                         'db_host': db_creds.get('host'),
                         'db_name': db_creds.get('dbname'),
                         'db_user': db_creds.get('username'),
+                        'db_password': db_creds.get('password'),
                     })
                 }
                 
