@@ -5,7 +5,12 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
   }
+  backend "local" {}
 }
 
 provider "aws" {
@@ -97,9 +102,9 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = "admin"
-    password = "Pr0d-DB-P4ssw0rd-${random_string.suffix.result}"
-    engine   = "aurora-postgresql"
-    host     = aws_rds_cluster.target_db.endpoint
+    password = "Pr0d_DB_P@ssw0rd_${random_string.suffix.result}"
+    engine   = "postgres"
+    host     = aws_db_instance.target_db.address
     port     = 5432
     dbname   = "production"
   })
@@ -117,7 +122,7 @@ resource "aws_lambda_function" "api_handler" {
   environment {
     variables = {
       SECRET_ARN       = aws_secretsmanager_secret.db_credentials.arn
-      DB_HOST          = aws_rds_cluster.target_db.endpoint
+      DB_HOST          = aws_db_instance.target_db.address
       DB_NAME          = "production"
       API_KEY          = "sk_live_${random_string.suffix.result}_insecure"
       DEBUG_MODE       = "true"
@@ -208,42 +213,35 @@ resource "aws_db_subnet_group" "main" {
   })
 }
 
-resource "aws_rds_cluster" "target_db" {
-  cluster_identifier      = "${local.lab_name}-cluster-${random_string.suffix.result}"
-  engine                  = "aurora-postgresql"
-  engine_version          = "17.4"
-  database_name           = "production"
-  master_username         = "pgadmin"
-  master_password         = "Pr0d-DB-P4ssw0rd-${random_string.suffix.result}"
-  skip_final_snapshot     = true
-  db_subnet_group_name    = aws_db_subnet_group.main.name
-  vpc_security_group_ids  = [aws_security_group.rds.id]
+resource "aws_db_instance" "target_db" {
+  identifier           = "${local.lab_name}-db-${random_string.suffix.result}"
+  engine               = "postgres"
+  engine_version       = "17.4"
+  instance_class       = "db.t3.micro"
+  allocated_storage    = 20
+  storage_type         = "gp2"
+  db_name              = "production"
+  username             = "pgadmin"
+  password             = "Pr0d-DB-P4ssw0rd${random_string.suffix.result}"
+  skip_final_snapshot  = true
+  publicly_accessible  = true
+  db_subnet_group_name = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [
+    aws_security_group.rds.id
+  ]
 
   tags = merge(local.common_tags, {
-    Name = "${local.lab_name}-aurora-cluster"
-  })
-}
-
-resource "aws_rds_cluster_instance" "target_db" {
-  identifier         = "${local.lab_name}-db-${random_string.suffix.result}"
-  cluster_identifier = aws_rds_cluster.target_db.id
-  instance_class     = "db.t3.medium"
-  engine             = aws_rds_cluster.target_db.engine
-  engine_version     = aws_rds_cluster.target_db.engine_version
-  publicly_accessible = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.lab_name}-aurora-instance"
+    Name = "${local.lab_name}-postgres-db"
   })
 }
 
 resource "null_resource" "init_database" {
-  depends_on = [aws_rds_cluster_instance.target_db]
+  depends_on = [aws_db_instance.target_db]
 
   provisioner "local-exec" {
     command = <<-EOT
       sleep 60
-      PGPASSWORD='Pr0d-DB-P4ssw0rd-${random_string.suffix.result}' psql -h ${aws_rds_cluster.target_db.endpoint} -U admin -d production -c "
+      PGPASSWORD='Pr0d_DB_P@ssw0rd_${random_string.suffix.result}' psql -h ${aws_db_instance.target_db.address} -U admin -d production -c "
         CREATE TABLE IF NOT EXISTS customer_records (
           id SERIAL PRIMARY KEY,
           customer_name VARCHAR(255),
