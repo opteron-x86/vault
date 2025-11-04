@@ -156,15 +156,22 @@ resource "aws_ebs_snapshot" "exposed_snapshot" {
   depends_on = [time_sleep.wait_for_userdata]
 }
 
-resource "aws_snapshot_create_volume_permission" "public_snapshot" {
-  snapshot_id = aws_ebs_snapshot.exposed_snapshot.id
-  group       = "all"
-}
-
-resource "null_resource" "cleanup_instance" {
+resource "null_resource" "make_snapshot_public" {
   depends_on = [aws_ebs_snapshot.exposed_snapshot]
 
   provisioner "local-exec" {
-    command = "sleep 10"
+    command = <<-EOT
+      aws ec2 modify-snapshot-attribute \
+        --snapshot-id ${aws_ebs_snapshot.exposed_snapshot.id} \
+        --attribute createVolumePermission \
+        --operation-type add \
+        --group-names all \
+        --region ${var.aws_region}
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "echo 'Snapshot will be destroyed with terraform destroy'"
   }
 }
