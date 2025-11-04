@@ -25,7 +25,7 @@ def get_project_paths() -> tuple[Path, Path, Path, Path]:
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
-    """Vulnerability Analysis Universal Lab Terminal"""
+    """Virtual Attack Utility Lab Terminal"""
     if ctx.invoked_subcommand is None:
         labs_dir, state_dir, config_dir, history_file = get_project_paths()
         
@@ -150,7 +150,16 @@ def search(query):
     handler = CommandHandler(labs_dir, state_dir, config_dir)
     handler.cmd_search(query)
 
-
+@cli.command()
+@click.argument("provider", required=False, type=click.Choice(["aws", "azure", "gcp", "all"], case_sensitive=False))
+def setup(provider):
+    """Interactive setup wizard for creating cloud provider config files"""
+    labs_dir, state_dir, config_dir, _ = get_project_paths()
+    handler = CommandHandler(labs_dir, state_dir, config_dir)
+    
+    if not handler.cmd_setup(provider):
+        sys.exit(1)
+        
 @cli.command()
 def check():
     """Check which CSP CLI tools are installed"""

@@ -288,6 +288,197 @@ class CommandHandler:
         console.print(table)
         console.print("\n[dim]Use 'install <tool>' to install missing tools[/dim]")
         console.print("[dim]Example: install aws[/dim]\n")
+
+    def cmd_setup(self, provider_name: Optional[str] = None) -> bool:
+        """Interactive setup wizard for creating common-<csp>.tfvars files"""
+        from rich.prompt import Prompt
+        import requests
+        
+        providers_to_setup = []
+        
+        if provider_name:
+            provider_name = provider_name.lower()
+            if provider_name not in ["aws", "azure", "gcp", "all"]:
+                log_error(f"Invalid provider: {provider_name}")
+                log_info("Valid options: aws, azure, gcp, all")
+                return False
+            
+            if provider_name == "all":
+                providers_to_setup = ["aws", "azure", "gcp"]
+            else:
+                providers_to_setup = [provider_name]
+        else:
+            console.print("\n[bold cyan]VAULT Configuration Setup[/bold cyan]\n")
+            console.print("This wizard will help you create configuration files for cloud providers.\n")
+            
+            choices = Prompt.ask(
+                "Which provider(s) would you like to configure?",
+                choices=["aws", "azure", "gcp", "all"],
+                default="all"
+            )
+            
+            if choices == "all":
+                providers_to_setup = ["aws", "azure", "gcp"]
+            else:
+                providers_to_setup = [choices]
+        
+        self.config_dir.mkdir(exist_ok=True)
+        
+        for provider_str in providers_to_setup:
+            if not self._setup_provider_config(provider_str):
+                log_warning(f"Skipped {provider_str.upper()} configuration")
+            console.print()
+        
+        log_success("Configuration setup complete!")
+        log_info("You can now deploy labs using 'vault deploy <lab>'")
+        return True
+
+    def _setup_provider_config(self, provider_str: str) -> bool:
+        """Setup configuration for a specific provider"""
+        from rich.prompt import Prompt, Confirm
+        import requests
+        
+        console.print(f"\n[bold cyan]Configuring {provider_str.upper()}[/bold cyan]")
+        console.print("─" * 50)
+        
+        from vault.core.types import CloudProvider
+        provider_enum = CloudProvider[provider_str.upper()]
+        provider = ProviderFactory.get_provider(provider_enum, self.config_dir)
+        
+        config_file = self.config_dir / provider.get_config_filename()
+        
+        if config_file.exists():
+            console.print(f"\n[yellow]Configuration file already exists:[/yellow] {config_file}")
+            if not Confirm.ask("Overwrite existing configuration?", default=False):
+                return False
+        
+        if provider_str == "aws":
+            return self._setup_aws_config(config_file)
+        elif provider_str == "azure":
+            return self._setup_azure_config(config_file)
+        elif provider_str == "gcp":
+            return self._setup_gcp_config(config_file)
+        
+        return False
+
+    def _setup_aws_config(self, config_file: Path) -> bool:
+        """Setup AWS configuration"""
+        from rich.prompt import Prompt, Confirm
+        import requests
+        
+        console.print("\n[dim]AWS Configuration requires:[/dim]")
+        console.print("  • AWS Region")
+        console.print("  • Allowed source IPs (for security groups)")
+        console.print("  • (Optional) SSH key name\n")
+        
+        region = Prompt.ask(
+            "AWS Region",
+            default="us-gov-east-1"
+        )
+        
+        public_ip = None
+        if Confirm.ask("Auto-detect your public IP?", default=True):
+            try:
+                response = requests.get("https://api.ipify.org", timeout=5)
+                if response.status_code == 200:
+                    public_ip = response.text.strip()
+                    console.print(f"[green]Detected IP:[/green] {public_ip}")
+            except Exception as e:
+                log_warning(f"Could not detect IP: {e}")
+        
+        if not public_ip:
+            public_ip = Prompt.ask(
+                "Your public IP address",
+                default="0.0.0.0"
+            )
+        
+        allowed_ips = f'["{public_ip}/32"]'
+        
+        if Confirm.ask("Add additional IP addresses?", default=False):
+            additional = Prompt.ask("Enter additional IPs (comma-separated)")
+            extra_ips = [f'"{ip.strip()}/32"' for ip in additional.split(",")]
+            allowed_ips = f'["{public_ip}/32", {", ".join(extra_ips)}]'
+        
+        ssh_key = ""
+        if Confirm.ask("Do you have an AWS SSH key pair configured?", default=False):
+            key_name = Prompt.ask("SSH key name")
+            ssh_key = f'\nssh_key_name = "{key_name}"'
+        
+        config_content = f'''# AWS Configuration for VAULT Labs
+    # Auto-generated by vault setup
+
+    aws_region = "{region}"
+    allowed_source_ips = {allowed_ips}{ssh_key}
+    '''
+        
+        config_file.write_text(config_content)
+        log_success(f"Created: {config_file}")
+        return True
+
+    def _setup_azure_config(self, config_file: Path) -> bool:
+        """Setup Azure configuration"""
+        from rich.prompt import Prompt
+        
+        console.print("\n[dim]Azure Configuration requires:[/dim]")
+        console.print("  • Azure Region\n")
+        
+        region = Prompt.ask(
+            "Azure Region",
+            default="usgovvirginia"
+        )
+        
+        config_content = f'''# Azure Configuration for VAULT Labs
+    # Auto-generated by vault setup
+
+    azure_region = "{region}"
+    '''
+        
+        config_file.write_text(config_content)
+        log_success(f"Created: {config_file}")
+        return True
+
+    def _setup_gcp_config(self, config_file: Path) -> bool:
+        """Setup GCP configuration"""
+        from rich.prompt import Prompt, Confirm
+        import subprocess
+        
+        console.print("\n[dim]GCP Configuration requires:[/dim]")
+        console.print("  • GCP Project ID")
+        console.print("  • GCP Region\n")
+        
+        project_id = None
+        if Confirm.ask("Auto-detect GCP project from gcloud config?", default=True):
+            try:
+                result = subprocess.run(
+                    ["gcloud", "config", "get-value", "project"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    project_id = result.stdout.strip()
+                    console.print(f"[green]Detected project:[/green] {project_id}")
+            except Exception as e:
+                log_warning(f"Could not detect project: {e}")
+        
+        if not project_id:
+            project_id = Prompt.ask("GCP Project ID")
+        
+        region = Prompt.ask(
+            "GCP Region",
+            default="us-east4"
+        )
+        
+        config_content = f'''# GCP Configuration for VAULT Labs
+    # Auto-generated by vault setup
+
+    gcp_project = "{project_id}"
+    gcp_region = "{region}"
+    '''
+        
+        config_file.write_text(config_content)
+        log_success(f"Created: {config_file}")
+        return True
     
     def cmd_install(self, tool: str) -> bool:
         """Show installation instructions for a CSP tool"""

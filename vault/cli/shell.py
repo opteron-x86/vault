@@ -21,7 +21,7 @@ class VaultCompleter(Completer):
         self.command_handler = command_handler
         self.commands = [
             "list", "use", "info", "init", "plan", "deploy", "destroy",
-            "outputs", "status", "active", "back", "check", "install",
+            "outputs", "status", "active", "back", "check", "setup", "install",
             "search", "validate", "git", "clear", "help", "attack", "version", "exit", "quit"
         ]
     
@@ -55,6 +55,17 @@ class VaultCompleter(Completer):
                                 start_position=-len(partial),
                                 display=lab.relative_path,
                                 display_meta=f"{lab.provider.value} - {lab.difficulty.label}"
+                            )
+            if cmd == "setup":
+                if len(words) == 1 or (len(words) == 2 and not text.endswith(" ")):
+                    partial = words[1] if len(words) == 2 else ""
+                    for provider in ["aws", "azure", "gcp", "all"]:
+                        if provider.startswith(partial.lower()):
+                            yield Completion(
+                                provider,
+                                start_position=-len(partial),
+                                display=provider,
+                                display_meta="provider"
                             )
 
 
@@ -169,6 +180,7 @@ class InteractiveShell:
             "back": lambda: self.command_handler.cmd_back(),
             "deselect": lambda: self.command_handler.cmd_back(),
             "check": lambda: self.command_handler.cmd_check(),
+            "setup": lambda: self.command_handler.cmd_setup(args[0] if args else None),
             "install": lambda: self.command_handler.cmd_install(args[0]) if args else log_error("Usage: install <tool>"),
             "git": lambda: self.command_handler.cmd_git(),
             "search": lambda: self.command_handler.cmd_search(" ".join(args)) if args else log_error("Usage: search <query>"),
@@ -208,6 +220,7 @@ class InteractiveShell:
   plan [lab]           Show terraform plan without deploying
   deploy [lab]         Deploy the selected or specified lab
   destroy [lab]        Destroy the selected or specified lab
+  setup [provider]     Setup wizard for config files (aws/azure/gcp/all)
   status [lab]         Show deployment status
   outputs [lab]        Show lab outputs (use --sensitive for sensitive values)
   active               List all active deployments
