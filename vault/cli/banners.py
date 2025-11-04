@@ -17,15 +17,15 @@ def get_version() -> str:
 
 BANNERS = [
     """
-       _    ______  ____  ____   ______
-      | |  / / __ |/ / / / / /  /_  __/
-      | | / / /_/ / / / / / /    / /   
-      | |/ / __  / / /_/ / /____/ /    
-      |___/_/ /_/_/|____/______/_/  _____ ______
-                                   |__  // ____/
-                                    /_ </___ |  
-                                  ___/ /___/ /  
-                                 /____/_____/   
+       _    ______  __  ____  ______
+      | |  / / __ |/ / / / / /_  __/
+      | | / / /_/ / / / / /   / /   
+      | |/ / __  / /_/ / /___/ /    
+      |___/_/ /_/|____/_____/_/  _____ ______
+                                 |__  // ____/
+                                  /_ </___ |  
+                                ___/ /___/ /  
+                               /____/_____/   
     """,
     """
     ██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗    ██████╗ ███████╗
@@ -63,7 +63,10 @@ TIPS = [
     "Run 'validate' before deploying labs",
     "Use 'list' to show all labs",
     "Run 'info' to view a lab's README",
-    "Set CSP configs in config/ directory",
+    "Run 'setup' to automatically create CSP configs",
+    "Run 'install' to automatically install CSP CLI tools",
+    "New labs need to be initialized using 'init'",
+    "Use 'status' to check a lab's deployment status",
 ]
 
 COLOR_SCHEMES = [

@@ -221,7 +221,7 @@ resource "aws_db_instance" "target_db" {
   allocated_storage    = 20
   storage_type         = "gp2"
   db_name              = "production"
-  username             = "admin"
+  username             = "pgadmin"
   password             = "Pr0d_DB_P@ssw0rd_${random_string.suffix.result}"
   skip_final_snapshot  = true
   publicly_accessible  = true
