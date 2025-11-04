@@ -179,6 +179,12 @@ resource "aws_apigatewayv2_route" "health" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+resource "aws_apigatewayv2_route" "db_test" {
+  api_id    = aws_apigatewayv2_api.lambda_api.id
+  route_key = "GET /db-test"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_security_group" "rds" {
   name        = "${local.lab_name}-rds-sg"
   description = "Allow PostgreSQL access"
