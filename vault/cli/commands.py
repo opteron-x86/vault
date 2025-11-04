@@ -341,7 +341,7 @@ class CommandHandler:
         console.print(f"\n[bold cyan]Configuring {provider_str.upper()}[/bold cyan]")
         console.print("─" * 50)
         
-        from vault.core.types import CloudProvider
+        from vault.core.lab import CloudProvider
         provider_enum = CloudProvider[provider_str.upper()]
         provider = ProviderFactory.get_provider(provider_enum, self.config_dir)
         
