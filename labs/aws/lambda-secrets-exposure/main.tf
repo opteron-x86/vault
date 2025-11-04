@@ -101,7 +101,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
-    username = "admin"
+    username = "pgadmin"
     password = "Pr0d_DB_P@ssw0rd_${random_string.suffix.result}"
     engine   = "postgres"
     host     = aws_db_instance.target_db.address
