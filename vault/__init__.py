@@ -1,7 +1,8 @@
 """
-VAULT - Vulnerability Analysis Universal Lab Terminal
-A Python-based CLI tool for managing cloud security lab infrastructure.
+VAULT - Virtual Attack Utility Lab Terminal
+A Python-based CLI tool for managing Terraform lab infrastructure.
 """
 
-__version__ = "1.0.0"
-__author__ = "DG35 - Cyber Threat Emulation"
+__version__ = "1.4.0"
+__author__ = "Caleb N. Cline"
+__org__ = "DG35 - CTE"

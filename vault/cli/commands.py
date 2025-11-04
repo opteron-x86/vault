@@ -288,6 +288,284 @@ class CommandHandler:
         console.print(table)
         console.print("\n[dim]Use 'install <tool>' to install missing tools[/dim]")
         console.print("[dim]Example: install aws[/dim]\n")
+
+
+    def cmd_setup(self, provider_name: Optional[str] = None) -> bool:
+        """Interactive setup wizard for creating common-<csp>.tfvars files"""
+        from rich.prompt import Prompt
+        
+        providers_to_setup = []
+        
+        if provider_name:
+            provider_name = provider_name.lower()
+            if provider_name not in ["aws", "azure", "gcp", "all"]:
+                log_error(f"Invalid provider: {provider_name}")
+                log_info("Valid options: aws, azure, gcp, all")
+                return False
+            
+            if provider_name == "all":
+                providers_to_setup = ["aws", "azure", "gcp"]
+            else:
+                providers_to_setup = [provider_name]
+        else:
+            console.print("\n[bold cyan]VAULT Configuration Setup[/bold cyan]\n")
+            console.print("This wizard will help you create configuration files for cloud providers.\n")
+            
+            choices = Prompt.ask(
+                "Which provider(s) would you like to configure?",
+                choices=["aws", "azure", "gcp", "all"],
+                default="all"
+            )
+            
+            if choices == "all":
+                providers_to_setup = ["aws", "azure", "gcp"]
+            else:
+                providers_to_setup = [choices]
+        
+        self.config_dir.mkdir(exist_ok=True)
+        
+        # Gather common config once for all providers
+        common_config = self._gather_common_config()
+        
+        for provider_str in providers_to_setup:
+            if not self._setup_provider_config(provider_str, common_config):
+                log_warning(f"Skipped {provider_str.upper()} configuration")
+            console.print()
+        
+        log_success("Configuration setup complete!")
+        log_info("You can now deploy labs using 'vault deploy <lab>'")
+        return True
+
+    def _gather_common_config(self) -> dict:
+        """Gather configuration values common across all providers"""
+        from rich.prompt import Prompt, Confirm
+        import getpass
+        
+        console.print("\n[bold cyan]Common Configuration[/bold cyan]")
+        console.print("─" * 50)
+        console.print("[dim]These values will be used across all providers\n[/dim]")
+        
+        # Resource prefix
+        default_prefix = getpass.getuser().lower()
+        resource_prefix = Prompt.ask(
+            "Resource prefix (for multi-user accounts)",
+            default=default_prefix
+        )
+        
+        # Owner email for tagging
+        owner_email = ""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["git", "config", "user.email"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                owner_email = result.stdout.strip()
+        except Exception:
+            pass
+        
+        if owner_email:
+            owner_email = Prompt.ask("Owner email (for resource tags)", default=owner_email)
+        else:
+            owner_email = Prompt.ask("Owner email (for resource tags)", default="")
+        
+        return {
+            "resource_prefix": resource_prefix,
+            "owner_email": owner_email
+        }
+
+    def _setup_provider_config(self, provider_str: str, common_config: dict) -> bool:
+        """Setup configuration for a specific provider"""
+        from rich.prompt import Confirm
+        
+        console.print(f"\n[bold cyan]Configuring {provider_str.upper()}[/bold cyan]")
+        console.print("─" * 50)
+        
+        from vault.core.lab import CloudProvider
+        provider_enum = CloudProvider[provider_str.upper()]
+        provider = ProviderFactory.get_provider(provider_enum, self.config_dir)
+        
+        config_file = self.config_dir / provider.get_config_filename()
+        
+        if config_file.exists():
+            console.print(f"\n[yellow]Configuration file already exists:[/yellow] {config_file}")
+            if not Confirm.ask("Overwrite existing configuration?", default=False):
+                return False
+        
+        if provider_str == "aws":
+            return self._setup_aws_config(config_file, common_config)
+        elif provider_str == "azure":
+            return self._setup_azure_config(config_file, common_config)
+        elif provider_str == "gcp":
+            return self._setup_gcp_config(config_file, common_config)
+        
+        return False
+
+    def _setup_aws_config(self, config_file: Path, common_config: dict) -> bool:
+        """Setup AWS configuration"""
+        from rich.prompt import Prompt, Confirm
+        import requests
+        
+        console.print("\n[dim]AWS Configuration requires:[/dim]")
+        console.print("  • AWS Region")
+        console.print("  • Allowed source IPs (for security groups)")
+        console.print("  • (Optional) SSH key name\n")
+        
+        region = Prompt.ask("AWS Region", default="us-gov-east-1")
+        
+        # Public IP detection
+        public_ip = None
+        if Confirm.ask("Auto-detect your public IP?", default=True):
+            try:
+                response = requests.get("https://api.ipify.org", timeout=5)
+                if response.status_code == 200:
+                    public_ip = response.text.strip()
+                    console.print(f"[green]Detected IP:[/green] {public_ip}")
+            except Exception as e:
+                log_warning(f"Could not detect IP: {e}")
+        
+        if not public_ip:
+            public_ip = Prompt.ask("Your public IP address", default="0.0.0.0")
+        
+        allowed_ips = [f'"{public_ip}/32"']
+        
+        if Confirm.ask("Add additional IP addresses?", default=False):
+            additional = Prompt.ask("Enter additional IPs (comma-separated)")
+            extra_ips = [f'"{ip.strip()}/32"' for ip in additional.split(",") if ip.strip()]
+            allowed_ips.extend(extra_ips)
+        
+        # SSH key name
+        ssh_key_name = ""
+        if Confirm.ask("Do you have an AWS SSH key pair configured?", default=False):
+            ssh_key_name = Prompt.ask("SSH key name")
+        
+        # Build config
+        config_lines = [
+            "# AWS Configuration for VAULT Labs",
+            "# Auto-generated by vault setup\n",
+            f'aws_region = "{region}"',
+            f'allowed_source_ips = [{", ".join(allowed_ips)}]'
+        ]
+        
+        if ssh_key_name:
+            config_lines.append(f'ssh_key_name = "{ssh_key_name}"')
+        
+        if common_config.get("resource_prefix"):
+            config_lines.append(f'lab_prefix = "{common_config["resource_prefix"]}"')
+        
+        if common_config.get("owner_email"):
+            config_lines.append(f'\ndefault_tags = {{')
+            config_lines.append(f'  Owner       = "{common_config["owner_email"]}"')
+            config_lines.append(f'  Environment = "lab"')
+            config_lines.append(f'  ManagedBy   = "vault"')
+            config_lines.append(f'}}')
+        
+        config_file.write_text("\n".join(config_lines) + "\n")
+        log_success(f"Created: {config_file}")
+        return True
+
+    def _setup_azure_config(self, config_file: Path, common_config: dict) -> bool:
+        """Setup Azure configuration"""
+        from rich.prompt import Prompt, Confirm
+        
+        console.print("\n[dim]Azure Configuration requires:[/dim]")
+        console.print("  • Azure Region")
+        console.print("  • (Optional) SSH key name\n")
+        
+        region = Prompt.ask("Azure Region", default="usgovvirginia")
+        
+        # SSH key name for Azure
+        ssh_key_name = ""
+        if Confirm.ask("Do you have an Azure SSH key configured?", default=False):
+            ssh_key_name = Prompt.ask("SSH key name")
+        
+        config_lines = [
+            "# Azure Configuration for VAULT Labs",
+            "# Auto-generated by vault setup\n",
+            f'azure_region = "{region}"'
+        ]
+        
+        if ssh_key_name:
+            config_lines.append(f'ssh_key_name = "{ssh_key_name}"')
+        
+        if common_config.get("resource_prefix"):
+            config_lines.append(f'lab_prefix = "{common_config["resource_prefix"]}"')
+        
+        if common_config.get("owner_email"):
+            config_lines.append(f'\ndefault_tags = {{')
+            config_lines.append(f'  Owner       = "{common_config["owner_email"]}"')
+            config_lines.append(f'  Environment = "lab"')
+            config_lines.append(f'  ManagedBy   = "vault"')
+            config_lines.append(f'}}')
+        
+        config_file.write_text("\n".join(config_lines) + "\n")
+        log_success(f"Created: {config_file}")
+        return True
+
+    def _setup_gcp_config(self, config_file: Path, common_config: dict) -> bool:
+        """Setup GCP configuration"""
+        from rich.prompt import Prompt, Confirm
+        import subprocess
+        
+        console.print("\n[dim]GCP Configuration requires:[/dim]")
+        console.print("  • GCP Project ID")
+        console.print("  • GCP Region")
+        console.print("  • (Optional) SSH key name\n")
+        
+        # Auto-detect project
+        project_id = None
+        if Confirm.ask("Auto-detect GCP project from gcloud config?", default=True):
+            try:
+                result = subprocess.run(
+                    ["gcloud", "config", "get-value", "project"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    project_id = result.stdout.strip()
+                    console.print(f"[green]Detected project:[/green] {project_id}")
+            except Exception as e:
+                log_warning(f"Could not detect project: {e}")
+        
+        if not project_id:
+            project_id = Prompt.ask("GCP Project ID")
+        
+        region = Prompt.ask("GCP Region", default="us-east4")
+        
+        # SSH key name for GCP
+        ssh_key_name = ""
+        if Confirm.ask("Do you have a GCP SSH key configured?", default=False):
+            ssh_key_name = Prompt.ask("SSH key name")
+        
+        config_lines = [
+            "# GCP Configuration for VAULT Labs",
+            "# Auto-generated by vault setup\n",
+            f'gcp_project = "{project_id}"',
+            f'gcp_region = "{region}"'
+        ]
+        
+        if ssh_key_name:
+            config_lines.append(f'ssh_key_name = "{ssh_key_name}"')
+        
+        if common_config.get("resource_prefix"):
+            config_lines.append(f'lab_prefix = "{common_config["resource_prefix"]}"')
+        
+        # GCP uses labels instead of tags, lowercase with hyphens
+        if common_config.get("owner_email"):
+            owner_label = common_config["owner_email"].replace("@", "-").replace(".", "-").lower()
+            config_lines.append(f'\ndefault_labels = {{')
+            config_lines.append(f'  owner       = "{owner_label}"')
+            config_lines.append(f'  environment = "lab"')
+            config_lines.append(f'  managed_by  = "vault"')
+            config_lines.append(f'}}')
+        
+        config_file.write_text("\n".join(config_lines) + "\n")
+        log_success(f"Created: {config_file}")
+        return True
     
     def cmd_install(self, tool: str) -> bool:
         """Show installation instructions for a CSP tool"""
