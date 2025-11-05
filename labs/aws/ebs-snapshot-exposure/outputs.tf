@@ -36,6 +36,7 @@ output "aws_account_id" {
 
 output "lab_instructions" {
   description = "Quick start instructions"
+  sensitive = true
   value       = <<-EOT
     
     === EBS Snapshot Exploitation Lab ===
