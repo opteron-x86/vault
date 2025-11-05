@@ -102,7 +102,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = "pgadmin"
-    password = "Pr0d_DB_P@ssw0rd_${random_string.suffix.result}"
+    password = "Pr0d-DB-P4ssw0rd-${random_string.suffix.result}"
     engine   = "postgres"
     host     = aws_db_instance.target_db.address
     port     = 5432
@@ -116,7 +116,7 @@ resource "aws_lambda_function" "api_handler" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "lambda_function.lambda_handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  runtime          = "python3.11"
+  runtime          = "python3.13"
   timeout          = 30
 
   environment {
