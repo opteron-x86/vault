@@ -3,7 +3,8 @@
 [![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Terraform](https://img.shields.io/badge/terraform-1.0%2B-purple.svg)](https://www.terraform.io/)
-[![License](https://img.shields.io/badge/license-DISA-green.svg)]()
+[![Org: DISA DG35](https://img.shields.io/badge/org-DG35-green.svg)]()
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 VAULT 35 is a comprehensive Python CLI tool for deploying and managing threat emulation labs across AWS, Azure, and GCP. Designed for cybersecurity professionals, VAULT provides pre-built vulnerable infrastructure scenarios for adversary emulation, penetration testing training, and detection engineering.
 
