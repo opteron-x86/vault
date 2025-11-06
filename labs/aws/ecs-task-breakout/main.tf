@@ -46,6 +46,7 @@ module "vpc" {
   name_prefix       = var.lab_prefix
   vpc_cidr          = "10.0.0.0/16"
   aws_region        = var.aws_region
+  az_count          = 2
   allowed_ssh_cidrs = ["0.0.0.0/0"]
   
   create_web_sg     = true
