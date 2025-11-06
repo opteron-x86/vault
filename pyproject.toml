@@ -3,12 +3,12 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["vault*"]
+include = ["source*"]
 exclude = ["labs*", "config*", "modules*"]
 
 [project]
 name = "vault"
-version = "1.4.1"
+version = "1.4.2"
 description = "Virtual Attack Utility Lab Terminal"
 requires-python = ">=3.12"
 dependencies = [
