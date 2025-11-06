@@ -229,7 +229,7 @@ resource "random_password" "db_password" {
 resource "aws_db_instance" "main" {
   identifier           = "${var.lab_prefix}-db-${random_string.suffix.result}"
   engine               = "postgres"
-  engine_version       = "15.4"
+  engine_version       = "17.4"
   instance_class       = "db.t3.micro"
   allocated_storage    = 20
   storage_encrypted    = false
