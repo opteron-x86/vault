@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.scripts]
-vault = "vault.__main__:main"
+vault = "source.__main__:main"
 
 [tool.ruff]
 line-length = 100
