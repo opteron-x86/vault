@@ -2,20 +2,24 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+STATE_FILE="$PROJECT_ROOT/.state/aws_ecs-task-breakout/terraform.tfstate"
 
 echo "=== ECS Task Breakout Lab Deployment ==="
 echo ""
 
-if [ ! -f "terraform.tfstate" ]; then
-    echo "Error: Terraform state not found. Deploy the lab first with 'vault deploy aws/ecs-task-breakout'"
+if [ ! -f "$STATE_FILE" ]; then
+    echo "Error: Terraform state not found at $STATE_FILE"
+    echo "Deploy the lab first with 'vault deploy aws/ecs-task-breakout'"
     exit 1
 fi
 
-ECR_REPO=$(terraform output -raw ecr_repository_url 2>/dev/null)
-REGION=$(terraform output -raw aws_region 2>/dev/null || echo "us-gov-east-1")
-CLUSTER=$(terraform output -raw ecs_cluster_name 2>/dev/null)
-SERVICE=$(terraform output -raw ecs_service_name 2>/dev/null)
+cd "$SCRIPT_DIR"
+
+ECR_REPO=$(terraform output -state="$STATE_FILE" -raw ecr_repository_url 2>/dev/null)
+REGION=$(terraform output -state="$STATE_FILE" -raw aws_region 2>/dev/null || echo "us-gov-east-1")
+CLUSTER=$(terraform output -state="$STATE_FILE" -raw ecs_cluster_name 2>/dev/null)
+SERVICE=$(terraform output -state="$STATE_FILE" -raw ecs_service_name 2>/dev/null)
 
 if [ -z "$ECR_REPO" ]; then
     echo "Error: Could not determine ECR repository URL"
