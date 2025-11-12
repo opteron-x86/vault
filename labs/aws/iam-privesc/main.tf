@@ -291,7 +291,7 @@ module "audit_logging" {
   
   data_resources = [{
     type   = "AWS::S3::Object"
-    values = ["${aws_s3_bucket.sensitive_data.arn}/*"]
+    values = ["${aws_s3_bucket.protected_data.arn}/*"]
   }]
   
   tags = local.common_tags
