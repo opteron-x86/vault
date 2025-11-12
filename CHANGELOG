@@ -8,13 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Flag for deploy and destroy to skip confirmation checks
-
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+## [1.4.4] - 2025-11-12
+
+### Added
+- Auto-approve flag (`-y`, `--auto-approve`) for deploy and destroy commands
+- Support for auto-approve in both CLI and interactive shell modes
+
+### Changed
+- Deploy and destroy commands now accept optional confirmation skip flag
+- Interactive shell command handlers updated to parse flag arguments
 
 ## [1.4.3] - 2025-11-12
 
