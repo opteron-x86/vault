@@ -64,6 +64,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs" {
     id     = "delete-old-logs"
     status = "Enabled"
 
+    filter {}
+
     expiration {
       days = var.log_retention_days
     }
@@ -125,14 +127,6 @@ resource "aws_cloudtrail" "vault_master" {
       type = "AWS::S3::Object"
       values = [
         "arn:aws-us-gov:s3:::${var.name_prefix}-*/*"
-      ]
-    }
-
-    # Log all Lambda invocations for VAULT functions
-    data_resource {
-      type = "AWS::Lambda::Function"
-      values = [
-        "arn:aws-us-gov:lambda:${var.aws_region}:${local.account_id}:function:${var.name_prefix}-*"
       ]
     }
   }
