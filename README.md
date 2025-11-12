@@ -1,388 +1,141 @@
-# VAULT 35- Virtual Attack Utility Lab Terminal
+# VAULT 35 - Virtual Attack Utility Lab Terminal
 
-VAULT 35 is a Python CLI tool for deploying and managing Terraform IaC resources across AWS, Azure, and GCP. Threat Emulation and Detection templates are packaged alongside VAULT 35, for launching vulnerable target resources to use in adversary emulation scenarios.
+[![Version](https://img.shields.io/badge/version-1.4.1-blue.svg)](CHANGELOG.md)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Terraform](https://img.shields.io/badge/terraform-1.0%2B-purple.svg)](https://www.terraform.io/)
+[![Org: DISA DG35](https://img.shields.io/badge/org-DG35-green.svg)]()
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## Prerequisites
+VAULT 35 is a comprehensive Python CLI tool for deploying and managing threat emulation labs across AWS, Azure, and GCP. Designed for cybersecurity professionals, VAULT provides pre-built vulnerable infrastructure scenarios for adversary emulation, penetration testing training, and detection engineering.
 
-- Python 3.12+
-- Terraform 1.0+
-- Cloud provider CLI tools (AWS CLI, Azure CLI, or gcloud)
-- Valid cloud credentials configured
+## 🚀 Features
 
-## Installation
+- **Multi-Cloud Support** - Deploy labs seamlessly across AWS, Azure, and GCP
+- **Interactive CLI** - Intuitive shell with tab completion and command history
+- **Automated Attack Chains** - Built-in scripts to automate exploitation workflows
+- **Lab Discovery** - Fuzzy search across labs by name, description, or objectives
+- **State Management** - Isolated Terraform state per deployment with metadata tracking
+- **Cost Controls** - Auto-shutdown tags and resource limits to prevent cost overruns
+
+## 📚 Documentation
+
+- 📖 **[Full Documentation](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/home)** - Complete guides and tutorials
+- 🔍 **[Lab Catalog](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Lab-Catalog)** - Browse all available labs
+- 🛠️ **[Troubleshooting](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Troubleshooting)** - Common issues and solutions
+- 🤝 **[Contributing](CONTRIBUTING.md)** - Development guidelines and lab creation
+
+## 📋 Prerequisites
+
+- **Python** 3.12 or higher
+- **Terraform** 1.0 or higher
+- **Cloud CLI Tools** - AWS CLI, Azure CLI, or gcloud SDK
+- **Valid Cloud Credentials** - Configured for your target provider(s)
+
+## 🔧 Quick Start
+
+### Installation
 
 ```bash
-# Clone repository
-git clone <repository-url>
+# Clone the repository
+git clone https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation.git
 cd cyber-threat-emulation
 
-# Create virtual environment
+# Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install vault
+# Install VAULT
 pip install -e .
 
 # Verify installation
-vault --help
+vault --version
 ```
 
-## Project Structure
+### Configuration
 
-```
-cyber-threat-emulation/
-├── labs/                    # Lab terraform configurations
-│   ├── aws/
-│   ├── azure/
-│   └── gcp/
-├── config/                  # CSP configuration files
-│   ├── common-aws.tfvars
-│   ├── common-azure.tfvars
-│   └── common-gcp.tfvars
-├── .state/                  # Terraform state and metadata
-│   └── .metadata/
-├── modules/                 # Shared terraform modules
-└── vault/                   # Application source
-```
+Run the interactive setup wizard to configure cloud providers:
 
-## Configuration
-
-### AWS Setup
-
-Create `config/common-aws.tfvars`:
-
-```hcl
-aws_region = "us-gov-east-1"
-allowed_source_ips = ["YOUR_IP/32"]
-ssh_key_name = "YOUR_SSH_KEY"
-```
-
-Configure AWS credentials:
 ```bash
-aws configure --profile default
+vault setup
 ```
 
-### Azure Setup
+Or manually create configuration files in `config/`:
+- `common-aws.tfvars` - AWS settings
+- `common-azure.tfvars` - Azure settings  
+- `common-gcp.tfvars` - GCP settings
 
-Create `config/common-azure.tfvars`:
+### Deploy Your First Lab
 
-```hcl
-azure_region = "usgovvirginia"
-```
-
-Authenticate:
-```bash
-az login
-```
-
-### GCP Setup
-
-Create `config/common-gcp.tfvars`:
-
-```hcl
-gcp_project = "your-project-id"
-gcp_region = "us-east4"
-```
-
-Authenticate:
-```bash
-gcloud auth application-default login
-gcloud config set project your-project-id
-```
-
-## Usage
-
-### Interactive Mode
-
-Launch interactive shell with tab completion and command history:
-
+**Interactive Mode:**
 ```bash
 vault
-```
-
-Commands available in interactive mode:
-
-```
-list [query]         List all labs, optionally filter by query
-use <lab>            Select lab by path or number
-info [lab]           Display lab details and README
-init [lab]           Initialize lab (download providers, configure backend)
-plan [lab]           Show terraform plan without deploying
-deploy [lab]         Deploy selected or specified lab
-destroy [lab]        Destroy deployed lab
-status [lab]         Show deployment status and resources
-outputs [lab]        Display lab outputs (--sensitive for all values)
-active               List active deployments
-search <query>       Fuzzy search across lab names and descriptions
-validate [lab]       Validate terraform configuration
-back                 Deselect current lab
-clear                Clear screen
-help                 Show help
-exit                 Exit vault
-```
-
-### CLI Mode
-
-Execute single commands without entering interactive mode:
-
-```bash
-# List all labs
-vault list
-
-# Search labs
-vault search ssrf
-vault search "privilege escalation"
-
-# Deploy lab
-vault deploy aws/iam-privesc
-
-# Check status
-vault status aws/iam-privesc
-
-# View outputs
-vault outputs aws/iam-privesc
-vault outputs aws/iam-privesc --sensitive
-
-# Destroy lab
-vault destroy aws/iam-privesc
-
-# Show active deployments
-vault active
-```
-
-## Workflow Examples
-
-### Deploy Lab
-
-```bash
-# Interactive
-vault
-> list
-> use 1                    # or: use aws/iam-privesc
+> list                     # Browse available labs
+> search ssrf              # Search for specific labs
+> use aws/ssrf-metadata    # Select a lab
 > info                     # Review lab details
-> deploy                   # Review plan, confirm deployment
-
-# CLI
-vault deploy aws/iam-privesc
+> deploy                   # Deploy the lab
+> outputs                  # Get connection details
+> destroy                  # Clean up when done
 ```
 
-### Check Lab Status
-
+**CLI Mode:**
 ```bash
-# Interactive
-vault
-> status aws/iam-privesc
-
-# CLI
-vault status aws/iam-privesc
+vault list
+vault deploy aws/ssrf-metadata
+vault outputs aws/ssrf-metadata
+vault destroy aws/ssrf-metadata
 ```
 
-### Retrieve Outputs
+## 🎯 Common Commands
 
+| Command | Description |
+|---------|-------------|
+| `list [query]` | List all labs, optionally filter by query |
+| `use <lab>` | Select lab by path or number |
+| `info [lab]` | Display lab details and README |
+| `deploy [lab]` | Deploy selected or specified lab |
+| `destroy [lab]` | Destroy deployed lab |
+| `status [lab]` | Show deployment status and resources |
+| `outputs [lab]` | Display lab outputs (use `--sensitive` for all values) |
+| `active` | List all active deployments |
+| `search <query>` | Fuzzy search across lab names and descriptions |
+| `attack [lab]` | Execute automated attack chain against lab |
+| `validate [lab]` | Validate Terraform configuration |
+
+## 🧪 Creating New Labs
+
+To create a new lab, see [instructions.md](instructions.md) for detailed guidelines.
+
+**Quick start:**
 ```bash
-# Interactive
-vault
-> use aws/iam-privesc
-> outputs
-> outputs --sensitive      # Show sensitive values
-
-# CLI
-vault outputs aws/iam-privesc --sensitive
-```
-
-### Destroy Lab
-
-```bash
-# Interactive
-vault
-> destroy aws/iam-privesc  # Requires lab name confirmation
-
-# CLI
-vault destroy aws/iam-privesc
-```
-
-### Search Labs
-
-```bash
-# Interactive
-vault
-> search metadata
-> search privilege escalation
-
-# CLI
-vault search ssrf
-```
-
-## Lab Development
-
-### Create New Lab
-
-1. Create lab directory:
-```bash
-mkdir -p labs/aws/my-new-lab
-cd labs/aws/my-new-lab
-```
-
-2. Create terraform files:
-```bash
+mkdir -p labs/aws/my-new-lab && cd labs/aws/my-new-lab
 touch main.tf variables.tf outputs.tf README.md
-```
-
-3. Follow lab development guidelines in `instructions.md`
-
-4. Test lab:
-```bash
+# Follow lab structure conventions from instructions.md
 vault validate aws/my-new-lab
 vault deploy aws/my-new-lab
 ```
 
-### Lab README Format
+## 📦 State Management
 
-Labs are auto-discovered when they contain `main.tf`. Metadata is parsed from README.md:
+VAULT maintains deployment state in `.state/`:
+- `.state/<csp>_<lab>/terraform.tfstate` - Terraform state files
+- `.state/.metadata/<csp>_<lab>.json` - Deployment metadata (timestamps, resources, user)
 
-```markdown
-# Lab Name
+Each lab deployment is isolated with its own state to prevent conflicts.
 
-**Difficulty:** 5
-**Description:** Brief description of the lab scenario
-**Estimated Time:** 45-60 minutes
+## 📞 Support
 
-## Learning Objectives
-- Objective 1
-- Objective 2
+- **Repository:** [GitLab](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation)
+- **Documentation:** [Wiki](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/home)
+- **Contact:** caleb.n.cline.ctr@mail.mil
+- **Organization:** DG35 - Cyber Threat Emulation
 
-## Scenario
-Detailed scenario description...
-```
+## 📖 Version History
 
-## State Management
+**Current Version:** 1.4.1 (2025-11-04)
 
-Vault maintains deployment state in `.state/`:
+See [CHANGELOG.md](CHANGELOG.md) for full version history.
 
-- `.state/<csp>_<lab>/terraform.tfstate` - Terraform state
-- `.state/.metadata/<csp>_<lab>.json` - Deployment metadata
+---
 
-State includes:
-- Resource count
-- Deployment timestamp
-- Deployed by user
-- Last action
-- Region
-
-## Troubleshooting
-
-### Terraform Not Found
-
-```bash
-# macOS
-brew install terraform
-
-# Linux
-wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
-unzip terraform_1.6.0_linux_amd64.zip
-sudo mv terraform /usr/local/bin/
-```
-
-### Import Errors
-
-Ensure vault is installed in development mode:
-```bash
-pip install -e . --force-reinstall
-```
-
-### Missing Cloud CLI
-
-Install required CLI tools:
-```bash
-# AWS CLI
-pip install awscli
-
-# Azure CLI
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-# gcloud
-# See: https://cloud.google.com/sdk/docs/install
-```
-
-### Configuration File Errors
-
-Vault creates template config files on first run. Edit placeholders:
-
-```bash
-# Check for YOUR_IP or YOUR_PROJECT_ID placeholders
-grep -r "YOUR_" config/
-
-# Update with actual values
-vim config/common-aws.tfvars
-```
-
-### State File Corruption
-
-If state becomes corrupted:
-```bash
-# Backup existing state
-cp -r .state .state.backup
-
-# Remove corrupted state
-rm -rf .state/aws_problematic-lab
-
-# Redeploy if needed
-vault deploy aws/problematic-lab
-```
-
-### Lab Not Found
-
-Vault discovers labs by scanning `labs/` directory. Verify structure:
-
-```bash
-# Lab must contain main.tf
-ls labs/aws/my-lab/main.tf
-
-# Refresh lab cache
-vault
-> list
-```
-
-## Development
-
-### Run Tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-pytest --cov=vault --cov-report=html
-```
-
-### Type Checking
-
-```bash
-mypy vault
-```
-
-### Linting
-
-```bash
-ruff check vault
-ruff format vault
-```
-
-### Adding New Provider
-
-1. Create provider class in `vault/providers/`
-2. Implement `BaseProvider` interface
-3. Register in `ProviderFactory._providers`
-4. Add configuration template
-
-## Contributing
-
-Follow guidelines in `instructions.md` for:
-- Lab structure conventions
-- Naming standards
-- Security requirements
-- Documentation requirements
-
-## Support
-
-- GitLab: https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation
-- Contact: caleb.n.cline.ctr@mail.mil
-- Organization: DG35 - Cyber Threat Emulation
+**⚠️ Security Notice:** All labs are designed for authorized security testing in isolated environments. Always ensure proper authorization before deploying infrastructure or conducting security testing.
