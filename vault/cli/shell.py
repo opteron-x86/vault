@@ -161,16 +161,28 @@ class InteractiveShell:
             "show": lambda: self.command_handler.cmd_info(args[0] if args else None),
             "init": lambda: self.command_handler.cmd_init(args[0] if args else None),
             "plan": lambda: self.command_handler.cmd_plan(args[0] if args else None, destroy="--destroy" in args),
-            "deploy": lambda: self.command_handler.cmd_deploy(args[0] if args else None),
-            "run": lambda: self.command_handler.cmd_deploy(args[0] if args else None),
+            "deploy": lambda: self.command_handler.cmd_deploy(
+                args[0] if args and not args[0].startswith('-') else None,
+                auto_approve="--auto-approve" in args or "-y" in args
+            ),
+            "run": lambda: self.command_handler.cmd_deploy(
+                args[0] if args and not args[0].startswith('-') else None,
+                auto_approve="--auto-approve" in args or "-y" in args
+            ),
             "attack": lambda: self.command_handler.cmd_attack(
                 args[0] if args else None, 
                 auto_destroy="--auto-destroy" in args,
                 verbose="--verbose" in args or "-v" in args,
                 save_log="--log" in args
             ),
-            "destroy": lambda: self.command_handler.cmd_destroy(args[0] if args else None),
-            "kill": lambda: self.command_handler.cmd_destroy(args[0] if args else None),
+            "destroy": lambda: self.command_handler.cmd_destroy(
+                args[0] if args and not args[0].startswith('-') else None,
+                auto_approve="--auto-approve" in args or "-y" in args
+            ),
+            "kill": lambda: self.command_handler.cmd_destroy(
+                args[0] if args and not args[0].startswith('-') else None,
+                auto_approve="--auto-approve" in args or "-y" in args
+            ),
             "outputs": lambda: self._handle_outputs(args),
             "output": lambda: self._handle_outputs(args),
             "status": lambda: self.command_handler.cmd_status(args[0] if args else None),
