@@ -93,9 +93,13 @@ class CommandHandler:
             if Confirm.ask("View full README?", default=False):
                 self._display_readme(lab)
     
-    def cmd_deploy(self, lab_identifier: Optional[str] = None) -> bool:
+    def cmd_deploy(self, lab_identifier: Optional[str] = None, auto_approve: bool = False) -> bool:
         lab = self._resolve_lab(lab_identifier)
         if not lab:
+            return False
+        
+        if self.state_manager.is_deployed(lab):
+            log_warning(f"Lab already deployed: {lab.relative_path}")
             return False
         
         provider = ProviderFactory.get_provider(lab.provider, self.config_dir)
@@ -132,9 +136,10 @@ class CommandHandler:
             log_error(f"Plan failed: {e}")
             return False
         
-        if not Confirm.ask("\n[green]Proceed with deployment?[/green]", default=False):
-            log_info("Deployment cancelled")
-            return False
+        if not auto_approve:
+            if not Confirm.ask("\n[green]Proceed with deployment?[/green]", default=False):
+                log_info("Deployment cancelled")
+                return False
         
         log_info(f"Deploying lab: {lab.relative_path}")
         
@@ -151,8 +156,8 @@ class CommandHandler:
         
         print_deployment_result(result, lab.relative_path)
         return result.success
-    
-    def cmd_destroy(self, lab_identifier: Optional[str] = None) -> bool:
+
+    def cmd_destroy(self, lab_identifier: Optional[str] = None, auto_approve: bool = False) -> bool:
         lab = self._resolve_lab(lab_identifier)
         if not lab:
             return False
@@ -164,12 +169,12 @@ class CommandHandler:
         provider = ProviderFactory.get_provider(lab.provider, self.config_dir)
         var_files = provider.get_var_files(lab)
         
-        console.print(
-            f"\n[red bold]WARNING:[/red bold] [red]This will destroy all resources for: {lab.relative_path}[/red]\n"
-        )
-        
-        if not Confirm.ask(f"Type lab name to confirm ({lab.name})", default=""):
-            confirmation = console.input("[yellow]Confirmation: [/yellow]")
+        if not auto_approve:
+            console.print(
+                f"\n[red bold]WARNING:[/red bold] [red]This will destroy all resources for: {lab.relative_path}[/red]\n"
+            )
+            
+            confirmation = console.input(f"[yellow]Type lab name to confirm ({lab.name}): [/yellow]")
             if confirmation != lab.name:
                 log_info("Destruction cancelled")
                 return False

@@ -81,7 +81,8 @@ def plan(lab, destroy):
 
 @cli.command()
 @click.argument("lab")
-def deploy(lab):
+@click.option("-y", "--auto-approve", is_flag=True, help="Skip confirmation prompts")
+def deploy(lab, auto_approve):
     """Deploy a lab"""
     labs_dir, state_dir, config_dir, _ = get_project_paths()
     handler = CommandHandler(labs_dir, state_dir, config_dir)
@@ -89,13 +90,14 @@ def deploy(lab):
     if not handler.cmd_use(lab):
         sys.exit(1)
     
-    if not handler.cmd_deploy():
+    if not handler.cmd_deploy(auto_approve=auto_approve):
         sys.exit(1)
 
 
 @cli.command()
 @click.argument("lab")
-def destroy(lab):
+@click.option("-y", "--auto-approve", is_flag=True, help="Skip confirmation prompts")
+def destroy(lab, auto_approve):
     """Destroy a lab"""
     labs_dir, state_dir, config_dir, _ = get_project_paths()
     handler = CommandHandler(labs_dir, state_dir, config_dir)
@@ -103,13 +105,13 @@ def destroy(lab):
     if not handler.cmd_use(lab):
         sys.exit(1)
     
-    if not handler.cmd_destroy():
+    if not handler.cmd_destroy(auto_approve=auto_approve):
         sys.exit(1)
 
 
 @cli.command()
 @click.argument("lab", required=False)
-@click.option("--sensitive", is_flag=True, help="Show sensitive outputs")
+@click.option("-s", "--sensitive", is_flag=True, help="Show sensitive outputs")
 def outputs(lab, sensitive):
     """Show lab outputs"""
     labs_dir, state_dir, config_dir, _ = get_project_paths()
