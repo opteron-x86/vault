@@ -8,11 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Flag for deploy and destroy to skip confirmation checks
+
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+## [1.4.3] - 2025-11-12
+
+### Changed
+- Optional variable setting for audit logging module (AWS)
+
+## [1.4.2] - 2025-11-06
+
+### Added
+- ecs-task-breakout AWS lab
 
 ## [1.4.1] - 2025-11-04
 
