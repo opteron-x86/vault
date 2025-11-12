@@ -1,11 +1,21 @@
+# Use existing shared CloudTrail or create new one
+locals {
+  use_shared = var.use_shared_cloudtrail && var.shared_cloudtrail_name != ""
+}
+
+# Only create trail if NOT using shared
 resource "aws_s3_bucket" "logs" {
+  count = local.use_shared ? 0 : 1
+  
   bucket        = "${var.name_prefix}-cloudtrail-${var.suffix}"
   force_destroy = true
   tags          = var.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "logs" {
-  bucket                  = aws_s3_bucket.logs.id
+  count = local.use_shared ? 0 : 1
+  
+  bucket                  = aws_s3_bucket.logs[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -13,7 +23,9 @@ resource "aws_s3_bucket_public_access_block" "logs" {
 }
 
 resource "aws_s3_bucket_policy" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  count = local.use_shared ? 0 : 1
+  
+  bucket = aws_s3_bucket.logs[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -25,7 +37,7 @@ resource "aws_s3_bucket_policy" "logs" {
           Service = "cloudtrail.amazonaws.com"
         }
         Action   = "s3:GetBucketAcl"
-        Resource = aws_s3_bucket.logs.arn
+        Resource = aws_s3_bucket.logs[0].arn
       },
       {
         Sid    = "AWSCloudTrailWrite"
@@ -34,7 +46,7 @@ resource "aws_s3_bucket_policy" "logs" {
           Service = "cloudtrail.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.logs.arn}/*"
+        Resource = "${aws_s3_bucket.logs[0].arn}/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -46,8 +58,10 @@ resource "aws_s3_bucket_policy" "logs" {
 }
 
 resource "aws_cloudtrail" "main" {
+  count = local.use_shared ? 0 : 1
+  
   name                          = "${var.name_prefix}-trail"
-  s3_bucket_name                = aws_s3_bucket.logs.id
+  s3_bucket_name                = aws_s3_bucket.logs[0].id
   include_global_service_events = var.include_global_events
   is_multi_region_trail         = var.multi_region
   enable_logging                = true
@@ -71,4 +85,10 @@ resource "aws_cloudtrail" "main" {
   tags = var.tags
 
   depends_on = [aws_s3_bucket_policy.logs]
+}
+
+# Reference existing shared trail
+data "aws_cloudtrail" "shared" {
+  count = local.use_shared ? 1 : 0
+  name  = var.shared_cloudtrail_name
 }
