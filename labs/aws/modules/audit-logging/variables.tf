@@ -1,3 +1,21 @@
+variable "use_shared_cloudtrail" {
+  description = "Use existing shared CloudTrail trail instead of creating new"
+  type        = bool
+  default     = true
+}
+
+variable "shared_cloudtrail_name" {
+  description = "Name of shared CloudTrail trail (if use_shared_cloudtrail=true)"
+  type        = string
+  default     = ""
+}
+
+variable "shared_cloudtrail_bucket" {
+  description = "S3 bucket name for shared CloudTrail logs"
+  type        = string
+  default     = ""
+}
+
 variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string

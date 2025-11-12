@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region for lab deployment"
   type        = string
-  default     = "us-gov-east-1"
+  default     = ""
 }
 
 variable "allowed_source_ips" {
@@ -16,7 +16,7 @@ variable "allowed_source_ips" {
 variable "ssh_key_name" {
   description = "AWS SSH key pair name for EC2 access"
   type        = string
-  default     = "cnc-all-access"
+  default     = ""
 }
 
 variable "lab_prefix" {
@@ -43,6 +43,12 @@ variable "auto_shutdown_hours" {
     condition     = var.auto_shutdown_hours >= 1 && var.auto_shutdown_hours <= 24
     error_message = "Auto shutdown must be between 1 and 24 hours."
   }
+}
+
+variable "enable_audit_logging" {
+  description = "Enable CloudTrail audit logging"
+  type        = bool
+  default     = false
 }
 
 variable "enable_cost_controls" {
