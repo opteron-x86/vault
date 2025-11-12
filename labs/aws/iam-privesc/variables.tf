@@ -3,7 +3,7 @@
 variable "aws_region" {
   description = "AWS region for lab deployment"
   type        = string
-  default     = "us-gov-east-1"
+  default     = ""
 }
 
 variable "lab_prefix" {
@@ -24,6 +24,12 @@ variable "lab_difficulty" {
     condition     = var.lab_difficulty >= 1 && var.lab_difficulty <= 10
     error_message = "Difficulty must be between 1 and 10."
   }
+}
+
+variable "enable_audit_logging" {
+  description = "Enable CloudTrail audit logging"
+  type        = bool
+  default     = false
 }
 
 variable "enable_cost_controls" {

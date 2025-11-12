@@ -341,6 +341,7 @@ resource "aws_ssm_parameter" "data_role_hint" {
 }
 
 module "audit_logging" {
+  count  = var.enable_audit_logging ? 1 : 0
   source = "../modules/audit-logging"
   
   name_prefix = var.lab_prefix

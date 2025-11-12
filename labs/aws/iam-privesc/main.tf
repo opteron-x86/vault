@@ -283,6 +283,7 @@ resource "aws_ssm_parameter" "security_note" {
 }
 
 module "audit_logging" {
+  count  = var.enable_audit_logging ? 1 : 0
   source = "../modules/audit-logging"
   
   name_prefix = var.lab_prefix
@@ -290,7 +291,7 @@ module "audit_logging" {
   
   data_resources = [{
     type   = "AWS::S3::Object"
-    values = ["${aws_s3_bucket.protected_data.arn}/*"]
+    values = ["${aws_s3_bucket.sensitive_data.arn}/*"]
   }]
   
   tags = local.common_tags
