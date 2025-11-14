@@ -14,13 +14,14 @@ output "instructions" {
        sudo tcpdump -i any -n udp port 4789 -w /tmp/mirror.pcap
     
     3. Generate traffic on source instance:
-       Visit http://${module.mirror_target_ec2.target_instance_public_ip} in your browser
+       Visit in your browser:
+       http://${module.mirror_target_ec2.target_instance_public_ip}
        
        Or from another terminal:
        curl http://${module.mirror_target_ec2.target_instance_public_ip}
     
     4. You should see VXLAN encapsulated traffic on the collector!
-        If written to a file with -w, read the file with :
+        If written to a file with -w, read the file with:
         tcpdump -r /tmp/mirror.pcap
 
         Alternatively, you can view the pcap with Wireshark!

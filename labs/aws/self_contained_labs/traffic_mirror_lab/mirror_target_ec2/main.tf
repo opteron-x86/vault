@@ -9,8 +9,8 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_security_group" "target_sg" {
-  name        = "target-instance-sg"
-  vpc_id      = var.mirror_vpc_id
+  name   = "target-instance-sg"
+  vpc_id = var.mirror_vpc_id
 
   ingress {
     description = "SSH"
@@ -18,7 +18,7 @@ resource "aws_security_group" "target_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    }
+  }
 
   ingress {
     description = "HTTP"
@@ -60,10 +60,10 @@ resource "aws_security_group" "target_sg" {
 resource "aws_instance" "target_instance" {
 
   associate_public_ip_address = true
-  ami           = data.aws_ami.amazon_linux.id
-  instance_type = "t3.micro"
-  subnet_id     = var.mirror_subnet_id
-  key_name      = var.key_name
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t3.micro"
+  subnet_id                   = var.mirror_subnet_id
+  key_name                    = var.key_name
 
   vpc_security_group_ids = [aws_security_group.target_sg.id]
 
@@ -77,7 +77,7 @@ resource "aws_instance" "target_instance" {
               EOF
 
   tags = {
-    Name = "cte-traffic-mirror-emulation-target-instance"
+    Name    = "cte-traffic-mirror-emulation-target-instance"
     mission = "cte"
   }
 }

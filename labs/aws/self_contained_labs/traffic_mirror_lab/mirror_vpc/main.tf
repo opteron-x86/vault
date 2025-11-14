@@ -1,5 +1,5 @@
 resource "aws_vpc" "mirror_vpc" {
-  cidr_block           = "192.168.0.0/16"
+  cidr_block = "192.168.0.0/16"
 
   tags = {
     mission = "cte"
@@ -32,9 +32,9 @@ resource "aws_route_table" "route_table" {
 }
 
 resource "aws_route" "rt_route" {
-  route_table_id            = aws_route_table.route_table.id
-  destination_cidr_block    = "0.0.0.0/0"
-  gateway_id                = aws_internet_gateway.vpc_gateway.id
+  route_table_id         = aws_route_table.route_table.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.vpc_gateway.id
 }
 
 resource "aws_route_table_association" "subnet_assoc_for_vpc" {

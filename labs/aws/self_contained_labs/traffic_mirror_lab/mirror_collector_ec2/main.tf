@@ -9,8 +9,8 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_security_group" "collector_sg" {
-  name        = "collector-instance-sg"
-  vpc_id      = var.mirror_vpc_id
+  name   = "collector-instance-sg"
+  vpc_id = var.mirror_vpc_id
 
   ingress {
     description = "SSH"
@@ -51,10 +51,10 @@ resource "aws_security_group" "collector_sg" {
 resource "aws_instance" "collector_instance" {
 
   associate_public_ip_address = true
-  ami           = data.aws_ami.amazon_linux.id
-  instance_type = "t3.micro"
-  subnet_id     = var.mirror_subnet_id
-  key_name      = var.key_name
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t3.micro"
+  subnet_id                   = var.mirror_subnet_id
+  key_name                    = var.key_name
 
   vpc_security_group_ids = [aws_security_group.collector_sg.id]
 
@@ -66,7 +66,7 @@ resource "aws_instance" "collector_instance" {
               EOF
 
   tags = {
-    Name = "cte-traffic-mirror-emulation-collector-instance"
+    Name    = "cte-traffic-mirror-emulation-collector-instance"
     mission = "cte"
   }
 }
