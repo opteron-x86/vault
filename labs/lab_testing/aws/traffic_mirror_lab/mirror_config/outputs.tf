@@ -9,7 +9,7 @@ output "instructions" {
     Traffic Mirroring Lab Setup Complete!
     
     1. SSH to collector instance:
-       ssh -i your-key.pem ec2-user@${aws_instance.collector_instance.public_ip}
+       ssh -i your-key.pem ec2-user@${var.target_instance_public_ip}
     
     2. Start capturing traffic on collector:
        sudo tcpdump -i any -n port 4789 -v
@@ -18,10 +18,10 @@ output "instructions" {
        sudo tcpdump -i any -n udp port 4789 -w /tmp/mirror.pcap
     
     3. Generate traffic on source instance:
-       Visit http://${aws_instance.source_instance.public_ip} in your browser
+       Visit http://${var.target_instance_public_ip} in your browser
        
        Or from another terminal:
-       curl http://${aws_instance.source_instance.public_ip}
+       curl http://${var.target_instance_public_ip}
     
     4. You should see VXLAN encapsulated traffic on the collector!
     
