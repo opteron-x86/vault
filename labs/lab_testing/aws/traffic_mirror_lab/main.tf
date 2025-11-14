@@ -34,7 +34,7 @@ module "mirror_collector_ec2" {
 module "mirror_config" {
     source = "./mirror_config"
 
-    collector_instance_primary_interface_id = module.mirror_collector_ec2.collector_instance.primary_network_interface_id
+    collector_instance_primary_interface_id = module.mirror_collector_ec2.collector_instance_primary_network_interface_id
     target_instance_primary_interface_id = module.mirror_target_ec2.target_instance.primary_network_interface
     target_instance_public_ip = module.mirror_target_ec2.target_instance_public_ip
 }

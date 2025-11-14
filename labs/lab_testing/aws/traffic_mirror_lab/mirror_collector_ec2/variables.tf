@@ -13,4 +13,3 @@ variable "mirror_subnet_id" {
 variable "mirror_vpc_id" {
   type = string
 }
-  

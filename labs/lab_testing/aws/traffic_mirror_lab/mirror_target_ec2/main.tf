@@ -63,7 +63,7 @@ resource "aws_instance" "target_instance" {
   subnet_id     = var.mirror_subnet_id
   key_name      = var.key_name
 
-  vpc_security_group_ids = [aws_security_group.source_sg.id]
+  vpc_security_group_ids = [aws_security_group.target_sg.id]
 
   user_data = <<-EOF
               #!/bin/bash
