@@ -46,19 +46,19 @@ output "ubuntu_22_04" {
   }
 }
 
-output "ubuntu_20_04_id" {
-  description = "Latest Ubuntu 20.04 LTS AMI ID"
+output "ubuntu_24_04_id" {
+  description = "Latest Ubuntu 24.04 LTS AMI ID"
   value       = data.aws_ami.ubuntu_20_04.id
 }
 
-output "ubuntu_20_04" {
-  description = "Full Ubuntu 20.04 LTS AMI details"
+output "ubuntu_24_04" {
+  description = "Full Ubuntu 24.04 LTS AMI details"
   value = {
-    id               = data.aws_ami.ubuntu_20_04.id
-    name             = data.aws_ami.ubuntu_20_04.name
-    creation_date    = data.aws_ami.ubuntu_20_04.creation_date
-    architecture     = data.aws_ami.ubuntu_20_04.architecture
-    root_device_type = data.aws_ami.ubuntu_20_04.root_device_type
+    id               = data.aws_ami.ubuntu_24_04.id
+    name             = data.aws_ami.ubuntu_24_04.name
+    creation_date    = data.aws_ami.ubuntu_24_04.creation_date
+    architecture     = data.aws_ami.ubuntu_24_04.architecture
+    root_device_type = data.aws_ami.ubuntu_24_04.root_device_type
   }
 }
 
