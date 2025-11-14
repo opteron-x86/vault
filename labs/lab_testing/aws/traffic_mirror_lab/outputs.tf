@@ -5,7 +5,7 @@ output "instructions" {
     Traffic Mirroring Lab Walkthrough:
     
     1. SSH to collector instance:
-       ssh -i cnc-all-access.pem ec2-user@${module.mirror_target_ec2.target_instance_public_ip}
+       ssh -i cnc-all-access.pem ec2-user@${module.mirror_target_ec2.collector_instance_public_ip}
     
     2. Start capturing traffic on collector:
        sudo tcpdump -i any -n port 4789 -v
