@@ -52,7 +52,7 @@ resource "aws_instance" "collector_instance" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
   subnet_id     = var.mirror_subnet_id
-  key_name      = var.mirror_vpc_id
+  key_name      = var.key_name
 
   vpc_security_group_ids = [aws_security_group.collector_sg.id]
 
