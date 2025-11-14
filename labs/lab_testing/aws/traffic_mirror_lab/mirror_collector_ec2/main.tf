@@ -49,6 +49,8 @@ resource "aws_security_group" "collector_sg" {
 }
 
 resource "aws_instance" "collector_instance" {
+
+  associate_public_ip_address = true
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
   subnet_id     = var.mirror_subnet_id
@@ -64,6 +66,7 @@ resource "aws_instance" "collector_instance" {
               EOF
 
   tags = {
+    Name = "cte-traffic-mirror-emulation-collector-instance"
     mission = "cte"
   }
 }
