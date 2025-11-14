@@ -14,6 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+## [1.4.4] - 2025-11-12
+
+### Added
+- Auto-approve flag (`-y`, `--auto-approve`) for deploy and destroy commands
+- Support for auto-approve in both CLI and interactive shell modes
+
+### Changed
+- Deploy and destroy commands now accept optional confirmation skip flag
+- Interactive shell command handlers updated to parse flag arguments
+
+## [1.4.3] - 2025-11-12
+
+### Changed
+- Optional variable setting for audit logging module (AWS)
+
+## [1.4.2] - 2025-11-06
+
+### Added
+- ecs-task-breakout AWS lab
+
 ## [1.4.1] - 2025-11-04
 
 ### Added
