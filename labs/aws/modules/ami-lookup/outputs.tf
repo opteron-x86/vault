@@ -48,7 +48,7 @@ output "ubuntu_22_04" {
 
 output "ubuntu_24_04_id" {
   description = "Latest Ubuntu 24.04 LTS AMI ID"
-  value       = data.aws_ami.ubuntu_20_04.id
+  value       = data.aws_ami.ubuntu_24_04.id
 }
 
 output "ubuntu_24_04" {
