@@ -1,7 +1,7 @@
 resource "aws_instance" "webapp" {
   ami                    = module.ami.amazon_linux_2023_id
   instance_type          = local.instance_type
-  subnet_id              = module.vpc.public_subnets[0]
+  subnet_id              = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.vpc.ssh_security_group_id, module.vpc.web_security_group_id]
   iam_instance_profile   = aws_iam_instance_profile.webapp.name
   key_name               = var.ssh_key_name
