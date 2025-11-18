@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+## [1.4.5] - 2025-11-18
+
+### Changed
+- Setup command now includes allowed_source_ips generation for all providers
+
 ## [1.4.4] - 2025-11-12
 
 ### Added

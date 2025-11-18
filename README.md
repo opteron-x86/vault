@@ -1,6 +1,6 @@
 # VAULT-35 - Virtual Attack Utility Lab Terminal
 
-[![Version](https://img.shields.io/badge/version-1.4.4-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.5-blue.svg)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Terraform](https://img.shields.io/badge/terraform-1.0%2B-purple.svg)](https://www.terraform.io/)
 [![Org: DISA DG35](https://img.shields.io/badge/org-DG35-green.svg)]()
