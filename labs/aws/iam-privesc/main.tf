@@ -22,6 +22,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_partition" "current" {}
+
 locals {
   common_tags = {
     Environment  = "lab"
@@ -100,7 +102,7 @@ resource "aws_iam_user_policy" "developer_base" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws-us-gov:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/developer/*"
+        Resource = "arn:${data.aws_partition.current.partition}:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/developer/*"
       }
     ]
   })
@@ -123,7 +125,7 @@ resource "aws_iam_user_policy" "developer_self_manage" {
           "iam:ListAccessKeys",
           "iam:GetAccessKeyLastUsed"
         ]
-        Resource = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:user/$${aws:username}"
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:user/$${aws:username}"
       },
       {
         Sid    = "SelfManagePolicies"
@@ -132,7 +134,7 @@ resource "aws_iam_user_policy" "developer_self_manage" {
           "iam:PutUserPolicy",
           "iam:DeleteUserPolicy"
         ]
-        Resource = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:user/*"
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:user/*"
       }
     ]
   })
@@ -228,7 +230,7 @@ resource "aws_iam_role" "admin_automation" {
       Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
-        AWS = "arn:aws-us-gov:iam::${data.aws_caller_identity.current.account_id}:root"
+        AWS = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
       }
     }]
   })
@@ -283,6 +285,7 @@ resource "aws_ssm_parameter" "security_note" {
 }
 
 module "audit_logging" {
+  count  = var.enable_audit_logging ? 1 : 0
   source = "../modules/audit-logging"
   
   name_prefix = var.lab_prefix

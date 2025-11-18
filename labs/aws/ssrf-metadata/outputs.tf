@@ -24,15 +24,17 @@ output "instance_role" {
   value       = aws_iam_role.webapp_instance.name
 }
 
+/*
 output "cloudtrail_bucket" {
   description = "S3 bucket containing audit logs"
-  value       = module.audit_logging.s3_bucket_name
+  value       = var.enable_audit_logging ? module.audit_logging[0].s3_bucket_name : "disabled"
 }
 
 output "cloudtrail_name" {
   description = "CloudTrail trail name"
-  value       = module.audit_logging.trail_name
+  value       = var.enable_audit_logging ? module.audit_logging[0].trail_name : "disabled"
 }
+*/
 
 output "attack_chain_hint" {
   description = "Starting point for the lab"

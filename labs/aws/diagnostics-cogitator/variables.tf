@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region for lab deployment"
   type        = string
-  default     = "us-gov-east-1"
+  default     = ""
 }
 
 variable "lab_prefix" {
