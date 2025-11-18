@@ -524,6 +524,7 @@ class CommandHandler:
         console.print("\n[dim]GCP Configuration requires:[/dim]")
         console.print("  • GCP Project ID")
         console.print("  • GCP Region")
+        console.print("  • Allowed source IPs")
         console.print("  • (Optional) SSH key name\n")
         
         # Auto-detect project
@@ -558,6 +559,10 @@ class CommandHandler:
             f'gcp_project = "{project_id}"',
             f'gcp_region = "{region}"'
         ]
+        
+        # Add allowed_source_ips from common config
+        if common_config.get("public_ip"):
+            config_lines.append(f'\nallowed_source_ips = ["{common_config["public_ip"]}/32"]')
         
         if ssh_key_name:
             config_lines.append(f'ssh_key_name = "{ssh_key_name}"')
