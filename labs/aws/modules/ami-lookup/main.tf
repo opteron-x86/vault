@@ -50,7 +50,7 @@ data "aws_ami" "amazon_linux_2" {
 
 data "aws_ami" "ubuntu_22_04" {
   most_recent = true
-  owners      = ["canonical"]
+  owners      = ["513442679011"]
 
   filter {
     name   = "name"
@@ -75,7 +75,7 @@ data "aws_ami" "ubuntu_22_04" {
 
 data "aws_ami" "ubuntu_24_04" {
   most_recent = true
-  owners      = ["canonical"]
+  owners      = ["513442679011"]
 
   filter {
     name   = "name"
@@ -150,11 +150,11 @@ data "aws_ami" "windows_server_2019" {
 
 data "aws_ami" "kali_linux" {
   most_recent = true
-  owners      = ["679593333241"] # Kali Linux Official
+  owners      = ["874634375141"]
 
   filter {
     name   = "name"
-    values = ["kali-linux-*-amd64-*"]
+    values = ["kali-last-snapshot-amd64-202*"]
   }
 
   filter {
