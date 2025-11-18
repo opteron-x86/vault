@@ -77,10 +77,10 @@ class AWSProvider(BaseProvider):
             for line in content.splitlines():
                 if "aws_region" in line and "=" in line:
                     return line.split("=")[1].strip(' "')
-        return "us-gov-east-1"
+        return "us-east-1"
     
     def get_config_template(self) -> str:
-        return '''aws_region = "us-gov-east-1"
+        return '''aws_region = "us-east-1"
 allowed_source_ips = ["YOUR_IP/32"]
 '''
     

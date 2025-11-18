@@ -1,4 +1,4 @@
-# VAULT 35 - Virtual Attack Utility Lab Terminal
+# VAULT-35 - Virtual Attack Utility Lab Terminal
 
 [![Version](https://img.shields.io/badge/version-1.4.4-blue.svg)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
@@ -6,23 +6,14 @@
 [![Org: DISA DG35](https://img.shields.io/badge/org-DG35-green.svg)]()
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-VAULT 35 is a comprehensive Python CLI tool for deploying and managing threat emulation labs across AWS, Azure, and GCP. Designed for cybersecurity professionals, VAULT provides pre-built vulnerable infrastructure scenarios for adversary emulation, penetration testing training, and detection engineering.
-
-## 🚀 Features
-
-- **Multi-Cloud Support** - Deploy labs seamlessly across AWS, Azure, and GCP
-- **Interactive CLI** - Intuitive shell with tab completion and command history
-- **Automated Attack Chains** - Built-in scripts to automate exploitation workflows
-- **Lab Discovery** - Fuzzy search across labs by name, description, or objectives
-- **State Management** - Isolated Terraform state per deployment with metadata tracking
-- **Cost Controls** - Auto-shutdown tags and resource limits to prevent cost overruns
+VAULT-35 is a Python program for deploying and managing threat emulation labs across AWS, Azure, and GCP.
 
 ## 📚 Documentation
 
-- 📖 **[Full Documentation](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/home)** - Complete guides and tutorials
-- 🔍 **[Lab Catalog](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Lab-Catalog)** - Browse all available labs
-- 🛠️ **[Troubleshooting](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Troubleshooting)** - Common issues and solutions
-- 🤝 **[Contributing](CONTRIBUTING.md)** - Development guidelines and lab creation
+- 📖 **[VAULT Wiki](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/home)**
+- 🔍 **[Lab Catalog](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Lab-Catalog)**
+- 🛠️ **[Troubleshooting](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/Troubleshooting)**
+- 🤝 **[Contributing](CONTRIBUTING.md)**
 
 ## 📋 Prerequisites
 
@@ -115,24 +106,9 @@ vault validate aws/my-new-lab
 vault deploy aws/my-new-lab
 ```
 
-## 📦 State Management
-
-VAULT maintains deployment state in `.state/`:
-- `.state/<csp>_<lab>/terraform.tfstate` - Terraform state files
-- `.state/.metadata/<csp>_<lab>.json` - Deployment metadata (timestamps, resources, user)
-
-Each lab deployment is isolated with its own state to prevent conflicts.
-
-## 📞 Support
-
-- **Repository:** [GitLab](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation)
-- **Documentation:** [Wiki](https://web.git.mil/USG/DOD/DISA/cyber-executive/disa-cssp/disa-cols-na/cyber-threat-emulation/-/wikis/home)
-- **Contact:** caleb.n.cline.ctr@mail.mil
-- **Organization:** DG35 - Cyber Threat Emulation
-
 ## 📖 Version History
 
-**Current Version:** 1.4.1 (2025-11-04)
+**Current Version:** 1.4.4 (2025-11-04)
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
 
