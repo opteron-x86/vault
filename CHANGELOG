@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+## [1.4.6] - 2025-11-20
+
+### Changed
+- Terraform init now uses local .state for providers installation
+
 ## [1.4.5] - 2025-11-18
 
 ### Changed
