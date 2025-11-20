@@ -164,10 +164,12 @@ class TerraformWrapper:
             return False
     
     def get_outputs(self, lab: Lab) -> dict[str, TerraformOutput]:
-        # Ensure terraform is initialized before reading outputs
+        outputs = self._get_outputs_from_state(lab)
+        if outputs:
+            return outputs
+        
         terraform_dir = lab.terraform_dir / ".terraform"
         if not terraform_dir.exists():
-            # Re-initialize if .terraform directory doesn't exist
             try:
                 state_path = self._get_state_path(lab)
                 tfstate_path = (state_path / "terraform.tfstate").resolve()
@@ -179,9 +181,8 @@ class TerraformWrapper:
                 ]
                 
                 self._run_terraform(args, lab.terraform_dir, capture_output=True)
-            except Exception as e:
-                # If init fails, still try to get outputs from state file directly
-                return self._get_outputs_from_state(lab)
+            except Exception:
+                return {}
         
         try:
             result = self._run_terraform(
@@ -201,9 +202,8 @@ class TerraformWrapper:
                 )
             
             return outputs
-        except Exception as e:
-            # Fallback to reading from state file
-            return self._get_outputs_from_state(lab)
+        except Exception:
+            return {}
     
     def state_list(self, lab: Lab) -> list[str]:
         try:
@@ -221,7 +221,7 @@ class TerraformWrapper:
             return []
 
     def _get_outputs_from_state(self, lab: Lab) -> dict[str, TerraformOutput]:
-        """Fallback method to read outputs directly from state file"""
+        """Read outputs directly from state file"""
         try:
             state_path = self._get_state_path(lab)
             tfstate = state_path / "terraform.tfstate"
@@ -243,7 +243,7 @@ class TerraformWrapper:
                 
                 return outputs
         except Exception:
-            return {}    
+            return {}   
         
     def _get_resource_count(self, lab: Lab) -> int:
         state_path = self._get_state_path(lab)
