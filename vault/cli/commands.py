@@ -264,6 +264,8 @@ class CommandHandler:
         """Check which CSP CLI tools are installed"""
         from rich.table import Table
         
+        self._ensure_plugin_cache()
+        
         tools = [
             ("aws", "AWS CLI", "Amazon Web Services"),
             ("az", "Azure CLI", "Microsoft Azure"),
@@ -294,10 +296,29 @@ class CommandHandler:
         console.print("\n[dim]Use 'install <tool>' to install missing tools[/dim]")
         console.print("[dim]Example: install aws[/dim]\n")
 
+    def _ensure_plugin_cache(self) -> None:
+        cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
+        terraformrc = Path.home() / ".terraformrc"
+        
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        if terraformrc.exists():
+            content = terraformrc.read_text()
+            if "plugin_cache_dir" in content:
+                return
+        
+        cache_config = f'\nplugin_cache_dir = "{cache_dir}"\n'
+        
+        with open(terraformrc, "a") as f:
+            f.write(cache_config)
+        
+        log_success(f"Configured Terraform plugin cache at {cache_dir}")
 
     def cmd_setup(self, provider_name: Optional[str] = None) -> bool:
-        """Interactive setup wizard for creating common-<csp>.tfvars files"""
+        """Setup wizard for creating common-<csp>.tfvars files"""
         from rich.prompt import Prompt
+        
+        self._ensure_plugin_cache()
         
         providers_to_setup = []
         
@@ -314,7 +335,6 @@ class CommandHandler:
                 providers_to_setup = [provider_name]
         else:
             console.print("\n[bold cyan]VAULT Configuration Setup[/bold cyan]\n")
-            console.print("This wizard will help you create configuration files for cloud providers.\n")
             
             choices = Prompt.ask(
                 "Which provider(s) would you like to configure?",
@@ -329,7 +349,6 @@ class CommandHandler:
         
         self.config_dir.mkdir(exist_ok=True)
         
-        # Gather common config once for all providers
         common_config = self._gather_common_config()
         
         for provider_str in providers_to_setup:
@@ -338,7 +357,6 @@ class CommandHandler:
             console.print()
         
         log_success("Configuration setup complete!")
-        log_info("You can now deploy labs using 'vault deploy <lab>'")
         return True
 
     def _gather_common_config(self) -> dict:
