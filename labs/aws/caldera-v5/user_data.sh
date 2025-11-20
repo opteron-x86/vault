@@ -6,28 +6,33 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -y
 
-# Install MATE desktop environment
+# Install XFCE desktop environment (lightweight, better RDP support)
 apt-get install -y \
-    ubuntu-mate-desktop \
-    mate-desktop-environment-core \
-    lightdm
+    xfce4 \
+    xfce4-goodies \
+    xorg \
+    dbus-x11
 
 # Install xrdp for RDP access
 apt-get install -y xrdp
-systemctl enable xrdp
-systemctl start xrdp
+adduser xrdp ssl-cert
 
-# Configure xrdp to use MATE
-echo "mate-session" > /etc/skel/.xsession
+# Configure xrdp to use XFCE
 cat > /etc/xrdp/startwm.sh << 'EOF'
 #!/bin/sh
 if [ -r /etc/default/locale ]; then
   . /etc/default/locale
   export LANG LANGUAGE
 fi
-exec mate-session
+startxfce4
 EOF
 chmod +x /etc/xrdp/startwm.sh
+
+# Configure XFCE session for all users
+echo "startxfce4" > /etc/skel/.xsession
+
+systemctl enable xrdp
+systemctl restart xrdp
 
 # Install TigerVNC server
 apt-get install -y tigervnc-standalone-server tigervnc-common
@@ -78,47 +83,18 @@ apt-get install -y \
     python3-pip \
     python3-venv \
     golang-go \
-    upx-ucl
+    upx-ucl \
+    npm
 
 # Clone Caldera repository
-cd /opt
 git clone https://github.com/mitre/caldera.git --recursive --branch master
 cd caldera
 
 # Install Python dependencies
-python3 -m pip install --break-system-packages -r requirements.txt
-
-# Configure Caldera
-cat > conf/local.yml << EOF
----
-host: 0.0.0.0
-port: 8888
-users:
-  admin:
-    admin: ${caldera_admin}
-EOF
-
-# Create systemd service for Caldera
-cat > /etc/systemd/system/caldera.service << 'EOF'
-[Unit]
-Description=MITRE Caldera
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/caldera
-ExecStart=/usr/bin/python3 server.py --insecure
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable caldera.service
-systemctl start caldera.service
+python3 -m venv .calderavenv
+source .calderavenv/bin/activate
+pip install -r requirements.txt
+python3 server.py --insecure --build
 
 # Install useful tools
 apt-get install -y \
