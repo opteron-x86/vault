@@ -12,30 +12,9 @@ apt install -y \
     xorg \
     dbus-x11
 
-apt install -y xrdp
-adduser xrdp ssl-cert
-
-# Configure xrdp to use XFCE
-cat > /etc/xrdp/startwm.sh << 'EOF'
-#!/bin/sh
-if [ -r /etc/default/locale ]; then
-  . /etc/default/locale
-  export LANG LANGUAGE
-fi
-startxfce4
-EOF
-chmod +x /etc/xrdp/startwm.sh
-
-# Configure XFCE session for all users
-echo "startxfce4" > /etc/skel/.xsession
-
-systemctl enable xrdp
-systemctl restart xrdp
-
-# Set password for ubuntu user (for RDP)
-echo "ubuntu:${vnc_password}" | chpasswd
-
 # Install dependencies for Caldera
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
 apt install -y \
     git \
     python3 \
@@ -65,6 +44,29 @@ apt install -y \
     net-tools \
 
 snap install firefox 
+
+apt install -y xrdp
+adduser xrdp ssl-cert
+
+# Configure xrdp to use XFCE
+cat > /etc/xrdp/startwm.sh << 'EOF'
+#!/bin/sh
+if [ -r /etc/default/locale ]; then
+  . /etc/default/locale
+  export LANG LANGUAGE
+fi
+startxfce4
+EOF
+chmod +x /etc/xrdp/startwm.sh
+
+# Configure XFCE session for all users
+echo "startxfce4" > /etc/skel/.xsession
+
+systemctl enable xrdp
+systemctl restart xrdp
+
+# Set password for ubuntu user (for RDP)
+echo "ubuntu:${vnc_password}" | chpasswd
 
 # Create desktop shortcuts
 mkdir -p /home/ubuntu/Desktop
