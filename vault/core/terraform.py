@@ -164,6 +164,26 @@ class TerraformWrapper:
             return False
     
     def get_outputs(self, lab: Lab) -> dict[str, TerraformOutput]:
+        outputs = self._get_outputs_from_state(lab)
+        if outputs:
+            return outputs
+        
+        terraform_dir = lab.terraform_dir / ".terraform"
+        if not terraform_dir.exists():
+            try:
+                state_path = self._get_state_path(lab)
+                tfstate_path = (state_path / "terraform.tfstate").resolve()
+                
+                args = [
+                    "init",
+                    f"-backend-config=path={tfstate_path}",
+                    "-reconfigure"
+                ]
+                
+                self._run_terraform(args, lab.terraform_dir, capture_output=True)
+            except Exception:
+                return {}
+        
         try:
             result = self._run_terraform(
                 ["output", "-json"],
@@ -199,7 +219,32 @@ class TerraformWrapper:
             ]
         except Exception:
             return []
-    
+
+    def _get_outputs_from_state(self, lab: Lab) -> dict[str, TerraformOutput]:
+        """Read outputs directly from state file"""
+        try:
+            state_path = self._get_state_path(lab)
+            tfstate = state_path / "terraform.tfstate"
+            
+            if not tfstate.exists():
+                return {}
+            
+            with open(tfstate) as f:
+                state = json.load(f)
+                raw_outputs = state.get("outputs", {})
+                outputs = {}
+                
+                for key, data in raw_outputs.items():
+                    outputs[key] = TerraformOutput(
+                        value=data.get("value"),
+                        sensitive=data.get("sensitive", False),
+                        type=data.get("type", "")
+                    )
+                
+                return outputs
+        except Exception:
+            return {}   
+        
     def _get_resource_count(self, lab: Lab) -> int:
         state_path = self._get_state_path(lab)
         tfstate = state_path / "terraform.tfstate"
