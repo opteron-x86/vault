@@ -221,7 +221,6 @@ class TerraformWrapper:
             return []
 
     def _get_outputs_from_state(self, lab: Lab) -> dict[str, TerraformOutput]:
-        """Read outputs directly from state file"""
         try:
             state_path = self._get_state_path(lab)
             tfstate = state_path / "terraform.tfstate"
@@ -235,15 +234,18 @@ class TerraformWrapper:
                 outputs = {}
                 
                 for key, data in raw_outputs.items():
-                    outputs[key] = TerraformOutput(
-                        value=data.get("value"),
-                        sensitive=data.get("sensitive", False),
-                        type=data.get("type", "")
-                    )
+                    try:
+                        outputs[key] = TerraformOutput(
+                            value=data.get("value"),
+                            sensitive=data.get("sensitive", False),
+                            type=data.get("type", "")
+                        )
+                    except Exception:
+                        pass
                 
                 return outputs
         except Exception:
-            return {}   
+            return {}
         
     def _get_resource_count(self, lab: Lab) -> int:
         state_path = self._get_state_path(lab)

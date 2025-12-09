@@ -123,7 +123,7 @@ class LabSearchResult:
 class TerraformOutput(BaseModel):
     value: str | dict | list
     sensitive: bool = False
-    type: str = ""
+    type: str | list = ""
 
 
 class DeploymentResult(BaseModel):
