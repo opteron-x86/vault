@@ -1,6 +1,6 @@
 # VAULT-35 - Virtual Attack Utility Lab Terminal
 
-[![Version](https://img.shields.io/badge/version-1.4.6-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.7-blue.svg)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Terraform](https://img.shields.io/badge/terraform-1.0%2B-purple.svg)](https://www.terraform.io/)
 [![Org: DISA DG35](https://img.shields.io/badge/org-DG35-green.svg)]()
@@ -108,7 +108,7 @@ vault deploy aws/my-new-lab
 
 ## 📖 Version History
 
-**Current Version:** 1.4.4 (2025-11-04)
+**Current Version:** 1.4.7 (2025-12-09)
 
 See [CHANGELOG.md](CHANGELOG.md) for full version history.
 
