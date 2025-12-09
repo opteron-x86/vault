@@ -5,7 +5,13 @@ Start-Transcript -Path "C:\ad-setup.log" -Append
 $DomainName = "${domain_name}"
 $DomainNetbios = "${domain_netbios}"
 $DSRMPassword = ConvertTo-SecureString "${dsrm_password}" -AsPlainText -Force
+$AdminPassword = ConvertTo-SecureString "${admin_password}" -AsPlainText -Force
 $LowPrivPassword = "${lowpriv_password}"
+
+# Set Administrator password before AD DS promotion
+$admin = [ADSI]"WinNT://./Administrator,user"
+$admin.SetPassword("${admin_password}")
+Write-Output "Administrator password set"
 
 Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 
