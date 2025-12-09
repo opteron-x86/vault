@@ -106,17 +106,31 @@ try {
     Write-Output "m.johnson creation failed: `$_"
 }
 
-Start-Sleep -Seconds 5
-try {
-    `$itAdmins = Get-ADGroup -Identity "IT Admins"
-    `$attackerUser = Get-ADUser -Identity "m.johnson"
-    `$acl = Get-Acl "AD:\`$(`$itAdmins.DistinguishedName)"
-    `$ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(`$attackerUser.SID, [System.DirectoryServices.ActiveDirectoryRights]::GenericAll, [System.Security.AccessControl.AccessControlType]::Allow)
-    `$acl.AddAccessRule(`$ace)
-    Set-Acl "AD:\`$(`$itAdmins.DistinguishedName)" `$acl
-    Write-Output "Granted m.johnson GenericAll on IT Admins"
-} catch {
-    Write-Output "ACL setup failed: `$_"
+# ACL setup with retry
+`$aclSet = `$false
+`$aclAttempts = 0
+`$maxAclAttempts = 6
+while (-not `$aclSet -and `$aclAttempts -lt `$maxAclAttempts) {
+    `$aclAttempts++
+    Start-Sleep -Seconds 10
+    try {
+        Import-Module ActiveDirectory
+        `$itAdmins = Get-ADGroup -Identity "IT Admins" -ErrorAction Stop
+        `$attackerUser = Get-ADUser -Identity "m.johnson" -ErrorAction Stop
+        if (`$itAdmins -and `$attackerUser) {
+            `$acl = Get-Acl "AD:\`$(`$itAdmins.DistinguishedName)"
+            `$ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(`$attackerUser.SID, [System.DirectoryServices.ActiveDirectoryRights]::GenericAll, [System.Security.AccessControl.AccessControlType]::Allow)
+            `$acl.AddAccessRule(`$ace)
+            Set-Acl "AD:\`$(`$itAdmins.DistinguishedName)" `$acl
+            `$aclSet = `$true
+            Write-Output "Granted m.johnson GenericAll on IT Admins"
+        }
+    } catch {
+        Write-Output "ACL setup attempt `$aclAttempts failed: `$_"
+    }
+}
+if (-not `$aclSet) {
+    Write-Output "ACL setup failed after `$maxAclAttempts attempts"
 }
 
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
