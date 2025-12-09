@@ -34,6 +34,7 @@ LAYOUT
 
 cat > app/page.js << 'PAGE'
 import Link from 'next/link'
+import { submitFeedback } from './actions'
 
 export default function Home() {
   return (
@@ -61,6 +62,14 @@ export default function Home() {
           <p style={{ color: '#666' }}>Contact our enterprise support team.</p>
           <Link href="/support" style={{ color: '#0066cc' }}>Get Help →</Link>
         </div>
+      </div>
+
+      <div style={{ marginTop: '2rem', padding: '1.5rem', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <h2 style={{ marginTop: 0 }}>Quick Feedback</h2>
+        <form action={submitFeedback}>
+          <textarea name="message" placeholder="Your feedback..." style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem', minHeight: '80px' }}></textarea>
+          <button type="submit" style={{ padding: '0.5rem 1rem', background: '#0066cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Submit</button>
+        </form>
       </div>
 
       <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #eee', color: '#999', fontSize: '0.875rem' }}>
