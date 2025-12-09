@@ -2,7 +2,10 @@
 set -e
 
 dnf update -y
-dnf install -y nodejs npm at git
+dnf install -y at git
+
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs
 
 mkdir -p /opt/webapp
 cd /opt/webapp
@@ -10,7 +13,7 @@ cd /opt/webapp
 npm init -y
 npm install next@16.0.6 react@19.1.0 react-dom@19.1.0
 
-mkdir -p app
+mkdir -p app/dashboard
 
 cat > app/layout.js << 'LAYOUT'
 export const metadata = {
@@ -169,4 +172,4 @@ systemctl start webapp
 
 systemctl enable atd
 systemctl start atd
-echo "sudo shutdown -h +$((${shutdown_hours} * 60))" | at now
+echo "sudo shutdown -h now" | at now + ${shutdown_hours} hours
