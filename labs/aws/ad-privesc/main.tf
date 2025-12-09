@@ -45,7 +45,7 @@ resource "aws_security_group" "dc" {
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    description = "RDP"
+    description = "RDP from allowed IPs"
     from_port   = 3389
     to_port     = 3389
     protocol    = "tcp"
@@ -53,17 +53,34 @@ resource "aws_security_group" "dc" {
   }
 
   ingress {
-    description = "WinRM HTTP"
-    from_port   = 5985
-    to_port     = 5985
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_source_ips
+    description = "AD traffic from VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [module.vpc.vpc_cidr]
   }
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.lab_name}-dc-sg"
+  })
+}
+
+resource "aws_security_group" "workstation" {
+  name        = "${local.lab_name}-ws"
+  description = "Workstation access"
+  vpc_id      = module.vpc.vpc_id
+
   ingress {
-    description = "WinRM HTTPS"
-    from_port   = 5986
-    to_port     = 5986
+    description = "RDP from allowed IPs"
+    from_port   = 3389
+    to_port     = 3389
     protocol    = "tcp"
     cidr_blocks = var.allowed_source_ips
   }
@@ -76,7 +93,7 @@ resource "aws_security_group" "dc" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.lab_name}-dc-sg"
+    Name = "${local.lab_name}-ws-sg"
   })
 }
 

