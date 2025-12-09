@@ -29,6 +29,22 @@ resource "random_password" "db_password" {
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
 
 module "vpc" {
   source = "../modules/lab-vpc"
@@ -45,6 +61,7 @@ module "vpc" {
   tags = local.common_tags
 }
 
+# IAM Role for EC2 Instance
 resource "aws_iam_role" "app_role" {
   name = "${var.lab_prefix}-app-role-${random_string.suffix.result}"
 
@@ -102,13 +119,12 @@ resource "aws_iam_role_policy" "app_permissions" {
   })
 }
 
-data "aws_partition" "current" {}
-
 resource "aws_iam_instance_profile" "app_profile" {
   name = "${var.lab_prefix}-profile-${random_string.suffix.result}"
   role = aws_iam_role.app_role.name
 }
 
+# S3 Bucket with sensitive data
 resource "aws_s3_bucket" "app_data" {
   bucket        = "${var.lab_prefix}-data-${random_string.suffix.result}"
   force_destroy = true
@@ -149,6 +165,7 @@ resource "aws_s3_object" "api_keys" {
   tags = local.common_tags
 }
 
+# Secrets Manager
 resource "aws_secretsmanager_secret" "app_config" {
   name                    = "${var.lab_prefix}/app-config-${random_string.suffix.result}"
   recovery_window_in_days = 0
@@ -158,13 +175,14 @@ resource "aws_secretsmanager_secret" "app_config" {
 resource "aws_secretsmanager_secret_version" "app_config" {
   secret_id = aws_secretsmanager_secret.app_config.id
   secret_string = jsonencode({
-    database_url     = "postgresql://app:${random_password.db_password.result}@db.internal:5432/production"
-    jwt_secret       = random_password.api_key.result
-    admin_api_key    = "FLAG{secrets_manager_accessed}"
-    encryption_key   = base64encode(random_password.api_key.result)
+    database_url   = "postgresql://app:${random_password.db_password.result}@db.internal:5432/production"
+    jwt_secret     = random_password.api_key.result
+    admin_api_key  = "FLAG{secrets_manager_accessed}"
+    encryption_key = base64encode(random_password.api_key.result)
   })
 }
 
+# SSM Parameter with hints
 resource "aws_ssm_parameter" "app_hint" {
   name  = "/${var.lab_prefix}/deployment-notes"
   type  = "String"
@@ -172,21 +190,7 @@ resource "aws_ssm_parameter" "app_hint" {
   tags  = local.common_tags
 }
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
+# EC2 Instance running vulnerable Next.js
 resource "aws_instance" "app_server" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
@@ -197,7 +201,7 @@ resource "aws_instance" "app_server" {
 
   metadata_options {
     http_endpoint = "enabled"
-    http_tokens   = "optional" # IMDSv1 enabled for lab purposes
+    http_tokens   = "optional"
   }
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {

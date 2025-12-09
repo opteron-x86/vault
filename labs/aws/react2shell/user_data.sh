@@ -7,7 +7,6 @@ dnf install -y nodejs npm at git
 mkdir -p /opt/webapp
 cd /opt/webapp
 
-# Install vulnerable Next.js version
 npm init -y
 npm install next@16.0.6 react@19.1.0 react-dom@19.1.0
 
@@ -137,7 +136,6 @@ cat > package.json << 'PKGJSON'
 }
 PKGJSON
 
-# Environment file with cloud config hints
 cat > .env << ENVFILE
 NODE_ENV=production
 APP_NAME=saas-portal
