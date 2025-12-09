@@ -122,6 +122,36 @@ resource "aws_instance" "dc" {
   })
 
   lifecycle {
-    ignore_changes = [ami, user_data]
+    ignore_changes = [ami, user_data_base64]
+  }
+}
+
+resource "aws_instance" "workstation" {
+  ami                    = module.ami.windows_server_2022_id
+  instance_type          = "t3.small"
+  subnet_id              = module.vpc.public_subnet_ids[0]
+  vpc_security_group_ids = [aws_security_group.workstation.id]
+  key_name               = var.ssh_key_name
+
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
+  user_data_base64 = base64encode(templatefile("${path.module}/workstation.ps1", {
+    domain_name      = var.domain_name
+    domain_netbios   = var.domain_netbios
+    dc_ip            = aws_instance.dc.private_ip
+    admin_password   = random_password.admin_password.result
+  }))
+
+  tags = merge(local.common_tags, {
+    Name = "${local.lab_name}-ws01"
+  })
+
+  depends_on = [aws_instance.dc]
+
+  lifecycle {
+    ignore_changes = [ami, user_data_base64]
   }
 }
