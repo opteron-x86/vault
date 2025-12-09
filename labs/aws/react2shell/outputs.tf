@@ -1,39 +1,39 @@
-output "webapp_url" {
-  description = "Vulnerable Next.js application URL"
-  value       = "http://${aws_instance.webapp.public_ip}:3000"
+output "app_url" {
+  description = "Application URL"
+  value       = "http://${aws_instance.app_server.public_ip}:3000"
 }
 
-output "webapp_ip" {
-  description = "EC2 instance public IP"
-  value       = aws_instance.webapp.public_ip
+output "ssh_connection" {
+  description = "SSH connection command"
+  value       = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.app_server.public_ip}" : "SSH key not configured"
+}
+
+output "instance_id" {
+  description = "EC2 instance ID"
+  value       = aws_instance.app_server.id
 }
 
 output "instance_role" {
-  description = "IAM role attached to instance"
-  value       = aws_iam_role.webapp_role.name
+  description = "Instance IAM role"
+  value       = aws_iam_role.app_role.name
 }
 
 output "s3_bucket" {
-  description = "S3 bucket containing sensitive data"
+  description = "Application data bucket"
   value       = aws_s3_bucket.app_data.id
 }
 
 output "secrets_arn" {
-  description = "Secrets Manager secret ARN"
+  description = "Secrets Manager ARN"
   value       = aws_secretsmanager_secret.app_config.arn
 }
 
-output "ssm_parameter" {
-  description = "SSM parameter with resource hints"
-  value       = aws_ssm_parameter.hint.name
+output "attack_surface" {
+  description = "Initial attack entry point"
+  value       = "Next.js 16.0.6 application with App Router at http://${aws_instance.app_server.public_ip}:3000"
 }
 
-output "attack_entry" {
-  description = "Initial attack vector"
-  value       = "POST to http://${aws_instance.webapp.public_ip}:3000 with RSC Flight payload"
-}
-
-output "cve_reference" {
-  description = "CVE identifier"
-  value       = "CVE-2025-55182 (React2Shell)"
+output "attack_chain" {
+  description = "Attack path overview"
+  value       = "React2Shell RCE → Environment Discovery → Metadata Credentials → S3 Exfiltration"
 }

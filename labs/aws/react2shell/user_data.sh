@@ -2,59 +2,28 @@
 set -e
 
 dnf update -y
-dnf install -y docker nodejs npm git
-
-systemctl enable docker
-systemctl start docker
-
-usermod -aG docker ec2-user
+dnf install -y nodejs npm at git
 
 mkdir -p /opt/webapp
 cd /opt/webapp
 
-# Create vulnerable Next.js application
-cat > package.json << 'PACKAGE'
-{
-  "name": "internal-dashboard",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start -p 3000"
-  },
-  "dependencies": {
-    "next": "16.0.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  }
-}
-PACKAGE
-
-cat > next.config.js << 'NEXTCONFIG'
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-}
-module.exports = nextConfig
-NEXTCONFIG
+# Install vulnerable Next.js version
+npm init -y
+npm install next@16.0.6 react@19.1.0 react-dom@19.1.0
 
 mkdir -p app
 
 cat > app/layout.js << 'LAYOUT'
 export const metadata = {
-  title: 'Internal Dashboard',
-  description: 'Employee portal and analytics',
+  title: 'SaaS Customer Portal',
+  description: 'Enterprise customer management platform',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: 'system-ui', margin: 0, padding: '20px', background: '#f5f5f5' }}>
-        <header style={{ background: '#1a1a2e', color: 'white', padding: '15px 20px', marginBottom: '20px' }}>
-          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Acme Corp Internal Dashboard</h1>
-        </header>
-        <main>{children}</main>
+      <body style={{ fontFamily: 'system-ui, sans-serif', margin: 0, padding: 0 }}>
+        {children}
       </body>
     </html>
   )
@@ -62,62 +31,126 @@ export default function RootLayout({ children }) {
 LAYOUT
 
 cat > app/page.js << 'PAGE'
+import Link from 'next/link'
+
 export default function Home() {
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-        <h2>Welcome to the Internal Dashboard</h2>
-        <p>Access company resources and analytics.</p>
+    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <header style={{ borderBottom: '1px solid #eee', paddingBottom: '1rem', marginBottom: '2rem' }}>
+        <h1 style={{ margin: 0, color: '#333' }}>SaaS Customer Portal</h1>
+        <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>Enterprise customer management platform</p>
+      </header>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1.5rem' }}>
+          <h2 style={{ marginTop: 0 }}>Customer Analytics</h2>
+          <p style={{ color: '#666' }}>View customer engagement metrics and subscription analytics.</p>
+          <Link href="/dashboard" style={{ color: '#0066cc' }}>View Dashboard →</Link>
+        </div>
+
+        <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1.5rem' }}>
+          <h2 style={{ marginTop: 0 }}>API Documentation</h2>
+          <p style={{ color: '#666' }}>Integration guides and REST API reference.</p>
+          <Link href="/docs" style={{ color: '#0066cc' }}>View Docs →</Link>
+        </div>
+
+        <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1.5rem' }}>
+          <h2 style={{ marginTop: 0 }}>Support</h2>
+          <p style={{ color: '#666' }}>Contact our enterprise support team.</p>
+          <Link href="/support" style={{ color: '#0066cc' }}>Get Help →</Link>
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
-          <h3>Employee Directory</h3>
-          <p>View team contacts</p>
-        </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
-          <h3>Analytics</h3>
-          <p>Q4 2025 Reports</p>
-        </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
-          <h3>Documents</h3>
-          <p>Internal policies</p>
-        </div>
-      </div>
-      <footer style={{ marginTop: '40px', color: '#666', fontSize: '0.9rem' }}>
-        <p>Powered by Next.js | Internal use only</p>
+
+      <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #eee', color: '#999', fontSize: '0.875rem' }}>
+        <p>© 2025 SaaS Portal Inc. All rights reserved.</p>
       </footer>
-    </div>
+    </main>
   )
 }
 PAGE
 
-# Server action for RSC vulnerability surface
-mkdir -p app/api/analytics
+cat > app/dashboard/page.js << 'DASHBOARD'
+export default function Dashboard() {
+  const stats = [
+    { label: 'Active Customers', value: '2,847' },
+    { label: 'Monthly Revenue', value: '$847,293' },
+    { label: 'API Calls (24h)', value: '12.4M' },
+    { label: 'Uptime', value: '99.97%' },
+  ]
+
+  return (
+    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <h1>Dashboard</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '2rem' }}>
+        {stats.map((stat, i) => (
+          <div key={i} style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px' }}>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stat.value}</div>
+            <div style={{ color: '#666' }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </main>
+  )
+}
+DASHBOARD
 
 cat > app/actions.js << 'ACTIONS'
 'use server'
-
-export async function getAnalytics(params) {
-  return { 
-    visitors: 1234, 
-    pageViews: 5678,
-    timestamp: new Date().toISOString()
-  }
-}
 
 export async function submitFeedback(formData) {
   const message = formData.get('message')
   return { success: true, received: message }
 }
+
+export async function getStatus() {
+  return { status: 'operational', timestamp: new Date().toISOString() }
+}
 ACTIONS
 
-npm install
+cat > next.config.js << 'CONFIG'
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['*'],
+    },
+  },
+}
+module.exports = nextConfig
+CONFIG
+
+cat > package.json << 'PKGJSON'
+{
+  "name": "saas-portal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p 3000 -H 0.0.0.0"
+  },
+  "dependencies": {
+    "next": "16.0.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}
+PKGJSON
+
+# Environment file with cloud config hints
+cat > .env << ENVFILE
+NODE_ENV=production
+APP_NAME=saas-portal
+S3_DATA_BUCKET=${s3_bucket}
+SECRETS_ARN=${secrets_arn}
+INTERNAL_API_KEY=${api_key}
+ENVFILE
+
 npm run build
 
-# Create systemd service
-cat > /etc/systemd/system/nextjs.service << 'SERVICE'
+cat > /etc/systemd/system/webapp.service << 'SYSD'
 [Unit]
-Description=Next.js Application
+Description=SaaS Portal Application
 After=network.target
 
 [Service]
@@ -125,25 +158,17 @@ Type=simple
 User=root
 WorkingDirectory=/opt/webapp
 ExecStart=/usr/bin/npm run start
-Restart=on-failure
+Restart=always
 Environment=NODE_ENV=production
-Environment=PORT=3000
 
 [Install]
 WantedBy=multi-user.target
-SERVICE
+SYSD
 
 systemctl daemon-reload
-systemctl enable nextjs
-systemctl start nextjs
+systemctl enable webapp
+systemctl start webapp
 
-# Auto-shutdown after 4 hours
-echo "shutdown -h now" | at now + 4 hours
-
-cat > /var/log/webapp-setup.log << LOGENTRY
-React2Shell Lab Deployment Complete
-Next.js Version: 16.0.6
-React Version: 19.1.0
-Application URL: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3000
-CVE: CVE-2025-55182
-LOGENTRY
+systemctl enable atd
+systemctl start atd
+echo "sudo shutdown -h +$((${shutdown_hours} * 60))" | at now
