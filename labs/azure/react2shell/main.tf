@@ -54,6 +54,111 @@ resource "azurerm_resource_group" "lab" {
   tags     = local.common_tags
 }
 
+# Log Analytics Workspace
+resource "azurerm_log_analytics_workspace" "lab" {
+  count = var.enable_logging ? 1 : 0
+
+  name                = "${var.lab_prefix}-logs-${random_string.suffix.result}"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+
+  tags = local.common_tags
+}
+
+# Storage Account Diagnostic Settings
+resource "azurerm_monitor_diagnostic_setting" "storage" {
+  count = var.enable_logging ? 1 : 0
+
+  name                       = "storage-diagnostics"
+  target_resource_id         = "${azurerm_storage_account.app_data.id}/blobServices/default"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.lab[0].id
+
+  enabled_log {
+    category = "StorageRead"
+  }
+
+  enabled_log {
+    category = "StorageWrite"
+  }
+
+  enabled_log {
+    category = "StorageDelete"
+  }
+
+  metric {
+    category = "Transaction"
+    enabled  = true
+  }
+}
+
+# Key Vault Diagnostic Settings
+resource "azurerm_monitor_diagnostic_setting" "keyvault" {
+  count = var.enable_logging ? 1 : 0
+
+  name                       = "keyvault-diagnostics"
+  target_resource_id         = azurerm_key_vault.app_config.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.lab[0].id
+
+  enabled_log {
+    category = "AuditEvent"
+  }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+  }
+}
+
+# NSG Flow Logs
+resource "azurerm_network_watcher" "lab" {
+  count = var.enable_logging ? 1 : 0
+
+  name                = "${var.lab_prefix}-nw-${random_string.suffix.result}"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+  tags                = local.common_tags
+}
+
+resource "azurerm_storage_account" "flow_logs" {
+  count = var.enable_logging ? 1 : 0
+
+  name                     = "${replace(var.lab_prefix, "-", "")}flow${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.lab.name
+  location                 = azurerm_resource_group.lab.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  tags = local.common_tags
+}
+
+resource "azurerm_network_watcher_flow_log" "nsg" {
+  count = var.enable_logging ? 1 : 0
+
+  network_watcher_name = azurerm_network_watcher.lab[0].name
+  resource_group_name  = azurerm_resource_group.lab.name
+  name                 = "${var.lab_prefix}-flowlog"
+
+  network_security_group_id = azurerm_network_security_group.app.id
+  storage_account_id        = azurerm_storage_account.flow_logs[0].id
+  enabled                   = true
+  version                   = 2
+
+  retention_policy {
+    enabled = true
+    days    = 7
+  }
+
+  traffic_analytics {
+    enabled               = true
+    workspace_id          = azurerm_log_analytics_workspace.lab[0].workspace_id
+    workspace_region      = azurerm_log_analytics_workspace.lab[0].location
+    workspace_resource_id = azurerm_log_analytics_workspace.lab[0].id
+    interval_in_minutes   = 10
+  }
+}
+
 module "images" {
   source   = "../modules/image-lookup"
   location = var.azure_region

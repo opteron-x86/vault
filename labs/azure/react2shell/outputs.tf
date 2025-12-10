@@ -62,3 +62,35 @@ terraform output -raw admin_password
 Begin by identifying the vulnerable Next.js application and exploiting CVE-2025-55182.
 EOT
 }
+
+output "log_analytics_workspace_id" {
+  description = "Log Analytics workspace ID"
+  value       = var.enable_logging ? azurerm_log_analytics_workspace.lab[0].id : null
+}
+
+output "log_analytics_workspace_name" {
+  description = "Log Analytics workspace name"
+  value       = var.enable_logging ? azurerm_log_analytics_workspace.lab[0].name : null
+}
+
+output "logging_query_examples" {
+  description = "Example KQL queries for detection"
+  value       = var.enable_logging ? <<-EOT
+# Storage blob access:
+StorageBlobLogs
+| where OperationName == "GetBlob"
+| project TimeGenerated, RequesterIpAddress, Uri, AuthenticationType
+
+# Key Vault secret access:
+AzureDiagnostics
+| where ResourceType == "VAULTS"
+| where OperationName == "SecretGet"
+| project TimeGenerated, CallerIPAddress, id_s, ResultType
+
+# NSG flow logs (after Traffic Analytics processing):
+AzureNetworkAnalytics_CL
+| where FlowType_s == "ExternalPublic"
+| project TimeGenerated, SrcIP_s, DestIP_s, DestPort_d
+EOT
+  : null
+}

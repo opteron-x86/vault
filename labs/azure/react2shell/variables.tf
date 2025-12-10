@@ -51,3 +51,9 @@ variable "auto_shutdown_hours" {
     error_message = "Auto shutdown must be between 1 and 24 hours."
   }
 }
+
+variable "enable_logging" {
+  description = "Enable Log Analytics, Storage diagnostics, Key Vault audit logs, and NSG flow logs"
+  type        = bool
+  default     = false
+}
