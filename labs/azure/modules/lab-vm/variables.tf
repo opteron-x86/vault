@@ -80,6 +80,12 @@ variable "network_security_group_id" {
   default     = null
 }
 
+variable "associate_nsg" {
+  description = "Whether to associate an NSG with the NIC"
+  type        = bool
+  default     = false
+}
+
 variable "assign_public_ip" {
   description = "Assign a public IP to the VM"
   type        = bool

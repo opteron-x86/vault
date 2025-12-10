@@ -236,6 +236,7 @@ module "app_server" {
   ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : null
   admin_password = var.ssh_public_key == "" ? (var.admin_password != "" ? var.admin_password : random_password.admin_password.result) : null
 
+  associate_nsg              = true
   network_security_group_id  = azurerm_network_security_group.app.id
   user_assigned_identity_ids = [azurerm_user_assigned_identity.app_identity.id]
 

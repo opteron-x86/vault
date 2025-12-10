@@ -26,7 +26,7 @@ resource "azurerm_network_interface" "vm" {
 }
 
 resource "azurerm_network_interface_security_group_association" "vm" {
-  count = var.network_security_group_id != null ? 1 : 0
+  count = var.associate_nsg ? 1 : 0
 
   network_interface_id      = azurerm_network_interface.vm.id
   network_security_group_id = var.network_security_group_id
