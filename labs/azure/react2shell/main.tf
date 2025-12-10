@@ -67,6 +67,10 @@ module "vnet" {
   location            = azurerm_resource_group.lab.location
   vnet_cidr           = "10.0.0.0/16"
 
+  create_ssh_nsg = false
+  create_rdp_nsg = false
+  create_web_nsg = false
+
   tags = local.common_tags
 }
 

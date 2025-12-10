@@ -1,7 +1,26 @@
-# React2Shell Lab (CVE-2025-55182) - Azure
-# Attack Chain: RSC Deserialization RCE → Credential Discovery → IMDS Token → Blob Exfiltration
-# Difficulty: 4
-# Estimated Time: 45-60 minutes
+# Azure RBAC Privilege Escalation Lab
+# Attack Chain: Service Principal → Custom Role Discovery → Role Assignment → Storage Access
+# Difficulty: Easy-Medium
+# Estimated Time: 30-45 minutes
+
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 2.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
+  }
+  backend "local" {}
+}
 
 provider "azurerm" {
   features {
@@ -15,12 +34,16 @@ provider "azurerm" {
   environment = "usgovernment"
 }
 
+provider "azuread" {
+  environment = "usgovernment"
+}
+
 locals {
   common_tags = {
     Environment  = "lab"
     Destroyable  = "true"
-    Scenario     = "react2shell"
-    AutoShutdown = "4hours"
+    Scenario     = "rbac-privilege-escalation"
+    AutoShutdown = "24hours"
   }
 }
 
@@ -28,21 +51,6 @@ resource "random_string" "suffix" {
   length  = 8
   special = false
   upper   = false
-}
-
-resource "random_password" "api_key" {
-  length  = 32
-  special = false
-}
-
-resource "random_password" "db_password" {
-  length  = 20
-  special = true
-}
-
-resource "random_password" "admin_password" {
-  length  = 16
-  special = true
 }
 
 data "azurerm_client_config" "current" {}
@@ -54,126 +62,137 @@ resource "azurerm_resource_group" "lab" {
   tags     = local.common_tags
 }
 
-module "images" {
-  source   = "../modules/image-lookup"
-  location = var.azure_region
+resource "azuread_application" "developer" {
+  display_name = "${var.lab_prefix}-developer-${random_string.suffix.result}"
+  owners       = [data.azurerm_client_config.current.object_id]
+  tags         = ["lab", "developer-access"]
 }
 
-module "vnet" {
-  source = "../modules/lab-vnet"
-
-  name_prefix         = var.lab_prefix
-  resource_group_name = azurerm_resource_group.lab.name
-  location            = azurerm_resource_group.lab.location
-  vnet_cidr           = "10.0.0.0/16"
-
-  create_ssh_nsg = false
-  create_rdp_nsg = false
-  create_web_nsg = false
-
-  tags = local.common_tags
+resource "azuread_service_principal" "developer" {
+  client_id = azuread_application.developer.client_id
+  owners    = [data.azurerm_client_config.current.object_id]
+  tags      = ["lab", "developer-access"]
 }
 
-resource "azurerm_network_security_group" "app" {
-  name                = "${var.lab_prefix}-app-nsg-${random_string.suffix.result}"
-  location            = azurerm_resource_group.lab.location
-  resource_group_name = azurerm_resource_group.lab.name
+resource "azuread_service_principal_password" "developer" {
+  service_principal_id = azuread_service_principal.developer.id
+  end_date_relative    = "8760h"
+}
 
-  security_rule {
-    name                       = "SSH"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefixes    = var.allowed_source_ips
-    destination_address_prefix = "*"
+resource "azurerm_role_definition" "developer_base" {
+  name        = "${var.lab_prefix}-developer-base-${random_string.suffix.result}"
+  scope       = data.azurerm_subscription.current.id
+  description = "Base permissions for application developers"
+
+  permissions {
+    actions = [
+      "Microsoft.Resources/subscriptions/resourceGroups/read",
+      "Microsoft.Storage/storageAccounts/read",
+      "Microsoft.KeyVault/vaults/read",
+      "Microsoft.KeyVault/vaults/secrets/read"
+    ]
+    not_actions = []
   }
 
-  security_rule {
-    name                       = "Web"
-    priority                   = 110
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3000"
-    source_address_prefixes    = var.allowed_source_ips
-    destination_address_prefix = "*"
+  assignable_scopes = [
+    data.azurerm_subscription.current.id
+  ]
+}
+
+resource "azurerm_role_definition" "developer_self_manage" {
+  name        = "${var.lab_prefix}-developer-self-service-${random_string.suffix.result}"
+  scope       = data.azurerm_subscription.current.id
+  description = "Self-service role management for developers"
+
+  permissions {
+    actions = [
+      "Microsoft.Authorization/roleDefinitions/read",
+      "Microsoft.Authorization/roleAssignments/read",
+      "Microsoft.Authorization/roleAssignments/write",
+      "Microsoft.Authorization/roleAssignments/delete"
+    ]
+    not_actions = []
   }
 
-  tags = local.common_tags
+  assignable_scopes = [
+    data.azurerm_subscription.current.id
+  ]
 }
 
-# User-Assigned Managed Identity for VM
-resource "azurerm_user_assigned_identity" "app_identity" {
-  name                = "${var.lab_prefix}-identity-${random_string.suffix.result}"
-  location            = azurerm_resource_group.lab.location
-  resource_group_name = azurerm_resource_group.lab.name
-  tags                = local.common_tags
+resource "azurerm_role_assignment" "developer_base" {
+  scope              = azurerm_resource_group.lab.id
+  role_definition_id = azurerm_role_definition.developer_base.role_definition_resource_id
+  principal_id       = azuread_service_principal.developer.object_id
 }
 
-# Storage Account with sensitive data
-resource "azurerm_storage_account" "app_data" {
-  name                     = "${replace(var.lab_prefix, "-", "")}data${random_string.suffix.result}"
+resource "azurerm_role_assignment" "developer_self_manage" {
+  scope              = data.azurerm_subscription.current.id
+  role_definition_id = azurerm_role_definition.developer_self_manage.role_definition_resource_id
+  principal_id       = azuread_service_principal.developer.object_id
+}
+
+resource "azurerm_storage_account" "protected" {
+  name                     = "${var.lab_prefix}protected${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.lab.name
   location                 = azurerm_resource_group.lab.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
   min_tls_version          = "TLS1_2"
 
-  tags = local.common_tags
-}
-
-resource "azurerm_storage_container" "exports" {
-  name                  = "exports"
-  storage_account_name  = azurerm_storage_account.app_data.name
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "config" {
-  name                  = "config"
-  storage_account_name  = azurerm_storage_account.app_data.name
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_blob" "customer_data" {
-  name                   = "customers.csv"
-  storage_account_name   = azurerm_storage_account.app_data.name
-  storage_container_name = azurerm_storage_container.exports.name
-  type                   = "Block"
-  source_content         = <<-CSV
-id,name,email,plan,card_last_four
-1001,Marcus Chen,m.chen@techcorp.io,enterprise,4532
-1002,Sarah Williams,s.williams@finserv.com,professional,8876
-1003,James Rodriguez,j.rod@startup.dev,enterprise,2341
-1004,Emily Zhang,e.zhang@bigcorp.net,enterprise,9902
-FLAG{azure_blob_customer_data_exfiltrated}
-CSV
-}
-
-resource "azurerm_storage_blob" "api_keys" {
-  name                   = "api-keys.json"
-  storage_account_name   = azurerm_storage_account.app_data.name
-  storage_container_name = azurerm_storage_container.config.name
-  type                   = "Block"
-  source_content = jsonencode({
-    stripe_live    = "sk_live_${random_password.api_key.result}"
-    sendgrid       = "SG.${random_string.suffix.result}.fake"
-    internal_token = "FLAG{sensitive_api_keys_exposed}"
+  tags = merge(local.common_tags, {
+    DataClassification = "Confidential"
+    Owner              = "Security Team"
   })
 }
 
-# Role assignment for blob access
-resource "azurerm_role_assignment" "blob_reader" {
-  scope                = azurerm_storage_account.app_data.id
-  role_definition_name = "Storage Blob Data Reader"
-  principal_id         = azurerm_user_assigned_identity.app_identity.principal_id
+resource "azurerm_storage_container" "financial" {
+  name                  = "financial-data"
+  storage_account_name  = azurerm_storage_account.protected.name
+  container_access_type = "private"
 }
 
-# Key Vault with secrets
-resource "azurerm_key_vault" "app_config" {
+resource "azurerm_storage_blob" "revenue" {
+  name                   = "q4-2024-revenue.csv"
+  storage_account_name   = azurerm_storage_account.protected.name
+  storage_container_name = azurerm_storage_container.financial.name
+  type                   = "Block"
+  source_content = <<-EOT
+department,revenue,expenses,profit_margin
+Engineering,2500000,1800000,28.0
+Sales,3200000,900000,71.9
+Marketing,800000,750000,6.3
+Operations,1500000,1200000,20.0
+FLAG{azure_rbac_privilege_escalation_successful},999999999,0,100.0
+EOT
+}
+
+resource "azurerm_storage_container" "secrets" {
+  name                  = "secrets"
+  storage_account_name  = azurerm_storage_account.protected.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_blob" "credentials" {
+  name                   = "production-credentials.json"
+  storage_account_name   = azurerm_storage_account.protected.name
+  storage_container_name = azurerm_storage_container.secrets.name
+  type                   = "Block"
+  source_content = jsonencode({
+    database = {
+      host     = "prod-sql.usgovcloudapi.net"
+      username = "sqladmin"
+      password = "P@ssw0rd_Pr0d_2024!"
+    }
+    api_keys = {
+      storage_connection = azurerm_storage_account.protected.primary_connection_string
+      key_vault_url      = "https://prod-kv.vault.usgovcloudapi.net/"
+    }
+  })
+}
+
+data "azurerm_client_config" "deployer" {}
+
+resource "azurerm_key_vault" "lab" {
   name                       = "${var.lab_prefix}-kv-${random_string.suffix.result}"
   location                   = azurerm_resource_group.lab.location
   resource_group_name        = azurerm_resource_group.lab.name
@@ -184,75 +203,37 @@ resource "azurerm_key_vault" "app_config" {
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
+    object_id = data.azurerm_client_config.deployer.object_id
 
-    secret_permissions = ["Get", "List", "Set", "Delete", "Purge"]
+    secret_permissions = [
+      "Get", "List", "Set", "Delete", "Purge"
+    ]
   }
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = azurerm_user_assigned_identity.app_identity.principal_id
+    object_id = azuread_service_principal.developer.object_id
 
-    secret_permissions = ["Get", "List"]
+    secret_permissions = [
+      "Get", "List"
+    ]
   }
 
   tags = local.common_tags
 }
 
-resource "azurerm_key_vault_secret" "database_url" {
-  name         = "database-url"
-  value        = "postgresql://app:${random_password.db_password.result}@db.internal:5432/production"
-  key_vault_id = azurerm_key_vault.app_config.id
+resource "azurerm_key_vault_secret" "storage_hint" {
+  name         = "protected-storage-account"
+  value        = azurerm_storage_account.protected.name
+  key_vault_id = azurerm_key_vault.lab.id
+
+  depends_on = [azurerm_key_vault.lab]
 }
 
-resource "azurerm_key_vault_secret" "jwt_secret" {
-  name         = "jwt-secret"
-  value        = random_password.api_key.result
-  key_vault_id = azurerm_key_vault.app_config.id
-}
+resource "azurerm_key_vault_secret" "security_note" {
+  name         = "security-review-notes"
+  value        = "TODO: Review custom RBAC roles for developers. Self-service role may be too broad. Need to restrict roleAssignments/write to specific scopes."
+  key_vault_id = azurerm_key_vault.lab.id
 
-resource "azurerm_key_vault_secret" "admin_api_key" {
-  name         = "admin-api-key"
-  value        = "FLAG{key_vault_secrets_accessed}"
-  key_vault_id = azurerm_key_vault.app_config.id
-}
-
-resource "azurerm_key_vault_secret" "deployment_notes" {
-  name         = "deployment-notes"
-  value        = "Production deployment uses Next.js 16.0.6 with App Router. Customer data synced to storage account: ${azurerm_storage_account.app_data.name}"
-  key_vault_id = azurerm_key_vault.app_config.id
-}
-
-# VM running vulnerable Next.js
-module "app_server" {
-  source = "../modules/lab-vm"
-
-  name                = "${var.lab_prefix}-server-${random_string.suffix.result}"
-  resource_group_name = azurerm_resource_group.lab.name
-  location            = azurerm_resource_group.lab.location
-  subnet_id           = module.vnet.public_subnet_ids[0]
-  vm_size             = var.vm_size
-
-  os_type      = "linux"
-  source_image = module.images.ubuntu_22_04
-
-  admin_username = "azureuser"
-  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : null
-  admin_password = var.ssh_public_key == "" ? (var.admin_password != "" ? var.admin_password : random_password.admin_password.result) : null
-
-  associate_nsg              = true
-  network_security_group_id  = azurerm_network_security_group.app.id
-  user_assigned_identity_ids = [azurerm_user_assigned_identity.app_identity.id]
-
-  custom_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    storage_account = azurerm_storage_account.app_data.name
-    key_vault_name  = azurerm_key_vault.app_config.name
-    api_key         = random_password.api_key.result
-    shutdown_hours  = var.auto_shutdown_hours
-    client_id       = azurerm_user_assigned_identity.app_identity.client_id
-  }))
-
-  os_disk_size_gb = 30
-
-  tags = local.common_tags
+  depends_on = [azurerm_key_vault.lab]
 }
