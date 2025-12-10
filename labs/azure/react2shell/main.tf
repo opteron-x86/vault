@@ -67,11 +67,37 @@ module "vnet" {
   location            = azurerm_resource_group.lab.location
   vnet_cidr           = "10.0.0.0/16"
 
-  create_ssh_nsg    = true
-  allowed_ssh_cidrs = var.allowed_source_ips
-  create_web_nsg    = true
-  allowed_web_cidrs = var.allowed_source_ips
-  web_ports         = [3000]
+  tags = local.common_tags
+}
+
+resource "azurerm_network_security_group" "app" {
+  name                = "${var.lab_prefix}-app-nsg-${random_string.suffix.result}"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefixes    = var.allowed_source_ips
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "Web"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "3000"
+    source_address_prefixes    = var.allowed_source_ips
+    destination_address_prefix = "*"
+  }
 
   tags = local.common_tags
 }
@@ -210,7 +236,7 @@ module "app_server" {
   ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : null
   admin_password = var.ssh_public_key == "" ? (var.admin_password != "" ? var.admin_password : random_password.admin_password.result) : null
 
-  network_security_group_ids = [module.vnet.ssh_nsg_id, module.vnet.web_nsg_id]
+  network_security_group_id  = azurerm_network_security_group.app.id
   user_assigned_identity_ids = [azurerm_user_assigned_identity.app_identity.id]
 
   custom_data = base64encode(templatefile("${path.module}/user_data.sh", {

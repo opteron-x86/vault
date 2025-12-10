@@ -74,10 +74,10 @@ variable "os_disk_type" {
   default     = "Standard_LRS"
 }
 
-variable "network_security_group_ids" {
-  description = "List of NSG IDs to associate with the NIC"
-  type        = list(string)
-  default     = []
+variable "network_security_group_id" {
+  description = "NSG ID to associate with the NIC"
+  type        = string
+  default     = null
 }
 
 variable "assign_public_ip" {
