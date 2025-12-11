@@ -4,6 +4,12 @@ data "aws_availability_zones" "available" {
 
 locals {
   azs = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  
+  # Calculate subnet bits based on VPC CIDR size
+  # For /24 VPC: use /28 subnets (16 IPs each, newbits=4)
+  # For /16 VPC: use /24 subnets (256 IPs each, newbits=8)
+  vpc_prefix_length = tonumber(split("/", var.vpc_cidr)[1])
+  subnet_newbits    = var.vpc_prefix_length >= 24 ? 4 : 8
 }
 
 resource "aws_vpc" "lab" {
@@ -24,11 +30,12 @@ resource "aws_internet_gateway" "lab" {
   })
 }
 
+
 resource "aws_subnet" "public" {
   count = length(local.azs)
 
   vpc_id                  = aws_vpc.lab.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index)
+  cidr_block              = cidrsubnet(var.vpc_cidr, local.subnet_newbits, count.index)
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = var.map_public_ip_on_launch
 
@@ -42,7 +49,7 @@ resource "aws_subnet" "private" {
   count = var.enable_private_subnets ? length(local.azs) : 0
 
   vpc_id            = aws_vpc.lab.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 100)
+  cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_newbits, count.index + 8)
   availability_zone = local.azs[count.index]
 
   tags = merge(var.tags, {
