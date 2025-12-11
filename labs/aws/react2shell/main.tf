@@ -50,7 +50,7 @@ module "vpc" {
   source = "../modules/lab-vpc"
 
   name_prefix       = var.lab_prefix
-  vpc_cidr          = "10.0.0.0/16"
+  vpc_cidr          = "192.168.0.0/24"
   aws_region        = var.aws_region
   allowed_ssh_cidrs = var.allowed_source_ips
 
