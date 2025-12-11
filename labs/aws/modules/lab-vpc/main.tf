@@ -9,7 +9,7 @@ locals {
   # For /24 VPC: use /28 subnets (16 IPs each, newbits=4)
   # For /16 VPC: use /24 subnets (256 IPs each, newbits=8)
   vpc_prefix_length = tonumber(split("/", var.vpc_cidr)[1])
-  subnet_newbits    = var.vpc_prefix_length >= 24 ? 4 : 8
+  subnet_newbits    = local.vpc_prefix_length >= 24 ? 4 : 8
 }
 
 resource "aws_vpc" "lab" {
