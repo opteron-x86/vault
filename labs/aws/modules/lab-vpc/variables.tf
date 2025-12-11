@@ -6,7 +6,7 @@ variable "name_prefix" {
 variable "vpc_cidr" {
   description = "CIDR block for VPC"
   type        = string
-  default     = "192.168.0.0/24"
+  default     = "10.10.10.0/24"
 }
 
 variable "az_count" {
