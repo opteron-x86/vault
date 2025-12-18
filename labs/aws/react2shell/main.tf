@@ -50,7 +50,6 @@ module "vpc" {
   source = "../modules/lab-vpc"
 
   name_prefix       = var.lab_prefix
-  vpc_cidr          = "10.0.0.0/16"
   aws_region        = var.aws_region
   allowed_ssh_cidrs = var.allowed_source_ips
 
@@ -212,7 +211,7 @@ resource "aws_instance" "app_server" {
   }))
 
   root_block_device {
-    volume_size = 20
+    volume_size = 30
     volume_type = "gp3"
   }
 

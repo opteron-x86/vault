@@ -1,7 +1,7 @@
-variable "aws_region" {
-  description = "AWS region for lab deployment"
+variable "azure_region" {
+  description = "Azure region for lab deployment"
   type        = string
-  default     = ""
+  default     = "usgovvirginia"
 }
 
 variable "allowed_source_ips" {
@@ -13,10 +13,17 @@ variable "allowed_source_ips" {
   }
 }
 
-variable "ssh_key_name" {
-  description = "AWS SSH key pair name for EC2 access"
+variable "ssh_public_key" {
+  description = "SSH public key for VM access"
   type        = string
   default     = ""
+}
+
+variable "admin_password" {
+  description = "Admin password (used if ssh_public_key not provided)"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "lab_prefix" {
@@ -29,18 +36,24 @@ variable "lab_prefix" {
   }
 }
 
-variable "instance_type" {
-  description = "EC2 instance type"
+variable "vm_size" {
+  description = "Azure VM size"
   type        = string
-  default     = "t3.medium"
+  default     = "Standard_B2s"
 }
 
 variable "auto_shutdown_hours" {
-  description = "Hours until automatic instance shutdown"
+  description = "Hours until automatic VM shutdown"
   type        = number
   default     = 4
   validation {
     condition     = var.auto_shutdown_hours >= 1 && var.auto_shutdown_hours <= 24
     error_message = "Auto shutdown must be between 1 and 24 hours."
   }
+}
+
+variable "enable_logging" {
+  description = "Enable Log Analytics, Storage diagnostics, Key Vault audit logs, and NSG flow logs"
+  type        = bool
+  default     = false
 }
