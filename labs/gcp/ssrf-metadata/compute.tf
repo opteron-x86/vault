@@ -24,7 +24,8 @@ resource "google_compute_instance" "webapp" {
     scopes = ["cloud-platform"]
   }
 
-  metadata = {
+metadata = {
+    data-processor-sa = google_service_account.data_processor.email
     startup-script = templatefile("${path.module}/startup_script.sh", {
       data_processor_sa = google_service_account.data_processor.email
       gcp_project       = var.gcp_project
