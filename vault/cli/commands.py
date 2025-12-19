@@ -958,9 +958,11 @@ class CommandHandler:
             return
         
         try:
-            plan_output = self.terraform.plan(lab, var_files, destroy=destroy)
+            has_changes, plan_output = self.terraform.plan(lab, var_files, destroy=destroy)
             console.print()
             console.print(plan_output)
+            if not has_changes:
+                log_info("No changes detected")
         except TerraformError as e:
             log_error(f"Plan failed: {e}")
             
