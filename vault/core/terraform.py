@@ -88,10 +88,10 @@ class TerraformWrapper:
         lab: Lab,
         var_files: list[Path],
         destroy: bool = False
-    ) -> str:
+    ) -> tuple[bool, str]:
         self.init(lab, var_files)
         
-        args = ["plan", "-no-color", "-compact-warnings"]
+        args = ["plan", "-no-color", "-compact-warnings", "-detailed-exitcode"]
         
         if destroy:
             args.append("-destroy")
@@ -99,12 +99,20 @@ class TerraformWrapper:
         for var_file in var_files:
             args.extend(["-var-file", str(var_file)])
         
-        result = self._run_terraform(
-            args,
-            lab.terraform_dir,
-            capture_output=True
+        cmd = ["terraform"] + args
+        
+        result = subprocess.run(
+            cmd,
+            cwd=lab.terraform_dir,
+            capture_output=True,
+            text=True
         )
-        return result.stdout
+        
+        if result.returncode == 1:
+            raise TerraformError(f"Terraform plan failed: {result.stderr}")
+        
+        has_changes = result.returncode == 2
+        return has_changes, result.stdout
     
     def apply(
         self,
@@ -135,10 +143,15 @@ class TerraformWrapper:
                 resources_created=resource_count
             )
         except TerraformError as e:
+            resource_count = self._get_resource_count(lab)
+            outputs = self.get_outputs(lab) if resource_count > 0 else {}
+            
             return DeploymentResult(
                 success=False,
                 lab_name=lab.relative_path,
-                error_message=str(e)
+                error_message=str(e),
+                outputs=outputs,
+                resources_created=resource_count
             )
     
     def destroy(

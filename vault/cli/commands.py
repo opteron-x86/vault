@@ -133,11 +133,15 @@ class CommandHandler:
         
         console.print("\n[bold cyan]Deployment Plan:[/bold cyan]\n")
         try:
-            plan_output = self.terraform.plan(lab, var_files)
+            has_changes, plan_output = self.terraform.plan(lab, var_files)
             console.print(plan_output)
         except TerraformError as e:
             log_error(f"Plan failed: {e}")
             return False
+        
+        if not has_changes:
+            log_info("No changes detected")
+            return True
         
         if not auto_approve:
             prompt = "\n[green]Proceed with update?[/green]" if is_update else "\n[green]Proceed with deployment?[/green]"
@@ -150,11 +154,11 @@ class CommandHandler:
         
         result = self.terraform.apply(lab, var_files, auto_approve=True)
         
-        if result.success:
+        if result.success or result.resources_created > 0:
             region = provider.get_region()
             self.state_manager.save_metadata(
                 lab,
-                "deployed",
+                "deployed" if result.success else "partial",
                 os.getenv("USER", "unknown"),
                 region
             )
