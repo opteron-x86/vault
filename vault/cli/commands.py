@@ -93,14 +93,16 @@ class CommandHandler:
             if Confirm.ask("View full README?", default=False):
                 self._display_readme(lab)
     
-    def cmd_deploy(self, lab_identifier: Optional[str] = None, auto_approve: bool = False) -> bool:
+    def cmd_deploy(
+        self,
+        lab_identifier: Optional[str] = None,
+        auto_approve: bool = False
+    ) -> bool:
         lab = self._resolve_lab(lab_identifier)
         if not lab:
             return False
         
-        if self.state_manager.is_deployed(lab):
-            log_warning(f"Lab already deployed: {lab.relative_path}")
-            return False
+        is_update = self.state_manager.is_deployed(lab)
         
         provider = ProviderFactory.get_provider(lab.provider, self.config_dir)
         
@@ -119,7 +121,8 @@ class CommandHandler:
                 log_info(f"Create {var_file} with required values")
                 return False
         
-        log_info(f"Initializing {lab.provider.value.upper()} lab: {lab.relative_path}")
+        action = "Updating" if is_update else "Initializing"
+        log_info(f"{action} {lab.provider.value.upper()} lab: {lab.relative_path}")
         
         try:
             self.terraform.init(lab, var_files)
@@ -137,11 +140,13 @@ class CommandHandler:
             return False
         
         if not auto_approve:
-            if not Confirm.ask("\n[green]Proceed with deployment?[/green]", default=False):
+            prompt = "\n[green]Proceed with update?[/green]" if is_update else "\n[green]Proceed with deployment?[/green]"
+            if not Confirm.ask(prompt, default=False):
                 log_info("Deployment cancelled")
                 return False
         
-        log_info(f"Deploying lab: {lab.relative_path}")
+        action = "Updating" if is_update else "Deploying"
+        log_info(f"{action} lab: {lab.relative_path}")
         
         result = self.terraform.apply(lab, var_files, auto_approve=True)
         

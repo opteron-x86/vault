@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 ### Changed
+- Update the deploy command to align with 'terraform apply' better; create missing resources, in-place updating, replace or recreate resources
+
 ### Deprecated
 ### Removed
 ### Fixed
