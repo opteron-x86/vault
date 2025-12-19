@@ -31,9 +31,7 @@ resource "google_compute_instance" "webapp" {
     })
   }
 
-  labels = merge(local.common_labels, {
-    data_processor_sa = replace(google_service_account.data_processor.email, ".", "_")
-  })
+  labels = local.common_labels
 
   lifecycle {
     ignore_changes = [metadata]
